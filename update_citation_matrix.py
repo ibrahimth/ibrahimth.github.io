@@ -13,8 +13,8 @@ def fetch_citation_data(scholar_url):
     soup = BeautifulSoup(response.content, 'html.parser')
     citation_data = {}
     
-    # Example: Parse the citation count
-    citation_count = soup.find('td', class_='gsc_rsb_std').text
+    # Parse the citation count
+    citation_count = soup.find_all('td', class_='gsc_rsb_std')[0].text
     citation_data['citation_count'] = citation_count
     
     return citation_data
@@ -41,8 +41,15 @@ def commit_and_push_changes(repo_path, commit_message):
 
 if __name__ == "__main__":
     scholar_url = 'https://scholar.google.com/citations?user=p6fjrJIAAAAJ&hl=en'
-    repo_path = ''  # This is the default path for GitHub Actions
+    repo_path = os.getenv('GITHUB_WORKSPACE', os.getcwd())  # Use the GITHUB_WORKSPACE environment variable if available
     html_file_path = os.path.join(repo_path, 'index.html')
+    
+    # Debugging information
+    print(f"Repository path: {repo_path}")
+    print(f"HTML file path: {html_file_path}")
+
+    if not os.path.exists(html_file_path):
+        raise FileNotFoundError(f"HTML file not found at path: {html_file_path}")
     
     citation_data = fetch_citation_data(scholar_url)
     update_citation_matrix(citation_data, html_file_path)
