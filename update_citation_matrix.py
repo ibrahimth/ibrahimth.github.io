@@ -41,7 +41,7 @@ def commit_and_push_changes(repo_path, commit_message):
 
 if __name__ == "__main__":
     scholar_url = 'https://scholar.google.com/citations?user=p6fjrJIAAAAJ&hl=en'
-    repo_path = '/github/workspace'  # This is the default path for GitHub Actions
+    repo_path = ''  # This is the default path for GitHub Actions
     html_file_path = os.path.join(repo_path, 'index.html')
     
     citation_data = fetch_citation_data(scholar_url)
