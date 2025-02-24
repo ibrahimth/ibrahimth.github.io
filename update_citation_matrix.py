@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import os
 import subprocess
 
-# Function to fetch citation data from Google Scholar (theoretical example)
+# Function to fetch citation data from Google Scholar
 def fetch_citation_data(scholar_url):
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     response = requests.get(scholar_url, headers=headers)
@@ -41,7 +41,7 @@ def commit_and_push_changes(repo_path, commit_message):
 
 if __name__ == "__main__":
     scholar_url = 'https://scholar.google.com/citations?user=p6fjrJIAAAAJ&hl=en'
-    repo_path = '/github/workspace'  
+    repo_path = '/github/workspace'  # This is the default path for GitHub Actions
     html_file_path = os.path.join(repo_path, 'index.html')
     
     citation_data = fetch_citation_data(scholar_url)
