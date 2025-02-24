@@ -39,9 +39,14 @@ def fetch_citation_data_google(scholar_url):
     try:
         # Find citation count element
         citation_count_element = soup.find_all('td', class_='gsc_rsb_std')
+        # Replace this block in the fetch_citation_data_google function
         if citation_count_element:
             citation_count = citation_count_element[0].text.strip()
-            citation_data['citation_count'] = citation_count
+            # Handle cases where citation count is not a number
+            if citation_count.isdigit():
+                citation_data['citation_count'] = citation_count
+            else:
+                citation_data['citation_count'] = "Error"
             print(f"✅ Extracted Citation Count: {citation_count}")
         else:
             print("⚠️ Could not find the citation count element!")
