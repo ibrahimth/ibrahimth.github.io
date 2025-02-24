@@ -1,4 +1,5 @@
 from scholarly import scholarly
+from bs4 import BeautifulSoup 
 import os
 import subprocess
 import re
