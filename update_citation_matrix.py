@@ -65,7 +65,7 @@ def commit_and_push_changes(repo_path, commit_message):
     subprocess.run(['git', 'push'])
 
 if __name__ == "__main__":
-    scholar_id = "p6fjrJIAAAAJ&hl=en"   
+    scholar_id = "https://scholar.google.com/citations?user=p6fjrJIAAAAJ&hl=en"   
     repo_path = os.getenv('GITHUB_WORKSPACE', os.getcwd())  # GitHub Actions repo path
     html_file_path = os.path.join(repo_path, 'index.html')
 
