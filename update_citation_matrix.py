@@ -4,15 +4,37 @@ import subprocess
 import re
 
 # Function to fetch citation count from Google Scholar
-def fetch_citation_data(scholar_profile_id):
+def fetch_citation_data(scholar_url):
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+    response = requests.get(scholar_url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f'Failed to fetch data from Google Scholar, Status Code: {response.status_code}')
+    
+    # Print the raw HTML to check if Google is blocking the request
+    print("🔍 Raw HTML Content:")
+    print(response.text[:1000])  # Print the first 1000 characters to check structure
+
+    soup = BeautifulSoup(response.content, 'html.parser')
+    citation_data = {}
+
     try:
-        author = scholarly.search_author_id(scholar_profile_id)
-        author = scholarly.fill(author, sections=["basics", "indices"])
-        citation_count = author.get("citedby", 0)  # Get citation count, default to 0
-        return {"citation_count": citation_count}
+        # Locate citation count
+        citation_count_element = soup.find_all('td', class_='gsc_rsb_std')
+        if citation_count_element:
+            citation_count = citation_count_element[0].text.strip()
+            citation_data['citation_count'] = citation_count
+            print(f"✅ Extracted Citation Count: {citation_count}")
+        else:
+            print("⚠️ Could not find the citation count element!")
+            citation_data['citation_count'] = "N/A"
+
     except Exception as e:
-        print(f"Error fetching citation data: {e}")
-        return {"citation_count": 0}  # Return 0 if fetching fails
+        print(f"❌ Error while parsing: {e}")
+        citation_data['citation_count'] = "Error"
+
+    return citation_data
+
 
 # Function to update citation count in HTML file
 def update_citation_matrix(citation_data, file_path):
