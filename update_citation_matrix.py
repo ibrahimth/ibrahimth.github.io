@@ -23,7 +23,7 @@ def update_citation_matrix(citation_data, file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
 
-    # Use regex to replace only the citation count inside the <span> tag
+    # Use regex to replace only the number inside <span id="citation_count">
     new_html_content = re.sub(
         r'(<span id="citation_count">)(\d+)(</span>)',
         rf'\1{citation_data["citation_count"]}\3',
@@ -43,7 +43,7 @@ def commit_and_push_changes(repo_path, commit_message):
     subprocess.run(['git', 'push'])
 
 if __name__ == "__main__":
-    scholar_id = "p6fjrJIAAAAJ"  # Replace with your actual Google Scholar ID
+    scholar_id = "p6fjrJIAAAAJ&hl=en"   
     repo_path = os.getenv('GITHUB_WORKSPACE', os.getcwd())  # GitHub Actions repo path
     html_file_path = os.path.join(repo_path, 'index.html')
 
