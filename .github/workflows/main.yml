@@ -42,7 +42,7 @@ jobs:
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         git add .
-        git commit -m 'Automated update of citation matrix'
+        git diff-index --quiet HEAD || git commit -m 'Automated update of citation matrix'
         git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
