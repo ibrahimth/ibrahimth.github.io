@@ -1,17 +1,6 @@
-name: Update Citation Matrix
-
-on:
-  schedule:
-    - cron: '0 0 * * *'  # Runs every day at midnight UTC
-  push:
-    branches:
-      - main  # Runs when there is a push to the main branch
-  workflow_dispatch:
-
 jobs:
-  update-citation-matrix:
+  build:
     runs-on: ubuntu-latest
-    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -26,15 +15,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests beautifulsoup4
 
-    - name: Run update script
-      run: python update_citation_matrix.py
-
-    - name: Commit and push changes
+    - name: Create index.html if it does not exist
       run: |
-        git config --global user.name 'github-actions[bot]'
-        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-        git add .
-        git commit -m 'Automated update of citation matrix'
-        git push
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if [ ! -f /github/workspace/index.html ]; then
+          echo "<html></html>" > /github/workspace/index.html
+        fi
+
+    - name: Run update_citation_matrix.py
+      run: python update_citation_matrix.py
