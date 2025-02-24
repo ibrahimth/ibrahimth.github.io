@@ -7,7 +7,8 @@ from bs4 import BeautifulSoup
 # ===========================
 # CONFIGURATION
 # ===========================
-SCHOLAR_URL = "https://scholar.google.com/citations?user=p6fjrJIAAAAJ&hl=en"   
+SCHOLAR_URL = "https://scholar.google.com/citations?user=p6fjrJIAAAAJ&hl=en"
+# If you want to use Semantic Scholar API instead, set USE_SEMANTIC_SCHOLAR to True and update SEMANTIC_SCHOLAR_ID.
 SEMANTIC_SCHOLAR_ID = "YOUR_SEMANTIC_SCHOLAR_ID"  # Optional
 USE_SEMANTIC_SCHOLAR = False  # Set to True for API-based data (recommended)
 HTML_FILE_PATH = "index.html"
@@ -18,7 +19,9 @@ HTML_FILE_PATH = "index.html"
 def fetch_citation_data_google(scholar_url):
     """Fetches citation count from Google Scholar (prone to blocking)."""
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                       'AppleWebKit/537.36 (KHTML, like Gecko) '
+                       'Chrome/91.0.4472.124 Safari/537.36')
     }
     response = requests.get(scholar_url, headers=headers)
 
@@ -34,7 +37,7 @@ def fetch_citation_data_google(scholar_url):
     citation_data = {}
 
     try:
-        # Find citation count
+        # Find citation count element
         citation_count_element = soup.find_all('td', class_='gsc_rsb_std')
         if citation_count_element:
             citation_count = citation_count_element[0].text.strip()
@@ -73,15 +76,20 @@ def update_citation_matrix(citation_data, file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
 
-    # Extract existing citation count
+    # Check for the expected citation count placeholder in the HTML.
     match = re.search(r'<span id="citation_count">(\d+)</span>', html_content)
     if match:
         old_citation_count = match.group(1)
         if old_citation_count == citation_data["citation_count"]:
             print(f"🔹 No update needed: Citation count is still {old_citation_count}")
             return False  # No change detected
+    else:
+        print("⚠️ Could not find the citation count placeholder in HTML.")
+        print("Please ensure your index.html contains exactly:")
+        print('<span id="citation_count">0</span>')
+        return False
 
-    # Replace citation count in the HTML
+    # Replace the citation count in the HTML
     new_html_content = re.sub(
         r'(<span id="citation_count">)(\d+)(</span>)',
         rf'\1{citation_data["citation_count"]}\3',
@@ -100,27 +108,34 @@ def update_citation_matrix(citation_data, file_path):
 def commit_and_push_changes(repo_path, commit_message):
     """Commits and pushes changes to GitHub."""
     os.chdir(repo_path)
+    # Set Git user identity to avoid "Author identity unknown" errors.
+    subprocess.run(['git', 'config', '--global', 'user.name', 'github-actions[bot]'])
+    subprocess.run(['git', 'config', '--global', 'user.email', 'github-actions[bot]@users.noreply.github.com'])
+    
     subprocess.run(['git', 'add', 'index.html'])
-    subprocess.run(['git', 'commit', '-m', commit_message])
-    subprocess.run(['git', 'push'])
+    commit_proc = subprocess.run(['git', 'commit', '-m', commit_message])
+    if commit_proc.returncode == 0:
+        subprocess.run(['git', 'push'])
+    else:
+        print("⚠️ No changes to commit.")
 
 # ===========================
 # MAIN SCRIPT
 # ===========================
 if __name__ == "__main__":
-    repo_path = os.getenv('GITHUB_WORKSPACE', os.getcwd())  # GitHub Actions workspace
+    repo_path = os.getenv('GITHUB_WORKSPACE', os.getcwd())  # GitHub Actions workspace or current directory
     html_file_path = os.path.join(repo_path, HTML_FILE_PATH)
 
     print(f"📂 Repository path: {repo_path}")
     print(f"📄 HTML file path: {html_file_path}")
 
-    # Fetch citation count
+    # Fetch citation count (choose method based on configuration)
     if USE_SEMANTIC_SCHOLAR:
         citation_data = fetch_citation_data_semantic(SEMANTIC_SCHOLAR_ID)
     else:
         citation_data = fetch_citation_data_google(SCHOLAR_URL)
 
-    # Update the HTML file
+    # Update the HTML file if needed
     update_needed = update_citation_matrix(citation_data, html_file_path)
 
     # Commit & push only if changes were made
