@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup
 # CONFIGURATION
 # ===========================
 SCHOLAR_URL = "https://scholar.google.com/citations?user=p6fjrJIAAAAJ&hl=en"
-# If you want to use Semantic Scholar API instead, set USE_SEMANTIC_SCHOLAR to True and update SEMANTIC_SCHOLAR_ID.
 SEMANTIC_SCHOLAR_ID = "YOUR_SEMANTIC_SCHOLAR_ID"  # Optional
 USE_SEMANTIC_SCHOLAR = False  # Set to True for API-based data (recommended)
 HTML_FILE_PATH = "index.html"
@@ -17,21 +16,16 @@ HTML_FILE_PATH = "index.html"
 # FETCH CITATION DATA
 # ===========================
 def fetch_citation_data_google(scholar_url):
-    """Fetches citation count from Google Scholar (prone to blocking)."""
+    """Fetches citation count from Google Scholar."""
     headers = {
         'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                        'AppleWebKit/537.36 (KHTML, like Gecko) '
                        'Chrome/91.0.4472.124 Safari/537.36')
     }
     response = requests.get(scholar_url, headers=headers)
-
     if response.status_code != 200:
         print(f"⚠️ Failed to fetch Google Scholar data (HTTP {response.status_code})")
         return {"citation_count": "Error"}
-
-    # Print raw HTML to debug structure changes
-    print("🔍 Raw HTML Content (First 1000 characters):")
-    print(response.text[:1000])
 
     soup = BeautifulSoup(response.content, 'html.parser')
     citation_data = {}
@@ -39,15 +33,10 @@ def fetch_citation_data_google(scholar_url):
     try:
         # Find citation count element
         citation_count_element = soup.find_all('td', class_='gsc_rsb_std')
-        # Replace this block in the fetch_citation_data_google function
         if citation_count_element:
             citation_count = citation_count_element[0].text.strip()
-            # Handle cases where citation count is not a number
-            if citation_count.isdigit():
-                citation_data['citation_count'] = citation_count
-            else:
-                citation_data['citation_count'] = "Error"
-            print(f"✅ Extracted Citation Count: {citation_count}")
+            citation_data['citation_count'] = citation_count if citation_count.isdigit() else "Error"
+            print(f"✅ Extracted Citation Count: {citation_data['citation_count']}")
         else:
             print("⚠️ Could not find the citation count element!")
             citation_data['citation_count'] = "N/A"
@@ -57,17 +46,18 @@ def fetch_citation_data_google(scholar_url):
 
     return citation_data
 
+
 def fetch_citation_data_semantic(semantic_scholar_id):
-    """Fetches citation count using Semantic Scholar API (recommended)."""
+    """Fetches citation count using Semantic Scholar API."""
     url = f"https://api.semanticscholar.org/v1/author/{semantic_scholar_id}"
     response = requests.get(url)
-
     if response.status_code != 200:
         print(f"⚠️ Failed to fetch Semantic Scholar data (HTTP {response.status_code})")
         return {"citation_count": "Error"}
 
     data = response.json()
     return {"citation_count": str(data.get("citedByCount", 0))}
+
 
 # ===========================
 # UPDATE HTML FILE
@@ -83,10 +73,6 @@ def fix_and_update_citation_matrix(citation_data, file_path):
     # Read the HTML content
     with open(file_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
-
-    # Debugging: Print HTML content
-    print("🔍 Original HTML Content:")
-    print(html_content[:1000])
 
     # Step 1: Fix malformed HTML (replace "Citations: K5</span>" with proper structure)
     fixed_html_content = re.sub(
@@ -145,7 +131,6 @@ def commit_and_push_changes(repo_path, commit_message):
     os.chdir(repo_path)
     subprocess.run(['git', 'config', '--global', 'user.name', 'github-actions[bot]'])
     subprocess.run(['git', 'config', '--global', 'user.email', 'github-actions[bot]@users.noreply.github.com'])
-
     subprocess.run(['git', 'add', 'index.html'])
     commit_proc = subprocess.run(['git', 'commit', '--allow-empty', '-m', commit_message])
     if commit_proc.returncode == 0:
@@ -160,7 +145,6 @@ def commit_and_push_changes(repo_path, commit_message):
 if __name__ == "__main__":
     repo_path = os.getenv('GITHUB_WORKSPACE', os.getcwd())  # GitHub Actions workspace or current directory
     html_file_path = os.path.join(repo_path, HTML_FILE_PATH)
-
     print(f"📂 Repository path: {repo_path}")
     print(f"📄 HTML file path: {html_file_path}")
 
@@ -172,7 +156,6 @@ if __name__ == "__main__":
 
     # Update the HTML file if needed
     update_needed = fix_and_update_citation_matrix(citation_data, html_file_path)
- 
 
     # Commit & push only if changes were made
     if update_needed:
