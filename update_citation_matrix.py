@@ -77,14 +77,17 @@ def update_citation_matrix(citation_data, file_path):
     if not os.path.exists(file_path):
         print(f"❌ HTML file not found: {file_path}")
         return False
-
     with open(file_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
-
+    
+    # Debugging: Print HTML content
+    print("🔍 HTML Content:")
+    print(html_content[:1000])
+    
     # Check for the expected citation count placeholder in the HTML.
-    match = re.search(r'<span id="citation_count">(\d+)</span>', html_content)
+    match = re.search(r'<span id="citation_count">(.*?)</span>', html_content)
     if match:
-        old_citation_count = match.group(1)
+        old_citation_count = match.group(1).strip()
         if old_citation_count == citation_data["citation_count"]:
             print(f"🔹 No update needed: Citation count is still {old_citation_count}")
             return False  # No change detected
@@ -93,17 +96,15 @@ def update_citation_matrix(citation_data, file_path):
         print("Please ensure your index.html contains exactly:")
         print('<span id="citation_count">0</span>')
         return False
-
+    
     # Replace the citation count in the HTML
     new_html_content = re.sub(
-        r'(<span id="citation_count">)(\d+)(</span>)',
+        r'(<span id="citation_count">)(.*?)(</span>)',
         rf'\1{citation_data["citation_count"]}\3',
         html_content
     )
-
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(new_html_content)
-
     print(f"✅ Updated citation count to {citation_data['citation_count']} in {file_path}")
     return True
 
