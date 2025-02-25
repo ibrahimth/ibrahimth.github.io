@@ -90,7 +90,7 @@ def fix_and_update_citation_matrix(citation_data, file_path):
 
     # Step 1: Fix malformed HTML (replace "Citations: K5</span>" with proper structure)
     fixed_html_content = re.sub(
-        r'<div id="citation-matrix">\s*Citations:\s*K5</span>\s*</div>',
+        r'<div id="citation-matrix">\s*Citations:\s*[^<]*</span>\s*</div>',
         r'<div id="citation-matrix">\n    Citations: <span id="citation_count">0</span>\n</div>',
         html_content,
         flags=re.DOTALL
@@ -102,6 +102,15 @@ def fix_and_update_citation_matrix(citation_data, file_path):
         html_content = fixed_html_content
     else:
         print("🔹 No malformed HTML detected.")
+
+    # Ensure the placeholder exists
+    if not re.search(r'<span id="citation_count">', html_content):
+        print("⚠️ Placeholder missing. Inserting default structure.")
+        html_content = html_content.replace(
+            '</body>',
+            '<div id="citation-matrix">\n    Citations: <span id="citation_count">0</span>\n</div>\n</body>',
+            1
+        )
 
     # Step 2: Update the citation count in the corrected structure
     match = re.search(r'<span id="citation_count">(.*?)</span>', html_content)
@@ -129,22 +138,21 @@ def fix_and_update_citation_matrix(citation_data, file_path):
 
     print(f"✅ Updated citation count to {citation_data['citation_count']} in {file_path}")
     return True
-# ===========================
-# COMMIT & PUSH CHANGES
-# ===========================
+
+
 def commit_and_push_changes(repo_path, commit_message):
     """Commits and pushes changes to GitHub."""
     os.chdir(repo_path)
-    # Set Git user identity to avoid "Author identity unknown" errors.
     subprocess.run(['git', 'config', '--global', 'user.name', 'github-actions[bot]'])
     subprocess.run(['git', 'config', '--global', 'user.email', 'github-actions[bot]@users.noreply.github.com'])
-    
+
     subprocess.run(['git', 'add', 'index.html'])
-    commit_proc = subprocess.run(['git', 'commit', '-m', commit_message])
+    commit_proc = subprocess.run(['git', 'commit', '--allow-empty', '-m', commit_message])
     if commit_proc.returncode == 0:
         subprocess.run(['git', 'push'])
     else:
         print("⚠️ No changes to commit.")
+
 
 # ===========================
 # MAIN SCRIPT
