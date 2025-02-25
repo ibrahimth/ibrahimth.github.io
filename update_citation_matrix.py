@@ -72,19 +72,38 @@ def fetch_citation_data_semantic(semantic_scholar_id):
 # ===========================
 # UPDATE HTML FILE
 # ===========================
-def update_citation_matrix(citation_data, file_path):
-    """Updates citation count in index.html if changed."""
+def fix_and_update_citation_matrix(citation_data, file_path):
+    """
+    Fixes malformed HTML and updates the citation count in index.html.
+    """
     if not os.path.exists(file_path):
         print(f"❌ HTML file not found: {file_path}")
         return False
+
+    # Read the HTML content
     with open(file_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
-    
+
     # Debugging: Print HTML content
-    print("🔍 HTML Content:")
+    print("🔍 Original HTML Content:")
     print(html_content[:1000])
-    
-    # Check for the expected citation count placeholder in the HTML.
+
+    # Step 1: Fix malformed HTML (replace "Citations: K5</span>" with proper structure)
+    fixed_html_content = re.sub(
+        r'<div id="citation-matrix">\s*Citations:\s*K5</span>\s*</div>',
+        r'<div id="citation-matrix">\n    Citations: <span id="citation_count">0</span>\n</div>',
+        html_content,
+        flags=re.DOTALL
+    )
+
+    # Check if the fix was applied
+    if fixed_html_content != html_content:
+        print("✅ Fixed malformed HTML structure.")
+        html_content = fixed_html_content
+    else:
+        print("🔹 No malformed HTML detected.")
+
+    # Step 2: Update the citation count in the corrected structure
     match = re.search(r'<span id="citation_count">(.*?)</span>', html_content)
     if match:
         old_citation_count = match.group(1).strip()
@@ -96,18 +115,20 @@ def update_citation_matrix(citation_data, file_path):
         print("Please ensure your index.html contains exactly:")
         print('<span id="citation_count">0</span>')
         return False
-    
+
     # Replace the citation count in the HTML
     new_html_content = re.sub(
         r'(<span id="citation_count">)(.*?)(</span>)',
         rf'\1{citation_data["citation_count"]}\3',
         html_content
     )
+
+    # Write the updated HTML back to the file
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(new_html_content)
+
     print(f"✅ Updated citation count to {citation_data['citation_count']} in {file_path}")
     return True
-
 # ===========================
 # COMMIT & PUSH CHANGES
 # ===========================
@@ -142,7 +163,8 @@ if __name__ == "__main__":
         citation_data = fetch_citation_data_google(SCHOLAR_URL)
 
     # Update the HTML file if needed
-    update_needed = update_citation_matrix(citation_data, html_file_path)
+    update_needed = fix_and_update_citation_matrix(citation_data, html_file_path)
+ 
 
     # Commit & push only if changes were made
     if update_needed:
