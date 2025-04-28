@@ -1,7 +1,8 @@
 import os
 import subprocess
-from scholarly import search_author_id
+import scholarly
 import requests
+import re
 
 # ===========================
 # CONFIGURATION
@@ -16,10 +17,10 @@ HTML_FILE_PATH = "index.html"
 # ===========================
 def fetch_citation_data_scholarly(user_id):
     try:
-        author_iter = search_author_id(user_id)
-        author = next(author_iter, None)
-        if author and 'citedby' in author:
-            return {"citation_count": str(author['citedby'])}
+        author = scholarly.search_author_id(user_id)
+        filled_author = scholarly.fill(author)
+        if filled_author and 'citedby' in filled_author:
+            return {"citation_count": str(filled_author['citedby'])}
         else:
             print("⚠️ Could not find citation count with scholarly.")
             return {"citation_count": "Error"}
@@ -44,8 +45,6 @@ def fetch_citation_data_semantic(semantic_scholar_id):
 # ===========================
 # UPDATE HTML FILE
 # ===========================
-import re
-
 def fix_and_update_citation_matrix(citation_data, file_path):
     if not os.path.exists(file_path):
         print(f"❌ File not found: {file_path}")
@@ -54,7 +53,6 @@ def fix_and_update_citation_matrix(citation_data, file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
 
-    # Fix or add the citation matrix div
     fixed_html = re.sub(
         r'<div\s+id="citation-matrix">.*?</div>',
         r'<div id="citation-matrix">Citations: <span id="citation_count">0</span></div>',
@@ -69,7 +67,6 @@ def fix_and_update_citation_matrix(citation_data, file_path):
             1
         )
 
-    # Update citation count
     updated_html = re.sub(
         r'(<span id="citation_count">)(.*?)(</span>)',
         rf'\g<1>{citation_data["citation_count"]}\g<3>',
@@ -82,7 +79,7 @@ def fix_and_update_citation_matrix(citation_data, file_path):
 
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(updated_html)
-    
+
     print(f"✅ Updated citation to {citation_data['citation_count']}")
     return True
 
@@ -92,12 +89,12 @@ def fix_and_update_citation_matrix(citation_data, file_path):
 if __name__ == "__main__":
     repo_path = os.getenv('GITHUB_WORKSPACE', os.getcwd())
     html_path = os.path.join(repo_path, HTML_FILE_PATH)
-    
+
     if USE_SEMANTIC_SCHOLAR:
         data = fetch_citation_data_semantic(SEMANTIC_SCHOLAR_ID)
     else:
         data = fetch_citation_data_scholarly(SCHOLAR_USER_ID)
-    
+
     if fix_and_update_citation_matrix(data, html_path):
         subprocess.run(['git', 'config', '--global', 'user.name', 'github-actions[bot]'])
         subprocess.run(['git', 'config', '--global', 'user.email', 'github-actions[bot]@users.noreply.github.com'])
