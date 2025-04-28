@@ -1,13 +1,12 @@
 import os
-import re
 import subprocess
+from scholarly import search_author_id
 import requests
-from bs4 import BeautifulSoup
 
 # ===========================
 # CONFIGURATION
 # ===========================
-SCHOLAR_URL = "https://scholar.google.com/citations?user=p6fjrJIAAAAJ&hl=en"
+SCHOLAR_USER_ID = "p6fjrJIAAAAJ"  # Your Google Scholar user ID
 SEMANTIC_SCHOLAR_ID = "YOUR_SEMANTIC_SCHOLAR_ID"
 USE_SEMANTIC_SCHOLAR = False
 HTML_FILE_PATH = "index.html"
@@ -15,28 +14,38 @@ HTML_FILE_PATH = "index.html"
 # ===========================
 # FETCH CITATION DATA
 # ===========================
-def fetch_citation_data_google(scholar_url):
-    headers = {
-        'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                       'AppleWebKit/537.36 (KHTML, like Gecko) '
-                       'Chrome/91.0.4472.124 Safari/537.36')
-    }
-    response = requests.get(scholar_url, headers=headers)
-    if response.status_code != 200:
-        print(f"⚠️ Failed to fetch Google Scholar (HTTP {response.status_code})")
+def fetch_citation_data_scholarly(user_id):
+    try:
+        author_iter = search_author_id(user_id)
+        author = next(author_iter, None)
+        if author and 'citedby' in author:
+            return {"citation_count": str(author['citedby'])}
+        else:
+            print("⚠️ Could not find citation count with scholarly.")
+            return {"citation_count": "Error"}
+    except Exception as e:
+        print(f"⚠️ Scholarly failed: {e}")
         return {"citation_count": "Error"}
-    
-    soup = BeautifulSoup(response.content, 'html.parser')
-    citation_count_element = soup.find('td', class_='gsc_rsb_std')
-    
-    if citation_count_element:
-        citation_text = citation_count_element.text.strip()
-        return {"citation_count": citation_text if citation_text.isdigit() else "Error"}
-    return {"citation_count": "Error"}
+
+def fetch_citation_data_semantic(semantic_scholar_id):
+    url = f"https://api.semanticscholar.org/graph/v1/author/{semantic_scholar_id}?fields=citationCount"
+    try:
+        resp = requests.get(url)
+        if resp.status_code == 200:
+            data = resp.json()
+            return {"citation_count": str(data.get("citationCount", "Error"))}
+        else:
+            print(f"⚠️ Failed to fetch Semantic Scholar (HTTP {resp.status_code})")
+            return {"citation_count": "Error"}
+    except Exception as e:
+        print(f"⚠️ Semantic Scholar failed: {e}")
+        return {"citation_count": "Error"}
 
 # ===========================
 # UPDATE HTML FILE
 # ===========================
+import re
+
 def fix_and_update_citation_matrix(citation_data, file_path):
     if not os.path.exists(file_path):
         print(f"❌ File not found: {file_path}")
@@ -45,15 +54,14 @@ def fix_and_update_citation_matrix(citation_data, file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
 
-    # Fix malformed HTML structure
+    # Fix or add the citation matrix div
     fixed_html = re.sub(
-        r'<div\s+id="citation-matrix">.*?</div>',  # Match any content inside the div
+        r'<div\s+id="citation-matrix">.*?</div>',
         r'<div id="citation-matrix">Citations: <span id="citation_count">0</span></div>',
         html_content,
         flags=re.DOTALL
     )
 
-    # Ensure the span exists even if the div wasn't found
     if '<span id="citation_count">' not in fixed_html:
         fixed_html = fixed_html.replace(
             '</body>',
@@ -88,7 +96,7 @@ if __name__ == "__main__":
     if USE_SEMANTIC_SCHOLAR:
         data = fetch_citation_data_semantic(SEMANTIC_SCHOLAR_ID)
     else:
-        data = fetch_citation_data_google(SCHOLAR_URL)
+        data = fetch_citation_data_scholarly(SCHOLAR_USER_ID)
     
     if fix_and_update_citation_matrix(data, html_path):
         subprocess.run(['git', 'config', '--global', 'user.name', 'github-actions[bot]'])
