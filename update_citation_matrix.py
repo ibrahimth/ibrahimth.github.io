@@ -17,8 +17,9 @@ HTML_FILE_PATH = "index.html"
 # ===========================
 def fetch_citation_data_scholarly(user_id):
     try:
-        author = scholarly.search_author_id(user_id)
-        filled_author = scholarly.fill(author)
+        scholarly_obj = scholarly.Scholarly()
+        author = scholarly_obj.search_author_id(user_id)
+        filled_author = scholarly_obj.fill(author)
         if filled_author and 'citedby' in filled_author:
             return {"citation_count": str(filled_author['citedby'])}
         else:
