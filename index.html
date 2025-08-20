@@ -3,263 +3,858 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Personal webpage of Ibrahim Al-Thamary, Ph.D. in Communication Engineering. Includes professional summary, education, work experience, courses, publications, and more.">
-    <title>Ibrahim Al-Thamary</title>
+    <meta name="description" content="Ibrahim Al-Thamary, Ph.D. - Postdoctoral Fellow at KFUPM specializing in AI, V2X Networks, and Communication Engineering">
+    <title>Ibrahim Al-Thamary | AI & Communication Systems Researcher</title>
     <link rel="icon" href="https://i.sstatic.net/AnJVo.png?s=256" type="image/png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
+        * {
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --accent: #f093fb;
+            --dark: #1a202c;
+            --light: #f7fafc;
+            --glass: rgba(255, 255, 255, 0.1);
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             color: #333;
             overflow-x: hidden;
         }
-        .header {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #333;
-            color: #fff;
-            padding: 20px;
-            border-radius: 15px 15px 0 0;
+        
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            box-sizing: border-box;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.05" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,106.7C1248,96,1344,96,1392,96L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat center;
+            background-size: cover;
+            pointer-events: none;
+            animation: wave 20s linear infinite;
         }
-        .header img {
-            width: 150px;
-            height: 150px;
+        
+        @keyframes wave {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        
+        /* Header Section */
+        .hero {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            margin: 30px auto;
+            max-width: 1200px;
+            padding: 60px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.8s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+            opacity: 0.1;
+            animation: rotate 30s linear infinite;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .hero-content {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .profile-img {
+            width: 180px;
+            height: 180px;
             border-radius: 50%;
             object-fit: cover;
-            margin-bottom: 20px;
+            border: 5px solid transparent;
+            background: linear-gradient(white, white) padding-box,
+                        linear-gradient(135deg, var(--primary), var(--secondary)) border-box;
+            animation: float 3s ease-in-out infinite;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
         }
-        .header h1 {
-            margin: 0;
-            font-size: 2em;
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
-        .header p {
-            margin: 5px 0;
-            font-size: 1.2em;
+        
+        .hero-text h1 {
+            font-size: 3em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            animation: shimmer 3s ease-in-out infinite;
         }
-        .header .profile-links a {
-            color: #1e90ff;
+        
+        @keyframes shimmer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .hero-text .title {
+            font-size: 1.3em;
+            color: #555;
+            margin-bottom: 15px;
+        }
+        
+        .social-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 50%;
             text-decoration: none;
-            margin-right: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
-        .header .profile-links a:hover {
-            text-decoration: underline;
+        
+        .social-links a:hover {
+            transform: translateY(-5px) scale(1.1);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
         }
-        .toolbar {
+        
+        /* Navigation */
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto 30px;
+            padding: 0 20px;
+        }
+        
+        .nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 15px 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             display: flex;
             justify-content: center;
-            background: #444;
-            padding: 10px;
-            border-radius: 0 0 15px 15px;
-            border-bottom: 2px solid #fff;
             flex-wrap: wrap;
+            gap: 10px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
         }
-        .toolbar ul {
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .toolbar ul li {
+        
+        .nav-btn {
             padding: 10px 20px;
-        }
-        .toolbar ul li a {
-            color: #fff;
+            background: linear-gradient(135deg, transparent, transparent);
+            border: 2px solid transparent;
+            border-radius: 30px;
+            color: #555;
             text-decoration: none;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
+            gap: 8px;
+            font-weight: 500;
         }
-        .toolbar ul li a i {
-            margin-right: 5px;
+        
+        .nav-btn:hover {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
         }
-        .toolbar ul li a:hover {
-            color: #0779e4;
-        }
+        
+        /* Main Content */
         .container {
-            width: 90%;
-            margin: 20px auto;
-            box-sizing: border-box;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
-        .main-content {
-            padding: 20px;
-            box-sizing: border-box;
-            overflow-y: auto;
+        
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            animation: fadeInUp 0.8s ease-out;
+            transition: transform 0.3s ease;
         }
-        .main-content section {
-            padding: 20px;
-            margin-bottom: 20px;
-            background: #fff;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        
+        .section:hover {
+            transform: translateY(-5px);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .section h2 {
+            font-size: 2em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .section h2 i {
+            font-size: 0.8em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 25px;
             border-radius: 15px;
-        }
-        footer {
-            padding: 20px;
-            background: #333;
-            color: #fff;
             text-align: center;
+            transition: transform 0.3s ease;
         }
-        h2 {
-            color: #0779e4;
+        
+        .stat-card:hover {
+            transform: scale(1.05);
         }
-        ul {
-            list-style-type: none;
-            padding: 0;
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
         }
-        ul li {
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
         }
-        ul li:last-child {
-            border: none;
+        
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 40px;
         }
-        @media (min-width: 768px) {
-            .header {
-                flex-direction: row;
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: linear-gradient(180deg, var(--primary), var(--secondary));
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-bottom: 30px;
+            animation: slideInLeft 0.6s ease-out;
+        }
+        
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
             }
-            .header img {
-                margin-right: 20px;
-                margin-bottom: 0;
+            to {
+                opacity: 1;
+                transform: translateX(0);
             }
-            .container {
-                width: 80%;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -28px;
+            top: 5px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid var(--primary);
+            z-index: 1;
+        }
+        
+        .timeline-content {
+            background: linear-gradient(135deg, #f5f5f5, #ffffff);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .timeline-content:hover {
+            transform: translateX(10px);
+        }
+        
+        .timeline-date {
+            color: var(--primary);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        /* Publications */
+        .pub-year {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 8px 20px;
+            border-radius: 30px;
+            display: inline-block;
+            margin: 20px 0 15px;
+            font-weight: bold;
+        }
+        
+        .publication {
+            background: linear-gradient(135deg, #f8f8f8, #ffffff);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+        
+        .publication:hover {
+            transform: translateX(10px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+        }
+        
+        .pub-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .pub-authors {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .pub-venue {
+            color: var(--primary);
+            font-style: italic;
+            font-size: 0.9em;
+        }
+        
+        .pub-citations {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        
+        /* Skills */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .skill-tag {
+            background: linear-gradient(135deg, #f0f0f0, #ffffff);
+            padding: 12px 20px;
+            border-radius: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .skill-tag:hover {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Footer */
+        footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px auto;
+            max-width: 1200px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-content {
+                flex-direction: column;
+                text-align: center;
             }
+            
+            .hero-text h1 {
+                font-size: 2em;
+            }
+            
+            .social-links {
+                justify-content: center;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Scroll animations */
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease;
+        }
+        
+        .scroll-reveal.active {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 </head>
 <body>
-    
- 
-    <div class="header">
-        <img src="https://scholar.googleusercontent.com/citations?view_op=view_photo&user=p6fjrJIAAAAJ&citpid=9" alt="Profile picture of Ibrahim Al-Thamary">
-        <div>
-            <h1>Ibrahim A. ALthamary</h1>
-            <p>Post Doctoral Fellow at Intelligent Secure Systems IRC </p>
-            <p>King Fahd University of Petroleum and Minerals (KFUPM)</p>
-            <div class="profile-links">
-                <a href="mailto:i.ibrahim42009@gmail.com"><i class="fas fa-envelope icon"></i>Email</a>
-                <a href="https://github.com/ibrahimth" target="_blank"><i class="fab fa-github icon"></i>GitHub</a>
-                <a href="https://scholar.google.com/citations?user=p6fjrJIAAAAJ&hl=en" target="_blank"><i class="fas fa-graduation-cap icon"></i>Google Scholar</a>
-                <a href="https://stackoverflow.com/users/4694757/i-al-thamary" target="_blank"><i class="fab fa-stack-overflow icon"></i>Stack Overflow</a>
-                <a href="https://orcid.org/0000-0001-7918-0136" target="_blank"><i class="fas fa-id-badge icon"></i>ORCID</a>
-                <a href="https://www.researchgate.net/profile/Ibrahim-Althamary?ev=hdr_xprf&amp;_tp=eyJjb250ZXh0Ijp7ImZpcnN0UGFnZSI6ImhvbWUiLCJwYWdlIjoiaG9tZSIsInBvc2l0aW9uIjoiZ2xvYmFsSGVhZGVyIn19" target="_blank"><i class="fab fa-researchgate icon"></i>ResearchGate</a>
+    <!-- Hero Section -->
+    <div class="hero">
+        <div class="hero-content">
+            <img src="https://scholar.googleusercontent.com/citations?view_op=view_photo&user=p6fjrJIAAAAJ&citpid=9" alt="Ibrahim Al-Thamary" class="profile-img">
+            <div class="hero-text">
+                <h1>Ibrahim A. Al-Thamary</h1>
+                <p class="title">Postdoctoral Fellow | AI & Communication Systems Researcher</p>
+                <p><i class="fas fa-university"></i> Intelligent Secure Systems IRC, KFUPM</p>
+                <p><i class="fas fa-map-marker-alt"></i> Dhahran, Saudi Arabia</p>
+                <div class="social-links">
+                    <a href="mailto:i.ibrahim42009@gmail.com" title="Email"><i class="fas fa-envelope"></i></a>
+                    <a href="https://github.com/ibrahimth" target="_blank" title="GitHub"><i class="fab fa-github"></i></a>
+                    <a href="https://scholar.google.com/citations?user=p6fjrJIAAAAJ&hl=en" target="_blank" title="Google Scholar"><i class="fas fa-graduation-cap"></i></a>
+                    <a href="https://stackoverflow.com/users/4694757/i-al-thamary" target="_blank" title="Stack Overflow"><i class="fab fa-stack-overflow"></i></a>
+                    <a href="https://orcid.org/0000-0001-7918-0136" target="_blank" title="ORCID"><i class="fab fa-orcid"></i></a>
+                    <a href="https://www.researchgate.net/profile/Ibrahim-Althamary" target="_blank" title="ResearchGate"><i class="fab fa-researchgate"></i></a>
+                </div>
             </div>
         </div>
     </div>
-    <div class="toolbar">
-        <ul>
-            <li><a href="#home"><i class="fas fa-home"></i>Home</a></li>
-            <li><a href="#education"><i class="fas fa-graduation-cap"></i>Education</a></li>
-            <li><a href="#experience"><i class="fas fa-briefcase"></i>Experience</a></li>
-            <li><a href="#Teaching"><i class="fas fa-book"></i>Teaching</a></li>
-            <li><a href="#publications"><i class="fas fa-newspaper"></i>Publications</a></li>
-            <li><a href="#projects"><i class="fas fa-project-diagram"></i>Projects</a></li>
-            <li> </li>
-        </ul>
+    
+    <!-- Navigation -->
+    <div class="nav-container">
+        <nav class="nav">
+            <a href="#about" class="nav-btn"><i class="fas fa-user"></i> About</a>
+            <a href="#stats" class="nav-btn"><i class="fas fa-chart-bar"></i> Impact</a>
+            <a href="#education" class="nav-btn"><i class="fas fa-graduation-cap"></i> Education</a>
+            <a href="#experience" class="nav-btn"><i class="fas fa-briefcase"></i> Experience</a>
+            <a href="#publications" class="nav-btn"><i class="fas fa-book"></i> Publications</a>
+            <a href="#teaching" class="nav-btn"><i class="fas fa-chalkboard-teacher"></i> Teaching</a>
+            <a href="#projects" class="nav-btn"><i class="fas fa-project-diagram"></i> Projects</a>
+            <a href="#skills" class="nav-btn"><i class="fas fa-tools"></i> Skills</a>
+        </nav>
     </div>
-
+    
+    <!-- Main Content -->
     <div class="container">
-        <div class="main-content">
-           <section id="home">
-                <h2>Bio</h2>
-                <p>
-                    Post Doctoral Fellow at the Intelligent Secure Systems IRC, King Fahd University of Petroleum and Minerals (KFUPM).  
-                    Ph.D. in Communication Engineering with extensive experience in teaching, research, and project management.  
-                    Skilled in AI, machine learning, V2X networks, and cloud computing.
-                </p>
-            </section>
+        <!-- About Section -->
+        <section id="about" class="section scroll-reveal">
+            <h2><i class="fas fa-user-circle"></i> About Me</h2>
+            <p style="font-size: 1.1em; line-height: 1.8;">
+                I am a Postdoctoral Fellow at the Intelligent Secure Systems IRC, King Fahd University of Petroleum and Minerals (KFUPM). 
+                With a Ph.D. in Communication Engineering from National Central University, my research focuses on the intersection of 
+                artificial intelligence, vehicular networks, and next-generation communication systems. I specialize in developing 
+                innovative solutions for V2X networks, satellite-aided vehicular communications, and multi-agent reinforcement learning 
+                systems that enhance connectivity and spectrum management in Beyond 5G networks.
+            </p>
+        </section>
+        
+        <!-- Stats Section -->
+        <section id="stats" class="section scroll-reveal">
+            <h2><i class="fas fa-chart-line"></i> Research Impact</h2>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number">20+</div>
+                    <div class="stat-label">Publications</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">120+</div>
+                    <div class="stat-label">Citations</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">10+</div>
+                    <div class="stat-label">Courses Taught</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">5+</div>
+                    <div class="stat-label">Research Projects</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Education Section -->
+        <section id="education" class="section scroll-reveal">
+            <h2><i class="fas fa-graduation-cap"></i> Education</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">2019 - 2024</div>
+                        <strong>Ph.D. in Communication Engineering</strong><br>
+                        National Central University, Taiwan
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">2014 - 2017</div>
+                        <strong>M.S. in Computer Engineering</strong><br>
+                        King Fahd University of Petroleum and Minerals (KFUPM), Saudi Arabia
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">2005 - 2010</div>
+                        <strong>B.S. in Computer Science</strong><br>
+                        Thamar University, Yemen
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Experience Section -->
+        <section id="experience" class="section scroll-reveal">
+            <h2><i class="fas fa-briefcase"></i> Professional Experience</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">2025 - Present</div>
+                        <strong>Postdoctoral Fellow</strong><br>
+                        Intelligent Secure Systems IRC, KFUPM
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">2022 - 2024</div>
+                        <strong>Lecturer</strong><br>
+                        Yuan Ze University, Taiwan
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">2019 - 2024</div>
+                        <strong>Researcher</strong><br>
+                        National Central University, Taiwan
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">2019 - 2021</div>
+                        <strong>Teaching Assistant</strong><br>
+                        National Central University, Taiwan
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-date">2010 - 2013</div>
+                        <strong>Academic Staff</strong><br>
+                        Thamar University, Yemen
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Publications Section -->
+        <section id="publications" class="section scroll-reveal">
+            <h2><i class="fas fa-book"></i> Selected Publications</h2>
             
-            <section id="education">
-                <h2>Education</h2>
-                <ul>
-                    <li>Ph.D. in Communication Engineering, National Central University</li>
-                    <li>M.S. in Computer Engineering, King Fahd University of Petroleum and Minerals (KFUPM)</li>
-                    <li>B.S. in Computer Science, Thamar University</li>
-                </ul>
-            </section>
+            <div class="pub-year">2025</div>
+            <div class="publication">
+                <div class="pub-title">Connectivity Management in Satellite-Aided Vehicular Networks with Multi-Head Attention-Based State Estimation</div>
+                <div class="pub-authors">I. Althamary, C.F. Chou, C.W. Huang</div>
+                <div class="pub-venue">arXiv preprint arXiv:2508.01060</div>
+            </div>
             
-            <section id="experience">
-                <h2>Work Experience</h2>
-                <ul>
-                    <li>Post Doctoral Fellow, Intelligent Secure Systems IRC, King Fahd University of Petroleum and Minerals (KFUPM) (2025–Present)</li>
-                    <li>Lecturer, Yuan Ze University (2022–2024)</li>
-                    <li>Researcher, National Central University (2019–2024)</li>
-                    <li>Teaching Assistant, National Central University (2019–2021)</li>
-                    <li>Academic Staff, Thamar University (2010–2013)</li>
-                </ul>
-            </section>
-            <section id="Teaching">
-                <h2>Teaching</h2>
-                <ul>
-                    <li>Advanced Mathematics for Engineering I</li>
-                    <li>Deep Learning</li>
-                    <li>Reinforcement Learning using Python</li>
-                    <li>Data Structure</li>
-                    <li>Linear Algebra</li>
-                    <li>Computer Networks</li>
-                    <li>Introduction to AI and Information Technology</li>
-                    <li>Fundamentals of Language Programming</li>
-                    <li>Algorithm</li>
-                    <li>Python</li>
-                </ul>
-            </section>
-            <section id="publications">
-              <h2 style="display: inline;">Publications</h2> 
-<!-- <h3 style="display: inline; margin-left: 10px;">
-    <div id="citation-matrix" style="display: inline;">
-        Citations: <span id="citation_count">Error</span>
+            <div class="pub-year">2024</div>
+            <div class="publication">
+                <div class="pub-title">A Multi-Layer Blockchain Simulator and Performance Evaluation of Social Internet of Vehicles with Multi-Connectivity Management</div>
+                <div class="pub-authors">Y.T. Sun, H.C. Lee, Y.C. Yu, T.F. Wu, I. Althamary, C.W. Huang</div>
+                <div class="pub-venue">arXiv preprint arXiv:2411.14000</div>
+                <span class="pub-citations">1 citation</span>
+            </div>
+            
+            <div class="publication">
+                <div class="pub-title">A Learning-Based Energy-Efficient Device Grouping Mechanism for Massive Machine-Type Communication in the Context of Beyond 5G Networks</div>
+                <div class="pub-authors">R. Boisguene, I. Althamary, C.W. Huang</div>
+                <div class="pub-venue">Journal of Sensor and Actuator Networks 13(3), 33</div>
+                <span class="pub-citations">3 citations</span>
+            </div>
+            
+            <div class="publication">
+                <div class="pub-title">Enhanced Multi-Task Traffic Forecasting in Beyond 5G Networks: Leveraging Transformer Technology and Multi-Source Data Fusion</div>
+                <div class="pub-authors">I. Althamary, R. Boisguene, C.W. Huang</div>
+                <div class="pub-venue">Future Internet 16(5), 159</div>
+                <span class="pub-citations">4 citations</span>
+            </div>
+            
+            <div class="pub-year">2023</div>
+            <div class="publication">
+                <div class="pub-title">Multi-Agent Deep Reinforcement Learning for Spectrum Management in V2X with Social Roles</div>
+                <div class="pub-authors">P.Y. Chen, Y.H. Zheng, I. Althamary, J.L. Chern, C.W. Huang</div>
+                <div class="pub-venue">GLOBECOM 2023 - IEEE Global Communications Conference, pp. 2293-2298</div>
+                <span class="pub-citations">2 citations</span>
+            </div>
+            
+            <div class="publication">
+                <div class="pub-title">A DRL-Based Automated Algorithm Selection Framework for Cross-Layer QoS-Aware Scheduling and Antenna Allocation in Massive MIMO Systems</div>
+                <div class="pub-authors">C.W. Huang, I. Althamary, Y.C. Chou, H.Y. Chen, C.F. Chou</div>
+                <div class="pub-venue">IEEE Access 11, pp. 13243-13256</div>
+                <span class="pub-citations">19 citations</span>
+            </div>
+            
+            <div class="pub-year">2020</div>
+            <div class="publication">
+                <div class="pub-title">Spectrum Management with Congestion Avoidance for V2X Based on Multi-Agent Reinforcement Learning</div>
+                <div class="pub-authors">I. Althamary, J.Y. Lin, C.W. Huang</div>
+                <div class="pub-venue">2020 IEEE Globecom Workshops, pp. 1-6</div>
+                <span class="pub-citations">2 citations</span>
+            </div>
+            
+            <div class="publication">
+                <div class="pub-title">Big Data/Machine Learning and D2D</div>
+                <div class="pub-authors">I. Althamary, C.W. Huang</div>
+                <div class="pub-venue">Wiley 5G Ref: The Essential 5G Reference Online, pp. 1-18</div>
+            </div>
+            
+            <div class="pub-year">2019</div>
+            <div class="publication">
+                <div class="pub-title">A Survey on Multi-Agent Reinforcement Learning Methods for Vehicular Networks</div>
+                <div class="pub-authors">I. Althamary, C.W. Huang, P. Lin</div>
+                <div class="pub-venue">15th International Wireless Communications & Mobile Computing Conference (IWCMC)</div>
+                <span class="pub-citations">65 citations</span>
+            </div>
+            
+            <div class="pub-year">2018</div>
+            <div class="publication">
+                <div class="pub-title">Popularity-Based Cache Placement for Fog Networks</div>
+                <div class="pub-authors">I. Althamary, C.W. Huang, P. Lin, S.R. Yang, C.W. Cheng</div>
+                <div class="pub-venue">14th International Wireless Communications & Mobile Computing Conference (IWCMC)</div>
+                <span class="pub-citations">32 citations</span>
+            </div>
+            
+            <div class="pub-year">2017</div>
+            <div class="publication">
+                <div class="pub-title">A More Secure Scheme for CAPTCHA-Based Authentication in Cloud Environment</div>
+                <div class="pub-authors">I.A. Althamary, E.S.M. El-Alfy</div>
+                <div class="pub-venue">8th International Conference on Information Technology (ICIT), pp. 405-411</div>
+                <span class="pub-citations">15 citations</span>
+            </div>
+        </section>
+        
+        <!-- Teaching Section -->
+        <section id="teaching" class="section scroll-reveal">
+            <h2><i class="fas fa-chalkboard-teacher"></i> Teaching Experience</h2>
+            <div class="skills-grid">
+                <div class="skill-tag">Advanced Mathematics for Engineering</div>
+                <div class="skill-tag">Deep Learning</div>
+                <div class="skill-tag">Reinforcement Learning</div>
+                <div class="skill-tag">Data Structures</div>
+                <div class="skill-tag">Linear Algebra</div>
+                <div class="skill-tag">Computer Networks</div>
+                <div class="skill-tag">AI & Information Technology</div>
+                <div class="skill-tag">Programming Languages</div>
+                <div class="skill-tag">Algorithms</div>
+                <div class="skill-tag">Python Programming</div>
+            </div>
+        </section>
+        
+        <!-- Projects Section -->
+        <section id="projects" class="section scroll-reveal">
+            <h2><i class="fas fa-project-diagram"></i> Research Projects</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <strong>Satellite-Aided V2X Networks</strong><br>
+                        Developing multi-head attention-based state estimation for connectivity management
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <strong>V2X Multi-Agent Reinforcement Learning</strong><br>
+                        Spectrum management and congestion avoidance using MARL techniques
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <strong>Fog Computing</strong><br>
+                        Popularity-based cache placement strategies for edge networks
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <strong>Volumetric Streaming</strong><br>
+                        Next-generation multimedia delivery systems
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <strong><a href="http://f1-preview.freehostingeu.com/esd-c.com/" target="_blank" style="color: var(--primary);">Electronic Sabic Dictionary</a></strong><br>
+                        Comprehensive translation tool for ancient Sabic language to Arabic, English, and French
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Skills Section -->
+        <section id="skills" class="section scroll-reveal">
+            <h2><i class="fas fa-tools"></i> Technical Skills</h2>
+            <div class="skills-grid">
+                <div class="skill-tag">Machine Learning</div>
+                <div class="skill-tag">Deep Learning</div>
+                <div class="skill-tag">Reinforcement Learning</div>
+                <div class="skill-tag">V2X Networks</div>
+                <div class="skill-tag">5G/6G Systems</div>
+                <div class="skill-tag">Cloud Computing</div>
+                <div class="skill-tag">Edge Computing</div>
+                <div class="skill-tag">Python</div>
+                <div class="skill-tag">TensorFlow</div>
+                <div class="skill-tag">PyTorch</div>
+                <div class="skill-tag">MATLAB</div>
+                <div class="skill-tag">Network Simulation</div>
+            </div>
+        </section>
     </div>
-</h3>  -->
-                <h3>Journals</h3>
-                <ul>
-                    <li>Althamary I, Boisguene R, Huang C-W. Enhanced Multi-Task Traffic Forecasting in Beyond 5G Networks: Leveraging Transformer Technology and Multi-Source Data Fusion. Future Internet. 2024.</li>
-                    <li>Boisguene, Rubbens, Ibrahim Althamary, and Chih-Wei Huang. 2024. "A Learning-Based Energy-Efficient Device Grouping Mechanism for Massive Machine-Type Communication in the IoT." Sensors. 2023.</li>
-                    <li>Huang, C. W., Althamary, I., Chou, Y. C., Chen, H. Y., & Chou, C. F. (2023). A DRL-Based Automated Algorithm Selection Framework for Cross-Layer QoS-Aware Scheduling and Allocation. IEEE Transactions on Vehicular Technology.</li>
-                    <li>Althamary, I. A., & Alkharobi, T. M. (2016). Secure file sharing in multi-clouds using Shamir’s secret sharing scheme. Transactions on Networks and Communications, 4(6), 1-10.</li>
-                </ul>
-                <h3>Conference Papers</h3>
-                <ul>
-                    <li>Chen, P. Y., Zheng, Y. H., Althamary, I., Chern, J. L., & Huang, C. W. (2023, December). Multi-Agent Deep Reinforcement Learning for Spectrum Management in V2X with Social Awareness. In 2023 IEEE Global Communications Conference (GLOBECOM).</li>
-                    <li>Althamary, I., Lin, J. Y., & Huang, C. W. (2020, December). Spectrum Management with Congestion Avoidance for V2X Based on Multi-Agent Reinforcement Learning. In 2020 IEEE International Conference on Communications (ICC).</li>
-                    <li>Althamary, I., Huang, C. W., & Lin, P. (2019, June). A Survey on Multi-Agent Reinforcement Learning Methods for Vehicular Networks. In 2019 15th International Wireless Communications & Mobile Computing Conference (IWCMC).</li>
-                    <li>Althamary, I., Hussain, MA., and Li, YH. (2019). An improved framework of accurate iris segmentation under relaxed imaging constraints using total variation model, The 32h IEEE International Conference on Computer Vision (ICCV).</li>
-                    <li>Xue-Hai Han, Ibrahim Althamary, Chih-Wei Huang. (2018) Efficient Cache Assignment in Fog-Cloud Networks. In TANET2018 Taiwan Network Conference.</li>
-                    <li>Althamary, I., Huang, C. W., Lin, P., Yang, S. R., & Cheng, C. W. (2018, June). Popularity-Based Cache Placement for Fog Networks. In 2018 14th International Wireless Communications & Mobile Computing Conference (IWCMC).</li>
-                    <li>Althamary, I. A., & El-Alfy, E. S. M. (2017, May). A more secure scheme for CAPTCHA-based authentication in cloud environment. In 2017 8th International Conference on Information Technology (ICIT).</li>
-                </ul>
-                <h3>Book Chapters</h3>
-                <ul>
-                    <li>Althamary, I. and Huang, C.-W. (2020). Big Data/Machine Learning and D2D. In Wiley 5G Ref (eds R. Tafazolli, C.-L. Wang and P. Chatzimisios). </li>
-                </ul>
-                <h3>Theses</h3>
-                <ul>
-                    <li>Al-thamary, I. (2017). Secure cloud storage using a secret sharing scheme. Available from ProQuest Dissertations & Theses A&I.</li>
-                    <li>Al-thamary, I. (2024). Scalable Spectrum and Connectivity Management in Satellite-Aided Vehicular Networks." PhD diss., National Central University, 2024.</li>
-                </ul>
-            </section>
-            <section id="projects">
-                <h2>Projects</h2>
-                <ul>
-                    <li>Fog Computing</li>
-                    <li>V2X Multi-Agent Reinforcement Learning</li>
-                    <li>Volumetric Streaming</li>
-                    <li>
-                        <a href="http://f1-preview.freehostingeu.com/esd-c.com/" target="_blank">Electronic Sabic Dictionary</a>
-                        <p class="project-description">The Electronic Sabic Dictionary is a comprehensive tool that translates Sabic into Arabic, English, and French. It incorporates the ancient Sabic dictionary with modern languages.</p>
-                    </li>
-                </ul>
-            </section>
-        </div>
-    </div>
+    
+    <!-- Footer -->
     <footer>
-        <p>Ibrahim Al-Thamary &copy; 2025</p>
+        <p style="color: #666;">© 2025 Ibrahim Al-Thamary | Building the Future of Connected Intelligence</p>
+        <p style="margin-top: 10px;">
+            <a href="mailto:i.ibrahim42009@gmail.com" style="color: var(--primary); text-decoration: none;">
+                <i class="fas fa-envelope"></i> Get in Touch
+            </a>
+        </p>
     </footer>
+    
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // Scroll reveal animation
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+        
+        document.querySelectorAll('.scroll-reveal').forEach(el => {
+            observer.observe(el);
+        });
+        
+        // Add animation to stats on scroll
+        let animated = false;
+        const animateStats = () => {
+            if (animated) return;
+            const statsSection = document.getElementById('stats');
+            const rect = statsSection.getBoundingClientRect();
+            if (rect.top <= window.innerHeight && rect.bottom >= 0) {
+                animated = true;
+                document.querySelectorAll('.stat-number').forEach(stat => {
+                    const target = parseInt(stat.innerText);
+                    let current = 0;
+                    const increment = target / 50;
+                    const timer = setInterval(() => {
+                        current += increment;
+                        if (current >= target) {
+                            stat.innerText = stat.innerText.includes('+') ? target + '+' : target;
+                            clearInterval(timer);
+                        } else {
+                            stat.innerText = Math.floor(current) + (stat.innerText.includes('+') ? '+' : '');
+                        }
+                    }, 30);
+                });
+            }
+        };
+        
+        window.addEventListener('scroll', animateStats);
+        
+        // Parallax effect for hero section
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const hero = document.querySelector('.hero');
+            hero.style.transform = `translateY(${scrolled * 0.3}px)`;
+        });
+    </script>
 </body>
 </html>
