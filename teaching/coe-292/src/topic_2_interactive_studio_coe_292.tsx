@@ -517,7 +517,7 @@ function GoalTreeRender({ node, depth }: { node: any; depth: number; }) {
   const isLeaf = node.type === 'LEAF';
   return (
     <div className="ml-2" style={{ marginLeft: depth * 12 }}>
-      <div className={cn("p-2 rounded-xl border bg-background inline-flex items-center gap-2", isLeaf ? "border-emerald-300" : "border-sky-300")}> 
+      <div className={cn("p-2 rounded-xl border bg-background inline-flex items-center gap-2", isLeaf ? "border-emerald-300" : "border-sky-300")}>
         <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{isLeaf? 'LEAF' : 'AND'}</span>
         <span className="text-sm font-mono">{node.label}</span>
       </div>
@@ -826,7 +826,7 @@ function SymbolicIntegration() {
 
   const render = (node: any, depth=0) => (
     <div className="ml-2" style={{ marginLeft: depth * 12 }}>
-      <div className={cn("p-2 rounded-xl border bg-background inline-flex items-center gap-2", node.done ? "border-emerald-300" : "border-transparent")}> 
+      <div className={cn("p-2 rounded-xl border bg-background inline-flex items-center gap-2", node.done ? "border-emerald-300" : "border-transparent")}>
         <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{node.type}</span>
         <span className="text-sm">{node.label}</span>
         {node.done && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
