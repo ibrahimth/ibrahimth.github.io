@@ -8,16 +8,15 @@
     <link rel="icon" href="https://i.sstatic.net/AnJVo.png?s=256" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Google Tag Manager -->
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-1MW6SJEZRH"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-1MW6SJEZRH');
-</script
+    <!-- Google Tag Manager (GTM only; GA4 configured inside GTM) -->
+    <script>
+    (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;
+    j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+    f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-W33F38Z9');
+    </script>
     <!-- End Google Tag Manager -->
 
     <style>
@@ -91,10 +90,7 @@
             font-size: 2em; background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 25px; display: flex; align-items: center; gap: 15px;
         }
-        .section h2 i {
-            font-size: 0.8em; background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
+        .section h2 i { font-size: 0.8em; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 25px; border-radius: 15px; text-align: center; transition: transform 0.3s ease; }
         .stat-card:hover { transform: scale(1.05); }
@@ -108,45 +104,22 @@
             content: ''; position: absolute; left: -28px; top: 5px; width: 15px; height: 15px; border-radius: 50%;
             background: white; border: 3px solid var(--primary); z-index: 1;
         }
-        .timeline-content {
-            background: linear-gradient(135deg, #f5f5f5, #ffffff); padding: 20px; border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease;
-        }
+        .timeline-content { background: linear-gradient(135deg, #f5f5f5, #ffffff); padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease; }
         .timeline-content:hover { transform: translateX(10px); }
         .timeline-date { color: var(--primary); font-weight: bold; margin-bottom: 5px; }
-        .pub-year {
-            background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 8px 20px; border-radius: 30px;
-            display: inline-block; margin: 20px 0 15px; font-weight: bold;
-        }
-        .publication {
-            background: linear-gradient(135deg, #f8f8f8, #ffffff); padding: 20px; border-radius: 15px; margin-bottom: 15px;
-            border-left: 4px solid var(--primary); transition: all 0.3s ease;
-        }
+        .pub-year { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 8px 20px; border-radius: 30px; display: inline-block; margin: 20px 0 15px; font-weight: bold; }
+        .publication { background: linear-gradient(135deg, #f8f8f8, #ffffff); padding: 20px; border-radius: 15px; margin-bottom: 15px; border-left: 4px solid var(--primary); transition: all 0.3s ease; }
         .publication:hover { transform: translateX(10px); box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2); }
         .pub-title { font-weight: bold; color: #333; margin-bottom: 8px; }
         .pub-authors { color: #666; font-size: 0.9em; margin-bottom: 5px; }
         .pub-venue { color: var(--primary); font-style: italic; font-size: 0.9em; }
-        .pub-citations {
-            display: inline-block; background: linear-gradient(135deg, var(--accent), var(--primary)); color: white;
-            padding: 3px 10px; border-radius: 15px; font-size: 0.8em; margin-left: 10px;
-        }
+        .pub-citations { display: inline-block; background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.8em; margin-left: 10px; }
         .skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-        .skill-tag {
-            background: linear-gradient(135deg, #f0f0f0, #ffffff); padding: 12px 20px; border-radius: 30px; text-align: center;
-            transition: all 0.3s ease; border: 2px solid transparent; text-decoration: none; color: inherit; display: block;
-        }
-        .skill-tag:hover {
-            background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-        }
-        .skill-tag.interactive {
-            background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; font-weight: bold; border: 2px solid rgba(255, 255, 255, 0.3);
-        }
+        .skill-tag { background: linear-gradient(135deg, #f0f0f0, #ffffff); padding: 12px 20px; border-radius: 30px; text-align: center; transition: all 0.3s ease; border: 2px solid transparent; text-decoration: none; color: inherit; display: block; }
+        .skill-tag:hover { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; transform: scale(1.05); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3); }
+        .skill-tag.interactive { background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; font-weight: bold; border: 2px solid rgba(255, 255, 255, 0.3); }
         .skill-tag.interactive:hover { background: linear-gradient(135deg, var(--primary), var(--secondary)); transform: scale(1.1); box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5); }
-        footer {
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 20px; padding: 30px; margin: 30px auto;
-            max-width: 1200px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        }
+        footer { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 20px; padding: 30px; margin: 30px auto; max-width: 1200px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         @media (max-width: 768px) {
             .hero-content { flex-direction: column; text-align: center; }
             .hero-text h1 { font-size: 2em; }
@@ -217,19 +190,19 @@
             <h2><i class="fas fa-chart-line"></i> Research Impact</h2>
             <div class="stats">
                 <div class="stat-card">
-                    <div class="stat-number">15+</div>
+                    <div class="stat-number" id="publications-count">—</div>
                     <div class="stat-label">Publications</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">153</div>
+                    <div class="stat-number" id="citations-count">—</div>
                     <div class="stat-label">Total Citations</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">5</div>
+                    <div class="stat-number" id="hindex-count">—</div>
                     <div class="stat-label">h-index</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">5</div>
+                    <div class="stat-number" id="i10-count">—</div>
                     <div class="stat-label">i10-index</div>
                 </div>
                 <div class="stat-card">
@@ -238,7 +211,9 @@
                 </div>
             </div>
             <p style="text-align: center; margin-top: 20px; color: #666; font-size: 0.9em;">
-                <i class="fas fa-info-circle"></i> Citation metrics from Google Scholar (144 citations since 2020)
+                <i class="fas fa-info-circle"></i>
+                Citation metrics from Google Scholar
+                (<span id="citations-since-2020">—</span> citations since 2020)
             </p>
         </section>
 
@@ -536,7 +511,7 @@
         }, observerOptions);
         document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
 
-        // Animate static stats on scroll (excludes #visitor-count which is dynamic)
+        // Animate static stats on scroll (excludes dynamic counters)
         let animated = false;
         const animateStats = () => {
             if (animated) return;
@@ -544,7 +519,7 @@
             const rect = statsSection.getBoundingClientRect();
             if (rect.top <= window.innerHeight && rect.bottom >= 0) {
                 animated = true;
-                document.querySelectorAll('.stat-number:not(#visitor-count)').forEach(stat => {
+                document.querySelectorAll('.stat-number:not(#visitor-count):not(#publications-count):not(#citations-count):not(#hindex-count):not(#i10-count)').forEach(stat => {
                     const targetText = stat.innerText;
                     const hasPlus = targetText.includes('+');
                     const target = parseInt(targetText.replace(/[^\d]/g, ''), 10);
@@ -567,7 +542,7 @@
             hero.style.transform = `translateY(${scrolled * 0.3}px)`;
         });
 
-        // ---------- Visitor Counter (robust with timeouts & fallbacks) ----------
+        // ---------- Visitor Counter (with fallbacks) ----------
         function parseNumber(text) {
             const n = parseInt(String(text).replace(/[^\d]/g, ''), 10);
             return Number.isFinite(n) ? n : 0;
@@ -604,22 +579,17 @@
             const el = document.getElementById('visitor-count');
             if (!el) return;
 
-            // show a brief loading cue if still on placeholder
             if (el.textContent.trim() === '1,247') el.textContent = '—';
 
-            // Strategy 1: CountAPI
             try {
                 const data = await fetchWithTimeout('https://api.countapi.xyz/hit/ibrahimth.github.io/visits', 3000);
                 if (data && typeof data.value === 'number' && data.value > 0) {
                     animateCounterFromCurrent(el, data.value);
-                    trackPageInteractions(); // fire bindings once we know GTM loaded
+                    trackPageInteractions();
                     return;
                 }
-            } catch (e) {
-                console.log('CountAPI unavailable:', e);
-            }
+            } catch (e) { console.log('CountAPI unavailable:', e); }
 
-            // Strategy 2: GitHub repo heuristic (optional; soft fallback)
             try {
                 const gh = await fetchWithTimeout('https://api.github.com/repos/ibrahimth/ibrahimth.github.io', 3000);
                 if (gh && typeof gh.stargazers_count === 'number') {
@@ -628,11 +598,8 @@
                     trackPageInteractions();
                     return;
                 }
-            } catch (e) {
-                console.log('GitHub API unavailable:', e);
-            }
+            } catch (e) { console.log('GitHub API unavailable:', e); }
 
-            // Strategy 3: localStorage per-browser counter + base
             try {
                 let local = parseInt(localStorage.getItem('ibrahimth-visits') || '0', 10);
                 if (!Number.isFinite(local)) local = 0;
@@ -643,34 +610,28 @@
                 trackPageInteractions();
                 return;
             } catch (e) {
-                // last resort
                 el.textContent = '1,200+';
                 trackPageInteractions();
             }
         }
 
-        // ---------- Analytics event wiring for GTM (no gtag.js needed) ----------
+        // ---------- Analytics event wiring for GTM ----------
         function dlPush(eventName, params = {}) {
             window.dataLayer = window.dataLayer || [];
             window.dataLayer.push({ event: eventName, ...params });
         }
 
         function trackPageInteractions() {
-            // Navigation clicks
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     dlPush('navigation_click', { event_category: 'navigation', event_label: btn.textContent.trim() });
                 }, { once: false });
             });
-
-            // Social media clicks
             document.querySelectorAll('.social-links a').forEach(link => {
                 link.addEventListener('click', () => {
                     dlPush('social_click', { event_category: 'social_media', event_label: link.getAttribute('title') || '' });
                 }, { once: false });
             });
-
-            // COE292 course clicks
             const coe292Link = document.querySelector('a[href*="teaching/coe-292"]');
             if (coe292Link) {
                 coe292Link.addEventListener('click', () => {
@@ -679,9 +640,47 @@
             }
         }
 
+        // ---------- Scholar metrics loader (expects /data/metrics.json) ----------
+        function nint(x){ const n = parseInt(String(x).replace(/[^\d]/g,''),10); return Number.isFinite(n)?n:0; }
+        function animateTo(el, target){
+            if (!el || !Number.isFinite(target)) return;
+            const start = nint(el.textContent);
+            let cur = start;
+            const step = Math.max(1, Math.ceil((target - start)/50));
+            const id = setInterval(() => {
+                cur += step;
+                if (cur >= target) { cur = target; clearInterval(id); }
+                el.textContent = cur.toLocaleString();
+            }, 30);
+        }
+        async function loadScholarMetrics(){
+            const els = {
+                pubs: document.getElementById('publications-count'),
+                cites: document.getElementById('citations-count'),
+                h: document.getElementById('hindex-count'),
+                i10: document.getElementById('i10-count'),
+                since2020: document.getElementById('citations-since-2020')
+            };
+            try {
+                const res = await fetch('/data/metrics.json?v=' + Date.now(), { cache: 'no-store' });
+                if (!res.ok) throw new Error('HTTP '+res.status);
+                const m = await res.json();
+                if (Number.isFinite(m.publications)) animateTo(els.pubs, m.publications);
+                if (Number.isFinite(m.citations))    animateTo(els.cites, m.citations);
+                if (Number.isFinite(m.h_index))      animateTo(els.h, m.h_index);
+                if (Number.isFinite(m.i10_index))    animateTo(els.i10, m.i10_index);
+                if (Number.isFinite(m.citations_since_2020) && els.since2020) {
+                    els.since2020.textContent = m.citations_since_2020.toLocaleString();
+                }
+            } catch (e) {
+                console.log('metrics.json unavailable yet:', e);
+            }
+        }
+
         // Init on DOM ready
         document.addEventListener('DOMContentLoaded', () => {
-            updateVisitorCount(); // immediate; no arbitrary delay
+            updateVisitorCount();
+            loadScholarMetrics();
         });
     </script>
 
