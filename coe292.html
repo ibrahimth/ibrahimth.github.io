@@ -1,12 +1,757 @@
-  <!doctype html>
-      <!DOCTYPE html>
-   <html lang="en">
-   <head>
-    <meta charset="UTF-8" />
-     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-     <title>COE 292 — Introduction to AI | Interactive Learning</title>
-  </head>
-   <body>
-     <div id="root"></div>
-     <script type="module" src="/src/main.jsx"></script>
-    </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COE 292 — Introduction to AI - Topic 1 Interactive Studio</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/framer-motion@11/dist/framer-motion.js"></script>
+    <style>
+        body { background: #f8fafc; }
+        .custom-card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            padding: 1.25rem;
+        }
+        .tab-button {
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            margin: 0 0.25rem;
+            transition: all 0.2s;
+            border: 1px solid;
+            cursor: pointer;
+        }
+        .tab-button.active {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-color: #2563eb;
+        }
+        .tab-button:not(.active) {
+            background: white;
+            color: #2563eb;
+            border-color: #cbd5e1;
+        }
+        .tab-button:not(.active):hover {
+            background: #eff6ff;
+        }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.125rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 9999px;
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+        .concept-card {
+            background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+            border: 1px solid #cbd5e1;
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        .move-btn {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            border: 1px solid;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .move-btn:enabled {
+            background: #059669;
+            color: white;
+            border-color: #059669;
+        }
+        .move-btn:enabled:hover {
+            background: #047857;
+        }
+        .move-btn:disabled {
+            background: #f1f5f9;
+            color: #94a3b8;
+            border-color: #cbd5e1;
+            cursor: not-allowed;
+        }
+        .feature-btn {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .feature-btn.good {
+            background: #059669;
+            color: white;
+            border-color: #059669;
+        }
+        .feature-btn.bad {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+        .feature-btn:not(.good):not(.bad) {
+            background: white;
+            border-color: #cbd5e1;
+        }
+        .feature-btn:not(.good):not(.bad):hover {
+            background: #f8fafc;
+        }
+        .quiz-option {
+            text-align: left;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            border: 1px solid #cbd5e1;
+            font-size: 0.875rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .quiz-option:hover {
+            background: #f8fafc;
+        }
+        .quiz-option.selected {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+        .quiz-option.correct {
+            box-shadow: 0 0 0 2px #059669;
+        }
+        .quiz-option.incorrect {
+            box-shadow: 0 0 0 2px #dc2626;
+        }
+        .river-visual {
+            height: 11rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+            background: #dbeafe;
+            position: relative;
+        }
+        .bank {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 2rem;
+        }
+        .boat {
+            position: absolute;
+            bottom: 0.75rem;
+            width: 5rem;
+            text-align: center;
+            transition: left 0.5s ease;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        const { motion, AnimatePresence } = window.FramerMotion;
+
+        // Concept Cards Data
+        const conceptCards = [
+            {
+                title: "What is AI?",
+                pts: [
+                    "Systems that do tasks needing human intelligence (perception, language, decision-making).",
+                    "Definitions differ — some focus on 'thinking like humans,' others on 'acting rationally'.",
+                    "1950s → expert systems → ML → deep learning → generative AI",
+                    "In the 1960s, ELIZA (a simple chatbot) felt like real AI.",
+                    "Today, it looks trivial compared to ChatGPT."
+                ]
+            },
+            {
+                title: "Application Areas",
+                pts: [
+                    "Natural Language Processing (NLP) (Automatic Speech Recognition (ASR), Text-to-Speech (TTS), translation, search, ChatGPT)",
+                    "Computer Vision (recognition, detection)",
+                    "Robotics & Autonomy (planning, assistive robots)",
+                    "Applied AI (scheduling, route planning, diagnosis, fraud, recommendations)"
+                ]
+            },
+            {
+                title: "Core Vocabulary",
+                pts: [
+                    "Agent: perceives via sensors and acts via actuators.",
+                    "Utility: numeric preference for outcomes.",
+                    "Rational Agent: maximizes expected utility given uncertainty."
+                ]
+            },
+            {
+                title: "Turing Test (and limits)",
+                pts: [
+                    "Judge converses with human & machine; if indistinguishable, machine 'passes'.",
+                    "Limits: subjective, language-only, incentivizes deception, ignores perception/motor skills.",
+                    "Deception = fooling someone into believing the machine is smart.",
+                    "Intelligence = actually having the ability to reason, understand, and learn.",
+                    {
+                        text: "👉 A useful way to think about it:",
+                        sub: [
+                            "Passing the Turing Test ≠ being intelligent.",
+                            "It just means you're good at faking intelligence."
+                        ]
+                    }
+                ]
+            },
+            {
+                title: "Two Solution Strategies",
+                pts: [
+                    "Use Perception + Representation to expose constraints (river crossing).",
+                    "Generate & Test with good features (fish ID)."
+                ]
+            }
+        ];
+
+        // River Crossing Logic
+        const RC_START = { boat: "L", P: "L", L: "L", S: "L", G: "L" };
+
+        function violates({ P, L, S, G }) {
+            const left = { P: P === "L", L: L === "L", S: S === "L", G: G === "L" };
+            const right = { P: P === "R", L: L === "R", S: S === "R", G: G === "R" };
+            const badLeft = (!left.P && ((left.L && left.S) || (left.S && left.G)));
+            const badRight = (!right.P && ((right.L && right.S) || (right.S && right.G)));
+            return badLeft || badRight;
+        }
+
+        const RC_SOLN = [["S"], [], ["L"], ["S"], ["G"], [], ["S"]];
+
+        // Feature Bank for Fish ID
+        const featureBank = [
+            { txt: "Square head shape", good: true, why: "Uncommon shape → discriminative." },
+            { txt: "Lives in water", good: false, why: "All fish do → not discriminative." },
+            { txt: "Mouth points downward", good: true, why: "Not typical → helpful." },
+            { txt: "Swims near rocks", good: false, why: "Too common → weak signal." },
+            { txt: "Side eyes close to head edge", good: true, why: "Distinct placement → useful feature." },
+            { txt: "Only photographed in bright light", good: false, why: "Artifact of taking photos, not the fish." }
+        ];
+
+        // Turing Test Pairs
+        const turingPairs = [
+            {
+                q: "Explain Wi‑Fi in one short sentence.",
+                options: [
+                    "It's like invisible internet that lets your phone talk to a box (router) in your home.",
+                    "Wi‑Fi is an 802.11 wireless LAN standard using radio frequencies."
+                ],
+                human: 0
+            },
+            {
+                q: "Describe how to make a peanut butter sandwich.",
+                options: [
+                    "Spread peanut butter on one slice, jam on the other, put them together, and eat.",
+                    "Acquire materials; execute assembly procedure per food preparation protocol."
+                ],
+                human: 0
+            },
+            {
+                q: "What did you do this weekend?",
+                options: [
+                    "Met friends, watched a movie, and fell asleep halfway through the credits.",
+                    "I completed recreational activities and achieved intended relaxation goals."
+                ],
+                human: 0
+            },
+            {
+                q: "Tell a simple joke.",
+                options: [
+                    "Why did the math book look sad? Because it had too many problems.",
+                    "Initiating humor: semantic pun about numeric entities."
+                ],
+                human: 0
+            }
+        ];
+
+        // Quiz Data
+        const QUIZ = [
+            {
+                q: "Which option best defines a rational agent?",
+                a: [
+                    "One that imitates human behavior regardless of outcome",
+                    "One that maximizes expected utility given its beliefs and actions",
+                    "One that never makes mistakes"
+                ],
+                correct: 1
+            },
+            {
+                q: "Pick the AI task NOT assessed by the classic Turing Test:",
+                a: ["Dialogue coherence", "Visual perception", "Deception ability"],
+                correct: 1
+            },
+            {
+                q: "In the river crossing puzzle, which state is illegal?",
+                a: [
+                    "🧍 with 🐑 on left; 🦁 with 🌿 on right",
+                    "🐑 with 🌿 alone on one bank",
+                    "🧍 crosses alone while all are on the same bank"
+                ],
+                correct: 1
+            },
+            {
+                q: "Good feature for fish identification?",
+                a: ["Lives in water", "Square head shape", "Photographed in bright light"],
+                correct: 1
+            },
+            {
+                q: "Utility in AI is…",
+                a: ["a rule list", "a numeric preference measure for outcomes", "a data structure for sensors"],
+                correct: 1
+            }
+        ];
+
+        // Components
+        function TabButton({ active, onClick, children }) {
+            return (
+                <button
+                    onClick={onClick}
+                    className={`tab-button ${active ? 'active' : ''}`}
+                >
+                    {children}
+                </button>
+            );
+        }
+
+        function Card({ title, children }) {
+            return (
+                <div className="custom-card">
+                    {title && <h3 className="text-lg font-semibold mb-3">{title}</h3>}
+                    {children}
+                </div>
+            );
+        }
+
+        function Pill({ children }) {
+            return <span className="pill">{children}</span>;
+        }
+
+        function ConceptCarousel() {
+            const [idx, setIdx] = useState(0);
+            const [autoplayMs, setAutoplayMs] = useState(0);
+
+            useEffect(() => {
+                if (!autoplayMs) return;
+                const t = setInterval(() => setIdx(i => (i + 1) % conceptCards.length), autoplayMs);
+                return () => clearInterval(t);
+            }, [autoplayMs]);
+
+            const prev = () => setIdx(i => (i - 1 + conceptCards.length) % conceptCards.length);
+            const next = () => setIdx(i => (i + 1) % conceptCards.length);
+
+            const card = conceptCards[idx];
+
+            return (
+                <div className="relative">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={card.title}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.35 }}
+                            className="concept-card"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xl font-semibold">{card.title}</h3>
+                                <Pill>{idx + 1} / {conceptCards.length}</Pill>
+                            </div>
+                            <ul className="list-disc pl-6 space-y-2 text-gray-700">
+                                {card.pts.map((p, i) => {
+                                    if (typeof p === "string") return <li key={i}>{p}</li>;
+                                    const text = p?.text ?? "";
+                                    const sub = Array.isArray(p?.sub) ? p.sub : [];
+                                    return (
+                                        <li key={i}>
+                                            {text}
+                                            {sub.length > 0 && (
+                                                <ul className="mt-1 list-[circle] pl-6 space-y-1">
+                                                    {sub.map((s, j) => <li key={j}>{s}</li>)}
+                                                </ul>
+                                            )}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </motion.div>
+                    </AnimatePresence>
+
+                    <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex justify-center gap-2">
+                            {conceptCards.map((_, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setIdx(i)}
+                                    className={`w-3 h-3 rounded-full border transition-all ${
+                                        i === idx ? "bg-blue-600 border-blue-600" : "bg-white border-blue-300"
+                                    }`}
+                                />
+                            ))}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button onClick={prev} className="px-3 py-2 rounded-xl border bg-white hover:bg-gray-50">← Prev</button>
+                            <button onClick={next} className="px-3 py-2 rounded-xl border bg-white hover:bg-gray-50">Next →</button>
+                            <div className="flex items-center gap-1 text-xs">
+                                <span className="text-gray-600">Autoplay:</span>
+                                <select
+                                    value={autoplayMs}
+                                    onChange={(e) => setAutoplayMs(Number(e.target.value))}
+                                    className="border rounded-lg px-2 py-1 text-xs bg-white"
+                                >
+                                    <option value={0}>Off</option>
+                                    <option value={12000}>Every 12s</option>
+                                    <option value={20000}>Every 20s</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function RiverCrossing() {
+            const [state, setState] = useState(RC_START);
+            const [status, setStatus] = useState("Make a safe crossing.");
+            const [auto, setAuto] = useState(false);
+
+            const reset = () => {
+                setState(RC_START);
+                setStatus("Make a safe crossing.");
+                setAuto(false);
+            };
+
+            const canMove = (item) => state[item] === state.boat;
+
+            const move = (items = []) => {
+                const next = { ...state };
+                const to = state.boat === "L" ? "R" : "L";
+                next.P = to;
+                if (items[0]) next[items[0]] = to;
+                next.boat = to;
+
+                if (violates(next)) {
+                    setStatus("⛔ Unsafe: someone got eaten! Try a different move.");
+                } else {
+                    setStatus("✅ Safe move.");
+                    setState(next);
+                }
+            };
+
+            useEffect(() => {
+                if (!auto) return;
+                let i = 0;
+                const id = setInterval(() => {
+                    if (i >= RC_SOLN.length) {
+                        setAuto(false);
+                        return clearInterval(id);
+                    }
+                    move(RC_SOLN[i]);
+                    i++;
+                }, 900);
+                return () => clearInterval(id);
+            }, [auto]);
+
+            const win = state.L === "R" && state.S === "R" && state.G === "R" && state.P === "R";
+
+            return (
+                <Card title="River Crossing Simulator (Lion–Lamb–Grass)">
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div className="flex items-center gap-4 mb-4">
+                                <span className="flex items-center gap-1 text-sm"><span className="text-xl">🧍</span>Person</span>
+                                <span className="flex items-center gap-1 text-sm"><span className="text-xl">🦁</span>Lion</span>
+                                <span className="flex items-center gap-1 text-sm"><span className="text-xl">🐑</span>Lamb</span>
+                                <span className="flex items-center gap-1 text-sm"><span className="text-xl">🌿</span>Grass</span>
+                            </div>
+                            
+                            <div className="river-visual">
+                                <div className="grid grid-cols-2 h-full">
+                                    <div className="bank">
+                                        {state.P === "L" && <motion.div layout>🧍</motion.div>}
+                                        {state.L === "L" && <motion.div layout>🦁</motion.div>}
+                                        {state.S === "L" && <motion.div layout>🐑</motion.div>}
+                                        {state.G === "L" && <motion.div layout>🌿</motion.div>}
+                                    </div>
+                                    <div className="bank">
+                                        {state.P === "R" && <motion.div layout>🧍</motion.div>}
+                                        {state.L === "R" && <motion.div layout>🦁</motion.div>}
+                                        {state.S === "R" && <motion.div layout>🐑</motion.div>}
+                                        {state.G === "R" && <motion.div layout>🌿</motion.div>}
+                                    </div>
+                                </div>
+                                <div className="boat" style={{left: state.boat === "L" ? "20px" : "220px"}}>
+                                    <div>🛶</div>
+                                    <div className="text-xs text-gray-600">boat</div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 flex flex-wrap gap-2">
+                                <button className="move-btn" onClick={() => move([])}>Cross alone</button>
+                                <button className="move-btn" onClick={() => move(["L"])} disabled={!canMove("L")}>Take Lion</button>
+                                <button className="move-btn" onClick={() => move(["S"])} disabled={!canMove("S")}>Take Lamb</button>
+                                <button className="move-btn" onClick={() => move(["G"])} disabled={!canMove("G")}>Take Grass</button>
+                                <button 
+                                    onClick={() => setAuto(true)}
+                                    className="px-3 py-2 rounded-xl text-sm border bg-indigo-600 text-white hover:bg-indigo-700"
+                                >
+                                    ▶ Show solution
+                                </button>
+                                <button 
+                                    onClick={reset} 
+                                    className="px-3 py-2 rounded-xl text-sm border bg-white hover:bg-gray-50"
+                                >
+                                    ↺ Reset
+                                </button>
+                            </div>
+                            
+                            <div className="mt-3 text-sm">
+                                <span className="font-medium">Status:</span> {win ? "🎉 Goal reached!" : status}
+                            </div>
+                            <div className="mt-2 text-xs text-gray-500">
+                                Rule: Never leave 🦁 with 🐑 or 🐑 with 🌿 without 🧍 present.
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <Card title="Why this models Topic 1 well">
+                                <ul className="list-disc pl-5 text-sm space-y-1 text-gray-700">
+                                    <li><b>Representation</b>: model states (who's on which bank) and actions (crossings).</li>
+                                    <li><b>Constraints</b>: detect illegal states (predator–prey without the person).</li>
+                                    <li><b>Perception → Reasoning</b>: visualize and prune bad states before acting.</li>
+                                    <li><b>Rationality</b>: choose actions that maximize progress toward the goal.</li>
+                                </ul>
+                            </Card>
+                            <div className="mt-3 text-xs text-gray-500">Tip: Try to finish in 7 crossings.</div>
+                        </div>
+                    </div>
+                </Card>
+            );
+        }
+
+        function FeaturePicker() {
+            const [answers, setAnswers] = useState({});
+            const [showWhy, setShowWhy] = useState(false);
+            const correct = Object.entries(answers).filter(([i, v]) => featureBank[+i].good === (v === "good")).length;
+
+            return (
+                <Card title="Generate & Test: Pick GOOD features for fish ID">
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div className="space-y-3">
+                                {featureBank.map((f, i) => {
+                                    const choice = answers[i];
+                                    const isCorrect = choice && (f.good === (choice === "good"));
+                                    return (
+                                        <div key={i} className="p-3 rounded-xl border bg-white flex items-center justify-between gap-3">
+                                            <div>
+                                                <div className="text-sm font-medium">{f.txt}</div>
+                                                {showWhy && (
+                                                    <div className={`text-xs mt-1 ${f.good ? "text-emerald-600" : "text-rose-600"}`}>
+                                                        {f.why}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-1 items-center">
+                                                <button
+                                                    onClick={() => setAnswers({ ...answers, [i]: "good" })}
+                                                    className={`feature-btn ${choice === "good" ? "good" : ""}`}
+                                                >
+                                                    Good
+                                                </button>
+                                                <button
+                                                    onClick={() => setAnswers({ ...answers, [i]: "bad" })}
+                                                    className={`feature-btn ${choice === "bad" ? "bad" : ""}`}
+                                                >
+                                                    Bad
+                                                </button>
+                                                {choice && <Pill>{isCorrect ? "✓" : "✗"}</Pill>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-4 flex items-center gap-2">
+                                <Pill>Score: {correct} / {featureBank.length}</Pill>
+                                <button 
+                                    onClick={() => setShowWhy(!showWhy)} 
+                                    className="px-3 py-2 rounded-xl border text-sm bg-white hover:bg-gray-50"
+                                >
+                                    {showWhy ? "Hide" : "Show"} explanations
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <Card title="Why features matter">
+                                <p className="text-sm text-gray-700 mb-3">
+                                    In <b>Generate & Test</b>, we hypothesize a label, then check it.
+                                    The quality of features controls how quickly we converge on the right answer.
+                                    Good features are <i>discriminative</i> — they separate the target class from others.
+                                </p>
+                                <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                                    <li>Good: rare traits, shape cues, distinctive textures/patterns.</li>
+                                    <li>Bad: universal facts ("lives in water"), photographer artifacts.</li>
+                                </ul>
+                            </Card>
+                        </div>
+                    </div>
+                </Card>
+            );
+        }
+
+        function TuringGuesser() {
+            const [choices, setChoices] = useState({});
+            const [show, setShow] = useState(false);
+            const score = Object.entries(choices).filter(([i, v]) => turingPairs[+i].human === v).length;
+
+            return (
+                <Card title="Mini Turing Test – Can you tell who's human?">
+                    <div className="space-y-4">
+                        {turingPairs.map((p, i) => (
+                            <div key={i} className="p-3 rounded-xl border bg-gray-50">
+                                <div className="text-sm font-medium mb-3">Q{i + 1}. {p.q}</div>
+                                <div className="grid md:grid-cols-2 gap-3">
+                                    {p.options.map((opt, j) => (
+                                        <button
+                                            key={j}
+                                            onClick={() => setChoices({ ...choices, [i]: j })}
+                                            className={`quiz-option ${choices[i] === j ? "selected" : ""}`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-4 flex items-center gap-3">
+                        <Pill>Selected: {Object.keys(choices).length} / {turingPairs.length}</Pill>
+                        <button 
+                            onClick={() => setShow(true)} 
+                            className="px-3 py-2 rounded-xl border bg-white hover:bg-gray-50"
+                        >
+                            Reveal
+                        </button>
+                        {show && <Pill>Score: {score} / {turingPairs.length}</Pill>}
+                    </div>
+                    {show && (
+                        <div className="mt-3 text-xs text-gray-600">
+                            Reflection: Passing a text-only test doesn't mean reasoning or perception—this illustrates Topic 1 limitations.
+                        </div>
+                    )}
+                </Card>
+            );
+        }
+
+        function Quiz() {
+            const [sel, setSel] = useState({});
+            const [show, setShow] = useState(false);
+            const score = QUIZ.reduce((s, q, i) => s + (sel[i] === q.correct ? 1 : 0), 0);
+
+            return (
+                <Card title="Topic 1 Checkpoint Quiz (click & select)">
+                    <div className="space-y-4">
+                        {QUIZ.map((q, i) => (
+                            <div key={i} className="p-3 rounded-xl border bg-gray-50">
+                                <div className="text-sm font-medium mb-3">Q{i + 1}. {q.q}</div>
+                                <div className="grid md:grid-cols-3 gap-2">
+                                    {q.a.map((choice, j) => {
+                                        const picked = sel[i] === j;
+                                        const isCorrect = q.correct === j;
+                                        let className = `quiz-option ${picked ? "selected" : ""}`;
+                                        if (show) {
+                                            if (isCorrect) className += " correct";
+                                            else if (picked) className += " incorrect";
+                                        }
+                                        return (
+                                            <button
+                                                key={j}
+                                                onClick={() => setSel({ ...sel, [i]: j })}
+                                                className={className}
+                                            >
+                                                {choice}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-4 flex items-center gap-3">
+                        <Pill>Answered: {Object.keys(sel).length} / {QUIZ.length}</Pill>
+                        <button 
+                            onClick={() => setShow(true)} 
+                            className="px-3 py-2 rounded-xl border bg-white hover:bg-gray-50"
+                        >
+                            Check answers
+                        </button>
+                        {show && <Pill>Score: {score} / {QUIZ.length}</Pill>}
+                    </div>
+                </Card>
+            );
+        }
+
+        function App() {
+            const [tab, setTab] = useState("ideas");
+
+            return (
+                <div className="min-h-screen w-full p-4 md:p-8">
+                    <div className="max-w-5xl mx-auto">
+                        <header className="mb-6">
+                            <h1 className="text-3xl font-bold tracking-tight">COE 292 • Topic 1 Interactive Studio</h1>
+                            <p className="text-gray-600 mt-2">
+                                Explore core ideas of AI via animations and mini‑games. Then test yourself with a quick quiz.
+                            </p>
+                        </header>
+
+                        <nav className="mb-6">
+                            <TabButton active={tab === "ideas"} onClick={() => setTab("ideas")}>Key Ideas</TabButton>
+                            <TabButton active={tab === "play"} onClick={() => setTab("play")}>Playgrounds</TabButton>
+                            <TabButton active={tab === "quiz"} onClick={() => setTab("quiz")}>Quiz</TabButton>
+                        </nav>
+
+                        {tab === "ideas" && (
+                            <div className="space-y-6">
+                                <ConceptCarousel />
+                                <Card title="What to look for in Topic 1">
+                                    <ul className="list-disc pl-6 text-gray-700 text-sm space-y-1">
+                                        <li>Different lenses on AI (acting/thinking humanly vs. rationally).</li>
+                                        <li>Turing Test origins + its limitations.</li>
+                                        <li>Agents, utility, rational decisions under uncertainty.</li>
+                                        <li>Problem‑solving strategies: Perception‑based modeling; Generate‑and‑Test.</li>
+                                    </ul>
+                                </Card>
+                            </div>
+                        )}
+
+                        {tab === "play" && (
+                            <div className="space-y-6">
+                                <RiverCrossing />
+                                <FeaturePicker />
+                                <TuringGuesser />
+                            </div>
+                        )}
+
+                        {tab === "quiz" && <Quiz />}
+
+                        <footer className="mt-8 text-xs text-gray-500 text-center">
+                            Built for COE 292 • Topic 1. Use it as a study companion alongside the course slides.
+                        </footer>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
