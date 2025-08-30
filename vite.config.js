@@ -4,7 +4,7 @@ import path from 'path'
 
 // Final config for GitHub Pages deployment
 export default defineConfig({
-  base: '/coe292-topic1/', // ensures assets load from this subpath
+  base: '/', // deploy to root of github pages
   plugins: [react()],
   resolve: {
     alias: {
