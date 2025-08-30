@@ -4,8 +4,11 @@ import path from 'path'
 
 // Final config for GitHub Pages deployment
 export default defineConfig({
-  base: '/', // deploy to root of github pages
+  base: '/app/', // deploy to /app/ subdirectory
   plugins: [react()],
+  build: {
+    outDir: 'app', // build to app directory instead of dist
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
