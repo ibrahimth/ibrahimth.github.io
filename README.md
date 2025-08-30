@@ -3,5 +3,5 @@
 
 
 
-**COE292 Interactive Studio**: [https://ibrahimth.github.io/teaching/coe-292/](https://ibrahimth.github.io/teaching/coe-292/)
+**COE292 Interactive Studio**: [https://ibrahimth.github.io/app/](https://ibrahimth.github.io/app/)
 
