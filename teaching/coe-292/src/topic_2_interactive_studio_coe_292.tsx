@@ -132,7 +132,7 @@ function hanoiMoves(n: number, from: string, to: string, aux: string, acc: Array
 }
 
 function Hanoi() {
-  // Canvas‑style Hanoi like the Open Book Project demo; plus hints & undo
+  // Canvas-style Hanoi like the Open Book Project demo; plus hints & undo
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [n, setN] = useState(3);
   const [pegs, setPegs] = useState<{ [k: string]: number[] }>({ A: [], B: [], C: [] });
@@ -294,7 +294,7 @@ function Hanoi() {
 
   useInterval(() => { if (playing) { if (idx < total) stepAuto(); else setPlaying(false); } }, playing ? delay : null);
 
-  // ---- Manual move (click peg areas) ----
+  // ---- Manual move helpers ----
   const pegFromX = (x: number) => {
     const cvs = canvasRef.current; if (!cvs) return null;
     const W = cvs.width; const pegX = [W*0.2, W*0.5, W*0.8];
@@ -307,15 +307,15 @@ function Hanoi() {
   const handleCanvasInteraction = (clientX: number, currentTarget: HTMLCanvasElement) => {
     // Only allow interaction in manual mode
     if (mode !== 'manual') return;
-    
+
     const rect = currentTarget.getBoundingClientRect();
     const x = clientX - rect.left; // px relative to canvas
     const target = pegFromX(x);
     if (!target) return;
-    
+
     // Clear any previous invalid move indicator
     setInvalidMove(null);
-    
+
     if (!selected) {
       if (pegs[target].length === 0) return; // ignore empty peg as source
       setSelected(target);
@@ -328,10 +328,10 @@ function Hanoi() {
     if (fromArr.length === 0) { setSelected(null); return; }
     const disk = fromArr[fromArr.length - 1];
     const ok = toArr.length === 0 || toArr[toArr.length - 1] > disk;
-    if (!ok) { 
+    if (!ok) {
       setInvalidMove(target);
-      setSelected(null); 
-      return; 
+      setSelected(null);
+      return;
     }
     setPegs(prev => {
       const snapshot = JSON.parse(JSON.stringify(prev));
@@ -345,20 +345,13 @@ function Hanoi() {
     setSelected(null);
   };
 
-  const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
+  // ---- Unified pointer handler (fix for mobile touch) ----
+  const onCanvasPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    // Prevent scrolling/gestures and make taps consistent across inputs
+    e.preventDefault();
+    // capture pointer so movement outside still counts (not strictly needed for taps)
+    (e.currentTarget as any).setPointerCapture?.(e.pointerId);
     handleCanvasInteraction(e.clientX, e.currentTarget);
-  };
-
-  const onCanvasTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault(); // Prevent scrolling and other default touch behaviors
-    const touch = e.changedTouches[0];
-    if (touch) {
-      handleCanvasInteraction(touch.clientX, e.currentTarget);
-    }
-  };
-
-  const onCanvasTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault(); // Prevent scrolling but don't handle interaction here
   };
 
   const undo = () => {
@@ -412,7 +405,7 @@ function Hanoi() {
               <RotateCcw className="w-4 h-4 mr-1" /> Reset
             </Button>
           </div>
-          
+
           {mode === 'select' && (
             <div className="p-4 rounded-xl border-2 border-dashed border-muted-foreground/30 text-center">
               <p className="text-sm text-muted-foreground mb-3">Choose how to solve the Tower of Hanoi:</p>
@@ -426,7 +419,7 @@ function Hanoi() {
               </div>
             </div>
           )}
-          
+
           {mode === 'manual' && (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium">👤 Manual Mode</span>
@@ -434,7 +427,7 @@ function Hanoi() {
               <Button size="sm" variant="outline" onClick={() => setMode('select')} aria-label="Back to mode selection">Back</Button>
             </div>
           )}
-          
+
           {mode === 'auto' && (
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-medium">🤖 Auto Mode</span>
@@ -457,10 +450,18 @@ function Hanoi() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 rounded-2xl bg-muted">
-            <canvas ref={canvasRef} width={540} height={220} onClick={onCanvasClick} onTouchStart={onCanvasTouchStart} onTouchEnd={onCanvasTouchEnd} className="w-full h-auto bg-background rounded-xl shadow-inner" />
+            <canvas
+              ref={canvasRef}
+              width={540}
+              height={220}
+              // IMPORTANT: prevent touch scrolling/gestures to ensure taps register
+              style={{ touchAction: 'none' }}
+              onPointerDown={onCanvasPointerDown}
+              className="w-full h-auto bg-background rounded-xl shadow-inner"
+            />
             <div className="text-xs text-muted-foreground mt-2">
               {mode === 'select' && "Choose Manual Play or Auto Solve above to begin."}
-              {mode === 'manual' && "Click or tap a source peg, then a destination peg to make a legal move."}
+              {mode === 'manual' && "Tap a source peg, then a destination peg to make a legal move."}
               {mode === 'auto' && "Watch the automatic solution or step through it manually."}
             </div>
           </div>
@@ -493,6 +494,7 @@ function Hanoi() {
     </Card>
   );
 }
+
 
 function AndOrSnippet() {
   // A tiny static depiction of 3AC = (2AB AND 1AC AND 2BC)
