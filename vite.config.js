@@ -7,9 +7,10 @@ export default defineConfig({
   base: './',            // IMPORTANT: make assets relative for subfolder hosting
   plugins: [react()],
   build: {
-    outDir: 'app',       // put the built site in /app
+    outDir: '../app',    // put the built site in /app (relative to src)
     emptyOutDir: true,
   },
+  root: 'src',           // use src as the project root
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
