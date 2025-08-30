@@ -145,6 +145,8 @@ function Hanoi() {
   const [statusMsg, setStatusMsg] = useState<string>("");
   const [showHints, setShowHints] = useState(true);
   const [history, setHistory] = useState<{ A:number[]; B:number[]; C:number[]; }[]>([]);
+  const [invalidMove, setInvalidMove] = useState<string | null>(null);
+  const [mode, setMode] = useState<'select' | 'manual' | 'auto'>('select');
 
   const init = (disks: number) => {
     const initial = { A: Array.from({ length: disks }, (_, i) => disks - i), B: [], C: [] } as { [k: string]: number[] };
@@ -156,6 +158,8 @@ function Hanoi() {
     setManualCount(0);
     setHistory([]);
     setStatusMsg("");
+    setInvalidMove(null);
+    setMode('select');
   };
 
   useEffect(() => { init(n); }, [n]);
@@ -196,6 +200,16 @@ function Hanoi() {
     const top = (arr: number[]) => arr[arr.length - 1];
     const legalTargetsFrom = (src: 'A'|'B'|'C') => pegKeys.filter(dst => dst !== src && (pegs[dst].length === 0 || top(pegs[dst]) > top(pegs[src])));
     const legalSources = pegKeys.filter(src => pegs[src].length > 0 && legalTargetsFrom(src as 'A'|'B'|'C').length > 0);
+
+    // highlight invalid move (red)
+    if (invalidMove) {
+      const i = pegKeys.indexOf(invalidMove as 'A'|'B'|'C');
+      if (i >= 0) {
+        ctx.strokeStyle = '#ef4444'; // red for invalid moves
+        ctx.lineWidth = 3;
+        ctx.strokeRect(pegX[i] - 60, H - 170, 120, 150);
+      }
+    }
 
     // highlight selected peg or hints
     if (selected) {
@@ -247,7 +261,7 @@ function Hanoi() {
       });
     });
   };
-  useEffect(draw, [pegs, selected, n, showHints]);
+  useEffect(draw, [pegs, selected, n, showHints, invalidMove]);
 
   // ---- Auto step ----
   const total = moves.length; // optimal = 2^n - 1
@@ -269,9 +283,11 @@ function Hanoi() {
       if (!isInitial) {
         init(n);
         setStatusMsg("Auto-solve starts from the initial state.");
+        setMode('auto');
         setPlaying(true);
         return;
       }
+      setMode('auto');
     }
     setPlaying(p => !p);
   };
@@ -289,10 +305,17 @@ function Hanoi() {
   };
 
   const handleCanvasInteraction = (clientX: number, currentTarget: HTMLCanvasElement) => {
+    // Only allow interaction in manual mode
+    if (mode !== 'manual') return;
+    
     const rect = currentTarget.getBoundingClientRect();
     const x = clientX - rect.left; // px relative to canvas
     const target = pegFromX(x);
     if (!target) return;
+    
+    // Clear any previous invalid move indicator
+    setInvalidMove(null);
+    
     if (!selected) {
       if (pegs[target].length === 0) return; // ignore empty peg as source
       setSelected(target);
@@ -305,7 +328,11 @@ function Hanoi() {
     if (fromArr.length === 0) { setSelected(null); return; }
     const disk = fromArr[fromArr.length - 1];
     const ok = toArr.length === 0 || toArr[toArr.length - 1] > disk;
-    if (!ok) { setSelected(null); return; }
+    if (!ok) { 
+      setInvalidMove(target);
+      setSelected(null); 
+      return; 
+    }
     setPegs(prev => {
       const snapshot = JSON.parse(JSON.stringify(prev));
       const nf: { [k: string]: number[] } = { ...prev, [selected]: [...prev[selected]], [target]: [...prev[target]] } as any;
@@ -322,12 +349,16 @@ function Hanoi() {
     handleCanvasInteraction(e.clientX, e.currentTarget);
   };
 
-  const onCanvasTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
+  const onCanvasTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault(); // Prevent scrolling and other default touch behaviors
-    const touch = e.touches[0] || e.changedTouches[0];
+    const touch = e.changedTouches[0];
     if (touch) {
       handleCanvasInteraction(touch.clientX, e.currentTarget);
     }
+  };
+
+  const onCanvasTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevent scrolling but don't handle interaction here
   };
 
   const undo = () => {
@@ -347,6 +378,8 @@ function Hanoi() {
       setPlaying(false);
       if (manualCount > 0) {
         setStatusMsg(manualCount === minMoves ? "Optimal solution! 🎉" : `Solved in ${manualCount} moves (optimal is ${minMoves}).`);
+        // Return to select mode after manual completion
+        setTimeout(() => setMode('select'), 2000);
       }
     }
   }, [isSolved, manualCount, minMoves]);
@@ -358,37 +391,78 @@ function Hanoi() {
     return () => clearTimeout(t);
   }, [statusMsg]);
 
+  // Auto-clear invalid move indicator
+  useEffect(() => {
+    if (!invalidMove) return;
+    const t = setTimeout(() => setInvalidMove(null), 1500);
+    return () => clearTimeout(t);
+  }, [invalidMove]);
+
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">Tower of Hanoi — Canvas Demo</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="text-sm" htmlFor="disks">Disks:</label>
-          <Input id="disks" type="number" value={n} min={1} max={8} onChange={(e)=>setN(Math.max(1, Math.min(8, Number(e.target.value)||1)))} className="w-20" />
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="secondary" onClick={handleToggleAuto} disabled={idx >= total} aria-label="Toggle Auto Solve">
-              {playing ? <Pause className="w-4 h-4 mr-1" /> : <Play className="w-4 h-4 mr-1" />} {playing?"Pause":"Auto Solve"}
-            </Button>
-            <Button size="sm" variant="secondary" onClick={stepAuto} disabled={idx >= total} aria-label="Step one move">
-              <StepForward className="w-4 h-4 mr-1" /> Next Move
-            </Button>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-sm" htmlFor="disks">Disks:</label>
+            <Input id="disks" type="number" value={n} min={1} max={8} onChange={(e)=>setN(Math.max(1, Math.min(8, Number(e.target.value)||1)))} className="w-20" />
             <Button size="sm" variant="outline" onClick={()=>init(n)} aria-label="Reset">
               <RotateCcw className="w-4 h-4 mr-1" /> Reset
             </Button>
-            <Button size="sm" variant="ghost" onClick={undo} disabled={history.length===0} aria-label="Undo last move">Undo</Button>
           </div>
-          <div className="flex items-center gap-2 ml-auto text-sm">
-            <span>Speed</span>
-            <input aria-label="Playback speed" type="range" min={100} max={1200} step={50} value={delay} onChange={(e)=>setDelay(Number(e.target.value))} />
-          </div>
+          
+          {mode === 'select' && (
+            <div className="p-4 rounded-xl border-2 border-dashed border-muted-foreground/30 text-center">
+              <p className="text-sm text-muted-foreground mb-3">Choose how to solve the Tower of Hanoi:</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button onClick={() => setMode('manual')} className="flex-1 min-w-32">
+                  👤 Manual Play
+                </Button>
+                <Button onClick={() => setMode('auto')} variant="secondary" className="flex-1 min-w-32">
+                  🤖 Auto Solve
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {mode === 'manual' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium">👤 Manual Mode</span>
+              <Button size="sm" variant="ghost" onClick={undo} disabled={history.length===0} aria-label="Undo last move">Undo</Button>
+              <Button size="sm" variant="outline" onClick={() => setMode('select')} aria-label="Back to mode selection">Back</Button>
+            </div>
+          )}
+          
+          {mode === 'auto' && (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium">🤖 Auto Mode</span>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="secondary" onClick={handleToggleAuto} disabled={idx >= total} aria-label="Toggle Auto Solve">
+                  {playing ? <Pause className="w-4 h-4 mr-1" /> : <Play className="w-4 h-4 mr-1" />} {playing?"Pause":"Play"}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={stepAuto} disabled={idx >= total} aria-label="Step one move">
+                  <StepForward className="w-4 h-4 mr-1" /> Next Move
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setMode('select')} aria-label="Back to mode selection">Back</Button>
+              </div>
+              <div className="flex items-center gap-2 ml-auto text-sm">
+                <span>Speed</span>
+                <input aria-label="Playback speed" type="range" min={100} max={1200} step={50} value={delay} onChange={(e)=>setDelay(Number(e.target.value))} />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 rounded-2xl bg-muted">
-            <canvas ref={canvasRef} width={540} height={220} onClick={onCanvasClick} onTouchStart={onCanvasTouch} onTouchEnd={onCanvasTouch} className="w-full h-auto bg-background rounded-xl shadow-inner" />
-            <div className="text-xs text-muted-foreground mt-2">Click or tap a source peg, then a destination peg to make a legal move.</div>
+            <canvas ref={canvasRef} width={540} height={220} onClick={onCanvasClick} onTouchStart={onCanvasTouchStart} onTouchEnd={onCanvasTouchEnd} className="w-full h-auto bg-background rounded-xl shadow-inner" />
+            <div className="text-xs text-muted-foreground mt-2">
+              {mode === 'select' && "Choose Manual Play or Auto Solve above to begin."}
+              {mode === 'manual' && "Click or tap a source peg, then a destination peg to make a legal move."}
+              {mode === 'auto' && "Watch the automatic solution or step through it manually."}
+            </div>
           </div>
 
           <div className="space-y-3">
