@@ -205,7 +205,7 @@ function Hanoi() {
     if (invalidMove) {
       const i = pegKeys.indexOf(invalidMove as 'A'|'B'|'C');
       if (i >= 0) {
-        ctx.strokeStyle = '#ef4444'; // red for invalid moves
+        ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = 3;
         ctx.strokeRect(pegX[i] - 60, H - 170, 120, 150);
       }
@@ -220,7 +220,7 @@ function Hanoi() {
         ctx.strokeRect(pegX[i] - 60, H - 170, 120, 150);
       }
       if (showHints) {
-        ctx.strokeStyle = '#fbbf24'; // amber for legal targets
+        ctx.strokeStyle = '#fbbf24';
         ctx.lineWidth = 2;
         legalTargetsFrom(selected as 'A'|'B'|'C').forEach(dst => {
           const j = pegKeys.indexOf(dst);
@@ -237,7 +237,7 @@ function Hanoi() {
     }
 
     // draw disks
-    const maxWidth = 120; // visual width span for largest disk
+    const maxWidth = 120;
     const diskHeight = 14;
     const colorFor = (d: number) => `hsl(${(d*40)%360} 65% 55%)`;
 
@@ -279,7 +279,6 @@ function Hanoi() {
 
   const handleToggleAuto = () => {
     if (!playing) {
-      // about to start auto; ensure a clean initial state
       if (!isInitial) {
         init(n);
         setStatusMsg("Auto-solve starts from the initial state.");
@@ -295,34 +294,36 @@ function Hanoi() {
   useInterval(() => { if (playing) { if (idx < total) stepAuto(); else setPlaying(false); } }, playing ? delay : null);
 
   // ---- Manual move helpers ----
-  const pegFromX = (x: number) => {
+  const pegFromX = (xCanvas: number) => {
     const cvs = canvasRef.current; if (!cvs) return null;
-    const W = cvs.width; const pegX = [W*0.2, W*0.5, W*0.8];
+    const W = cvs.width;
+    const pegCenters = [W*0.2, W*0.5, W*0.8];
     const keys: Array<'A'|'B'|'C'> = ['A','B','C'];
     let best: 'A'|'B'|'C' | null = null; let bestDist = Infinity;
-    pegX.forEach((px, i) => { const d = Math.abs(px - x); if (d < bestDist) { bestDist = d; best = keys[i]; } });
+    pegCenters.forEach((px, i) => { const d = Math.abs(px - xCanvas); if (d < bestDist) { bestDist = d; best = keys[i]; } });
     return best;
   };
 
+  // NOTE: FIX — convert CSS pixel x to canvas pixel x
   const handleCanvasInteraction = (clientX: number, currentTarget: HTMLCanvasElement) => {
-    // Only allow interaction in manual mode
     if (mode !== 'manual') return;
 
     const rect = currentTarget.getBoundingClientRect();
-    const x = clientX - rect.left; // px relative to canvas
-    const target = pegFromX(x);
+    const scaleX = currentTarget.width / rect.width; // canvas px per CSS px
+    const xCanvas = (clientX - rect.left) * scaleX;
+
+    const target = pegFromX(xCanvas);
     if (!target) return;
 
-    // Clear any previous invalid move indicator
     setInvalidMove(null);
 
     if (!selected) {
-      if (pegs[target].length === 0) return; // ignore empty peg as source
+      if (pegs[target].length === 0) return;
       setSelected(target);
       return;
     }
     if (selected === target) { setSelected(null); return; }
-    // attempt move selected -> target
+
     const fromArr = pegs[selected];
     const toArr = pegs[target];
     if (fromArr.length === 0) { setSelected(null); return; }
@@ -345,11 +346,9 @@ function Hanoi() {
     setSelected(null);
   };
 
-  // ---- Unified pointer handler (fix for mobile touch) ----
+  // Unified pointer handler (mouse/touch/stylus)
   const onCanvasPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    // Prevent scrolling/gestures and make taps consistent across inputs
     e.preventDefault();
-    // capture pointer so movement outside still counts (not strictly needed for taps)
     (e.currentTarget as any).setPointerCapture?.(e.pointerId);
     handleCanvasInteraction(e.clientX, e.currentTarget);
   };
@@ -371,13 +370,12 @@ function Hanoi() {
       setPlaying(false);
       if (manualCount > 0) {
         setStatusMsg(manualCount === minMoves ? "Optimal solution! 🎉" : `Solved in ${manualCount} moves (optimal is ${minMoves}).`);
-        // Return to select mode after manual completion
         setTimeout(() => setMode('select'), 2000);
       }
     }
   }, [isSolved, manualCount, minMoves]);
 
-  // Auto-clear transient status messages
+  // Auto-clear transient messages
   useEffect(() => {
     if (!statusMsg) return;
     const t = setTimeout(() => setStatusMsg(""), 3000);
@@ -454,8 +452,7 @@ function Hanoi() {
               ref={canvasRef}
               width={540}
               height={220}
-              // IMPORTANT: prevent touch scrolling/gestures to ensure taps register
-              style={{ touchAction: 'none' }}
+              style={{ touchAction: 'none' }}   // prevent native gestures
               onPointerDown={onCanvasPointerDown}
               className="w-full h-auto bg-background rounded-xl shadow-inner"
             />
@@ -494,6 +491,7 @@ function Hanoi() {
     </Card>
   );
 }
+
 
 
 function AndOrSnippet() {
