@@ -2,12 +2,13 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// Final config for GitHub Pages deployment
+// Build the React app into /app with relative asset URLs
 export default defineConfig({
-  base: '/app/', // deploy to /app/ subdirectory
+  base: './',            // IMPORTANT: make assets relative for subfolder hosting
   plugins: [react()],
   build: {
-    outDir: 'app', // build to app directory instead of dist
+    outDir: 'app',       // put the built site in /app
+    emptyOutDir: true,
   },
   resolve: {
     alias: {
