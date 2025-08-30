@@ -288,9 +288,9 @@ function Hanoi() {
     return best;
   };
 
-  const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left; // px relative to canvas
+  const handleCanvasInteraction = (clientX: number, currentTarget: HTMLCanvasElement) => {
+    const rect = currentTarget.getBoundingClientRect();
+    const x = clientX - rect.left; // px relative to canvas
     const target = pegFromX(x);
     if (!target) return;
     if (!selected) {
@@ -316,6 +316,18 @@ function Hanoi() {
     });
     setManualCount(c => c + 1);
     setSelected(null);
+  };
+
+  const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
+    handleCanvasInteraction(e.clientX, e.currentTarget);
+  };
+
+  const onCanvasTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevent scrolling and other default touch behaviors
+    const touch = e.touches[0] || e.changedTouches[0];
+    if (touch) {
+      handleCanvasInteraction(touch.clientX, e.currentTarget);
+    }
   };
 
   const undo = () => {
@@ -375,8 +387,8 @@ function Hanoi() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 rounded-2xl bg-muted">
-            <canvas ref={canvasRef} width={540} height={220} onClick={onCanvasClick} className="w-full h-auto bg-background rounded-xl shadow-inner" />
-            <div className="text-xs text-muted-foreground mt-2">Click a source peg, then a destination peg to make a legal move.</div>
+            <canvas ref={canvasRef} width={540} height={220} onClick={onCanvasClick} onTouchStart={onCanvasTouch} onTouchEnd={onCanvasTouch} className="w-full h-auto bg-background rounded-xl shadow-inner" />
+            <div className="text-xs text-muted-foreground mt-2">Click or tap a source peg, then a destination peg to make a legal move.</div>
           </div>
 
           <div className="space-y-3">
