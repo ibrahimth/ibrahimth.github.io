@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy COE292 to GitHub Pages
 
 on:
   push:
@@ -6,20 +6,14 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
-  # Build the COE292 interactive app
-  build-app:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -28,49 +22,20 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: './teaching/coe-292/package-lock.json'
 
     - name: Install dependencies
-      working-directory: ./teaching/coe-292
       run: npm ci
 
-    - name: Build COE292 app
-      working-directory: ./teaching/coe-292
+    - name: Build
       run: npm run build
-
-    - name: Upload COE292 build artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: coe292-build
-        path: ./teaching/coe-292/dist
-
-  # Deploy everything to GitHub Pages
-  deploy:
-    needs: build-app
-    runs-on: ubuntu-latest
-    
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Download COE292 build
-      uses: actions/download-artifact@v4
-      with:
-        name: coe292-build
-        path: ./teaching/coe-292
 
     - name: Setup Pages
       uses: actions/configure-pages@v4
 
-    - name: Upload Pages artifact
+    - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: '.'
+        path: 'dist'
 
     - name: Deploy to GitHub Pages
       id: deployment
