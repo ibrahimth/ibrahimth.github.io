@@ -7,6 +7,15 @@
     <title>Ibrahim Al-Thamary | AI & Communication Systems Researcher</title>
     <link rel="icon" href="https://i.sstatic.net/AnJVo.png?s=256" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX');
+    </script>
     <style>
         * {
             margin: 0;
@@ -421,6 +430,9 @@
             text-align: center;
             transition: all 0.3s ease;
             border: 2px solid transparent;
+            text-decoration: none;
+            color: inherit;
+            display: block;
         }
         
         .skill-tag:hover {
@@ -428,6 +440,19 @@
             color: white;
             transform: scale(1.05);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .skill-tag.interactive {
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            color: white;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .skill-tag.interactive:hover {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            transform: scale(1.1);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
         }
         
         /* Footer */
@@ -544,6 +569,10 @@
                 <div class="stat-card">
                     <div class="stat-number">5</div>
                     <div class="stat-label">i10-index</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="visitor-count">-</div>
+                    <div class="stat-label">Site Visitors</div>
                 </div>
             </div>
             <p style="text-align: center; margin-top: 20px; color: #666; font-size: 0.9em;">
@@ -751,12 +780,12 @@
                 <div class="skill-tag">Programming Languages</div>
                 <div class="skill-tag">Algorithms</div>
                 <div class="skill-tag">Python Programming</div>
-                  <a class="skill-tag" 
-       href="/teaching/coe-292/" 
-       target="_blank" 
-       rel="noopener noreferrer">
-       COE292 Introduction to Artificial Intelligence
-    </a>
+                <a class="skill-tag interactive" 
+                   href="./teaching/coe-292/" 
+                   target="_blank" 
+                   rel="noopener noreferrer">
+                   🎓 COE292 Introduction to Artificial Intelligence
+                </a>
             </div>
         </section>
         
@@ -807,7 +836,7 @@
                 <div class="skill-tag">V2X Networks</div>
                 <div class="skill-tag">5G/6G Systems</div>
                 <div class="skill-tag">Cloud Computing</div>
-                  <div class="skill-tag">Computer Security</div>
+                <div class="skill-tag">Computer Security</div>
                 <div class="skill-tag">Edge Computing</div>
                 <div class="skill-tag">Python</div>
                 <div class="skill-tag">TensorFlow</div>
@@ -896,6 +925,82 @@
             const hero = document.querySelector('.hero');
             hero.style.transform = `translateY(${scrolled * 0.3}px)`;
         });
+        
+        // Visitor Counter
+        async function updateVisitorCount() {
+            try {
+                // Using a simple visitor counter API
+                const response = await fetch('https://api.countapi.xyz/hit/ibrahimth.github.io/visits');
+                const data = await response.json();
+                
+                if (data.value) {
+                    const visitorElement = document.getElementById('visitor-count');
+                    const targetCount = data.value;
+                    
+                    // Animate the counter
+                    let currentCount = 0;
+                    const increment = Math.ceil(targetCount / 50);
+                    
+                    const countAnimation = setInterval(() => {
+                        currentCount += increment;
+                        if (currentCount >= targetCount) {
+                            currentCount = targetCount;
+                            clearInterval(countAnimation);
+                        }
+                        visitorElement.textContent = currentCount.toLocaleString();
+                    }, 30);
+                    
+                    // Track page interactions
+                    trackPageInteractions();
+                }
+            } catch (error) {
+                console.log('Visitor count unavailable');
+                document.getElementById('visitor-count').textContent = '-';
+            }
+        }
+        
+        // Track page interactions
+        function trackPageInteractions() {
+            // Track clicks on navigation
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'navigation_click', {
+                            'event_category': 'navigation',
+                            'event_label': btn.textContent.trim()
+                        });
+                    }
+                });
+            });
+            
+            // Track social media clicks
+            document.querySelectorAll('.social-links a').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'social_click', {
+                            'event_category': 'social_media',
+                            'event_label': link.getAttribute('title')
+                        });
+                    }
+                });
+            });
+            
+            // Track COE292 course clicks
+            const coe292Link = document.querySelector('a[href*="teaching/coe-292"]');
+            if (coe292Link) {
+                coe292Link.addEventListener('click', () => {
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'course_access', {
+                            'event_category': 'teaching',
+                            'event_label': 'COE292'
+                        });
+                    }
+                });
+            }
+        }
+        
+        // Initialize visitor counter when page loads
+        document.addEventListener('DOMContentLoaded', updateVisitorCount);
     </script>
 </body>
 </html>
