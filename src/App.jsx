@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Topic1Studio from './topic_1_interactive_studio_coe_292.jsx'
 import Topic2Studio from './topic_2_interactive_studio_coe_292.tsx'
+import SVMPlayground from './topic_3_svm_playground.tsx'
 
 function TabButton({ id, isActive, onClick, children }) {
   const base = {
@@ -40,7 +41,7 @@ function TabButton({ id, isActive, onClick, children }) {
 }
 
 export default function App() {
-  const [active, setActive] = useState('topic1')
+  const [active, setActive] = useState('topic3')
 
   return (
     <div style={{ padding: '1rem' }}>
@@ -75,6 +76,14 @@ export default function App() {
         >
           Topic 2 — Playground
         </TabButton>
+
+        <TabButton
+          id="tab-topic3"
+          isActive={active === 'topic3'}
+          onClick={() => setActive('topic3')}
+        >
+          Topic 3 — k-NN Classification
+        </TabButton>
       </nav>
 
       {/* Panels */}
@@ -96,6 +105,16 @@ export default function App() {
         style={{ display: active === 'topic2' ? 'block' : 'none' }}
       >
         <Topic2Studio />
+      </section>
+
+      <section
+        id="tab-topic3-panel"
+        role="tabpanel"
+        aria-labelledby="tab-topic3"
+        hidden={active !== 'topic3'}
+        style={{ display: active === 'topic3' ? 'block' : 'none' }}
+      >
+        <SVMPlayground />
       </section>
     </div>
   )
