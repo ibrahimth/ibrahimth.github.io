@@ -858,108 +858,108 @@ function SymbolicIntegration() {
 }
 
 // ---------- Developer Tests ----------
-function DevTests() {
-  const results = useMemo(() => {
-    const out: {name:string; pass:boolean;}[] = [];
-    const assert = (name: string, cond: any) => out.push({ name, pass: !!cond });
+// function DevTests() {
+//   const results = useMemo(() => {
+//     const out: {name:string; pass:boolean;}[] = [];
+//     const assert = (name: string, cond: any) => out.push({ name, pass: !!cond });
 
-    // Test 1: hanoiMoves for n=3
-    const m3 = hanoiMoves(3, "A", "C", "B", []);
-    assert("hanoiMoves n=3 length = 7", m3.length === 7);
-    assert("hanoiMoves n=3 first move A→C", m3[0][0] === "A" && m3[0][1] === "C");
-    assert("hanoiMoves n=3 last move A→C", m3[m3.length - 1][0] === "A" && m3[m3.length - 1][1] === "C");
+//     // Test 1: hanoiMoves for n=3
+//     const m3 = hanoiMoves(3, "A", "C", "B", []);
+//     assert("hanoiMoves n=3 length = 7", m3.length === 7);
+//     assert("hanoiMoves n=3 first move A→C", m3[0][0] === "A" && m3[0][1] === "C");
+//     assert("hanoiMoves n=3 last move A→C", m3[m3.length - 1][0] === "A" && m3[m3.length - 1][1] === "C");
 
-    // Additional tests for robustness
-    const m1 = hanoiMoves(1, "A", "C", "B", []);
-    assert("hanoiMoves n=1 length = 1", m1.length === 1);
-    assert("hanoiMoves n=1 move is A→C", m1[0][0] === "A" && m1[0][1] === "C");
-    const m0 = hanoiMoves(0, "A", "C", "B", []);
-    assert("hanoiMoves n=0 length = 0", m0.length === 0);
+//     // Additional tests for robustness
+//     const m1 = hanoiMoves(1, "A", "C", "B", []);
+//     assert("hanoiMoves n=1 length = 1", m1.length === 1);
+//     assert("hanoiMoves n=1 move is A→C", m1[0][0] === "A" && m1[0][1] === "C");
+//     const m0 = hanoiMoves(0, "A", "C", "B", []);
+//     assert("hanoiMoves n=0 length = 0", m0.length === 0);
 
-    // NEW: min moves formula vs generator for n=4
-    const m4 = hanoiMoves(4, "A", "C", "B", []);
-    assert("hanoiMoves n=4 length = 15", m4.length === 15);
+//     // NEW: min moves formula vs generator for n=4
+//     const m4 = hanoiMoves(4, "A", "C", "B", []);
+//     assert("hanoiMoves n=4 length = 15", m4.length === 15);
 
-    // Test 2: evaluate AND/OR logic
-    const tAND = { type: "AND", children: [{ done: true, children: [] }, { done: false, children: [] }] };
-    const tOR = { type: "OR", children: [{ done: false, children: [] }, { done: true, children: [] }] };
-    assert("evaluate AND(true,false) = false", evaluate(tAND) === false);
-    assert("evaluate OR(false,true) = true", evaluate(tOR) === true);
+//     // Test 2: evaluate AND/OR logic
+//     const tAND = { type: "AND", children: [{ done: true, children: [] }, { done: false, children: [] }] };
+//     const tOR = { type: "OR", children: [{ done: false, children: [] }, { done: true, children: [] }] };
+//     assert("evaluate AND(true,false) = false", evaluate(tAND) === false);
+//     assert("evaluate OR(false,true) = true", evaluate(tOR) === true);
 
-    // NEW: nested structure truth
-    const nested = { type: "AND", children: [ { type: "OR", children: [ { done: false, children: [] }, { done: true, children: [] } ] }, { done: true, children: [] } ] } as any;
-    assert("evaluate AND( OR(false,true), true ) = true", evaluate(nested) === true);
+//     // NEW: nested structure truth
+//     const nested = { type: "AND", children: [ { type: "OR", children: [ { done: false, children: [] }, { done: true, children: [] } ] }, { done: true, children: [] } ] } as any;
+//     assert("evaluate AND( OR(false,true), true ) = true", evaluate(nested) === true);
 
-    // Test 3: factorial
-    function fact(n:number){ return n <= 1 ? 1 : n * fact(n-1); }
-    assert("factorial(5) = 120", fact(5) === 120);
+//     // Test 3: factorial
+//     function fact(n:number){ return n <= 1 ? 1 : n * fact(n-1); }
+//     assert("factorial(5) = 120", fact(5) === 120);
 
-    // Test 4: isGoal check (63 is LCM of 7 and 9)
-    const isGoal = (x:number) => x % 7 === 0 && x % 9 === 0;
-    assert("isGoal(63) === true", isGoal(63) === true);
-    assert("isGoal(64) === false", isGoal(64) === false);
-    assert("isGoal(126) === true", isGoal(126) === true);
+//     // Test 4: isGoal check (63 is LCM of 7 and 9)
+//     const isGoal = (x:number) => x % 7 === 0 && x % 9 === 0;
+//     assert("isGoal(63) === true", isGoal(63) === true);
+//     assert("isGoal(64) === false", isGoal(64) === false);
+//     assert("isGoal(126) === true", isGoal(126) === true);
 
-    // Test 5: HanoiGoalTree shape for n=2
-    const make = (k:number, from:string, to:string, aux:string): any => k===1 ? { label:`1${from}${to}`, type:'LEAF', children:[] } : ({ label:`${k}${from}${to}`, type:'AND', children:[ { label:`1${from}${aux}`, type:'LEAF', children:[] }, { label:`1${from}${to}`, type:'LEAF', children:[] }, { label:`1${aux}${to}`, type:'LEAF', children:[] } ] });
-    const t2 = make(2,'A','C','B');
-    assert("HanoiGoalTree n=2 label is 2AC", t2.label === '2AC');
-    assert("HanoiGoalTree n=2 middle child is 1AC", t2.children[1].label === '1AC');
+//     // Test 5: HanoiGoalTree shape for n=2
+//     const make = (k:number, from:string, to:string, aux:string): any => k===1 ? { label:`1${from}${to}`, type:'LEAF', children:[] } : ({ label:`${k}${from}${to}`, type:'AND', children:[ { label:`1${from}${aux}`, type:'LEAF', children:[] }, { label:`1${from}${to}`, type:'LEAF', children:[] }, { label:`1${aux}${to}`, type:'LEAF', children:[] } ] });
+//     const t2 = make(2,'A','C','B');
+//     assert("HanoiGoalTree n=2 label is 2AC", t2.label === '2AC');
+//     assert("HanoiGoalTree n=2 middle child is 1AC", t2.children[1].label === '1AC');
 
-    // Test 6: SymbolicIntegration tree leaves are typed as LEAF and marked done appropriately
-    const intTree = {
-      label: "∫ (x^2 + 1)/x dx",
-      type: "OR",
-      children: [
-        { label: "Safe: split fraction", type: "AND", done: true, children: [
-          { label: "∫ x dx = x^2/2", type: "LEAF", done: true, children: [] },
-          { label: "∫ 1/x dx = ln|x|", type: "LEAF", done: true, children: [] },
-        ]},
-        { label: "Heuristic: u‑substitution (u = x^2+1)", type: "OR", done: false, children: [
-          { label: "du = 2x dx → needs x dx present (dead end)", type: "LEAF", done: false, children: [] },
-        ]},
-      ], done: true } as any;
-    const leaves = [intTree.children[0].children[0], intTree.children[0].children[1], intTree.children[1].children[0]] as any[];
-    assert("Integration tree leaves use type=LEAF", leaves.every(l => l.type === 'LEAF'));
-    assert("Integration safe leaves marked done", leaves[0].done === true && leaves[1].done === true);
-    assert("Integration heuristic leaf not done", leaves[2].done === false);
+//     // Test 6: SymbolicIntegration tree leaves are typed as LEAF and marked done appropriately
+//     const intTree = {
+//       label: "∫ (x^2 + 1)/x dx",
+//       type: "OR",
+//       children: [
+//         { label: "Safe: split fraction", type: "AND", done: true, children: [
+//           { label: "∫ x dx = x^2/2", type: "LEAF", done: true, children: [] },
+//           { label: "∫ 1/x dx = ln|x|", type: "LEAF", done: true, children: [] },
+//         ]},
+//         { label: "Heuristic: u‑substitution (u = x^2+1)", type: "OR", done: false, children: [
+//           { label: "du = 2x dx → needs x dx present (dead end)", type: "LEAF", done: false, children: [] },
+//         ]},
+//       ], done: true } as any;
+//     const leaves = [intTree.children[0].children[0], intTree.children[0].children[1], intTree.children[1].children[0]] as any[];
+//     assert("Integration tree leaves use type=LEAF", leaves.every(l => l.type === 'LEAF'));
+//     assert("Integration safe leaves marked done", leaves[0].done === true && leaves[1].done === true);
+//     assert("Integration heuristic leaf not done", leaves[2].done === false);
 
-        // NEW: shuffle utility preserves exactly one correct option
-    const opts = [
-      { text: 'A', correct: false },
-      { text: 'B', correct: true },
-      { text: 'C', correct: false },
-      { text: 'D', correct: false },
-    ];
-    const rng = () => 0.42; // deterministic
-    const sh = shuffle(opts, rng);
-    assert("shuffle keeps same length", sh.length === opts.length);
-    assert("shuffle keeps one correct option", sh.filter(o => o.correct).length === 1);
-    assert("shuffle keeps set of texts", sh.map(o=>o.text).sort().join('') === opts.map(o=>o.text).sort().join(''));
+//         // NEW: shuffle utility preserves exactly one correct option
+//     const opts = [
+//       { text: 'A', correct: false },
+//       { text: 'B', correct: true },
+//       { text: 'C', correct: false },
+//       { text: 'D', correct: false },
+//     ];
+//     const rng = () => 0.42; // deterministic
+//     const sh = shuffle(opts, rng);
+//     assert("shuffle keeps same length", sh.length === opts.length);
+//     assert("shuffle keeps one correct option", sh.filter(o => o.correct).length === 1);
+//     assert("shuffle keeps set of texts", sh.map(o=>o.text).sort().join('') === opts.map(o=>o.text).sort().join(''));
 
-    return out;
-  }, []);
+//     return out;
+//   }, []);
 
-  const passed = results.filter(r => r.pass).length;
+//   const passed = results.filter(r => r.pass).length;
 
-  return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Developer Tests</CardTitle>
-      </CardHeader>
-      <CardContent className="text-sm space-y-2">
-        <div>Passed {passed} / {results.length} checks</div>
-        <ul className="list-disc ml-5">
-          {results.map((r, i) => (
-            <li key={i} className={r.pass ? "text-emerald-700" : "text-red-700"}>
-              {r.pass ? "✅" : "❌"} {r.name}
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
-  );
-}
+//   return (
+//     <Card className="shadow-sm">
+//       <CardHeader className="pb-2">
+//         <CardTitle className="text-lg">Developer Tests</CardTitle>
+//       </CardHeader>
+//       <CardContent className="text-sm space-y-2">
+//         <div>Passed {passed} / {results.length} checks</div>
+//         <ul className="list-disc ml-5">
+//           {results.map((r, i) => (
+//             <li key={i} className={r.pass ? "text-emerald-700" : "text-red-700"}>
+//               {r.pass ? "✅" : "❌"} {r.name}
+//             </li>
+//           ))}
+//         </ul>
+//       </CardContent>
+//     </Card>
+//   );
+// }
 
 // ---------- Main App ----------
 export default function Topic2Playground() {
@@ -987,9 +987,9 @@ export default function Topic2Playground() {
         </div>
       </Tabs>
 
-      <div className="mt-6 grid gap-4">
+{/*       <div className="mt-6 grid gap-4">
         <DevTests />
-      </div>
+      </div> */}
 
       <footer className="mt-6 text-xs text-muted-foreground">
         Built for COE 292 — Topic 2 (Goal Trees & Problem Solving). Use it as a study companion alongside the course slides.
