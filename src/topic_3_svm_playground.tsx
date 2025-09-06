@@ -1289,3 +1289,4 @@ function TestsPanel() {
       </div>
     </div>
   );
+}
