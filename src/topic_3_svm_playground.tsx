@@ -172,6 +172,138 @@ function fitLinearSVM(data: Pt[], C = 1) {
   return best;
 }
 
+// ---------- Perceptron Learning Algorithm ----------
+function perceptronClassify(x1: number, x2: number, w0: number, w1: number, w2: number): 1 | -1 {
+  const activation = w0 + w1 * x1 + w2 * x2;
+  return activation >= 0 ? 1 : -1;
+}
+
+function trainPerceptron(
+  data: Pt[], 
+  alpha: number = 0.1, 
+  maxIter: number = 100,
+  onUpdate?: (iteration: number, weights: {w0: number; w1: number; w2: number}, errors: number) => void
+): { weights: {w0: number; w1: number; w2: number}; history: Array<{iteration: number; weights: {w0: number; w1: number; w2: number}; errors: number}> } {
+  // Initialize weights
+  let w0 = Math.random() * 0.2 - 0.1; // bias term
+  let w1 = Math.random() * 0.2 - 0.1; // weight for x1
+  let w2 = Math.random() * 0.2 - 0.1; // weight for x2
+  
+  const history: Array<{iteration: number; weights: {w0: number; w1: number; w2: number}; errors: number}> = [];
+  
+  for (let iter = 0; iter < maxIter; iter++) {
+    let errorCount = 0;
+    
+    // For each training instance
+    for (let i = 0; i < data.length; i++) {
+      const Xi = data[i];
+      const Yi = Xi.label; // actual class
+      const predicted = perceptronClassify(Xi.x, Xi.y, w0, w1, w2);
+      
+      // If misclassified, update weights
+      if (predicted !== Yi) {
+        errorCount++;
+        // Update rule: wj = wj + α(Yi - h(Xi)) × xi,j
+        const error = Yi - predicted; // Yi - h(Xi)
+        w0 = w0 + alpha * error * 1; // bias term (x0 = 1)
+        w1 = w1 + alpha * error * Xi.x; // weight for x1
+        w2 = w2 + alpha * error * Xi.y; // weight for x2
+      }
+    }
+    
+    const weights = { w0, w1, w2 };
+    history.push({ iteration: iter, weights: { ...weights }, errors: errorCount });
+    
+    if (onUpdate) {
+      onUpdate(iter, weights, errorCount);
+    }
+    
+    // Stop if no errors (converged)
+    if (errorCount === 0) {
+      break;
+    }
+  }
+  
+  return { weights: { w0, w1, w2 }, history };
+}
+
+function generatePerceptronSteps(
+  data: Pt[], 
+  alpha: number = 0.1, 
+  maxIter: number = 100
+): Array<{
+  iteration: number;
+  pointIndex: number;
+  point: Pt;
+  oldWeights: {w0: number; w1: number; w2: number};
+  prediction: 1 | -1;
+  actual: 1 | -1;
+  isCorrect: boolean;
+  newWeights: {w0: number; w1: number; w2: number};
+  weightChange: {w0: number; w1: number; w2: number};
+}> {
+  const steps = [];
+  
+  // Initialize weights
+  let w0 = Math.random() * 0.2 - 0.1;
+  let w1 = Math.random() * 0.2 - 0.1;
+  let w2 = Math.random() * 0.2 - 0.1;
+  
+  for (let iter = 0; iter < maxIter; iter++) {
+    let errorCount = 0;
+    
+    for (let i = 0; i < data.length; i++) {
+      const point = data[i];
+      const oldWeights = { w0, w1, w2 };
+      const prediction = perceptronClassify(point.x, point.y, w0, w1, w2);
+      const actual = point.label;
+      const isCorrect = prediction === actual;
+      
+      let newWeights = { ...oldWeights };
+      let weightChange = { w0: 0, w1: 0, w2: 0 };
+      
+      if (!isCorrect) {
+        errorCount++;
+        const error = actual - prediction;
+        const dw0 = alpha * error * 1;
+        const dw1 = alpha * error * point.x;
+        const dw2 = alpha * error * point.y;
+        
+        newWeights = {
+          w0: w0 + dw0,
+          w1: w1 + dw1,
+          w2: w2 + dw2
+        };
+        
+        weightChange = { w0: dw0, w1: dw1, w2: dw2 };
+        
+        w0 = newWeights.w0;
+        w1 = newWeights.w1;
+        w2 = newWeights.w2;
+      }
+      
+      steps.push({
+        iteration: iter,
+        pointIndex: i,
+        point,
+        oldWeights,
+        prediction,
+        actual,
+        isCorrect,
+        newWeights,
+        weightChange
+      });
+    }
+    
+    // Stop if no errors (converged)
+    if (errorCount === 0) {
+      break;
+    }
+  }
+  
+  return steps;
+}
+
 function splitTrainTest(points: Pt[], trainRatio = 0.7) {
   const shuffled = points.slice().sort(() => Math.random() - 0.5);
   const cut = Math.floor(shuffled.length * trainRatio);
@@ -259,6 +391,31 @@ export default function SVMPlayground() {
   const [selectedClass, setSelectedClass] = useState<1 | -1>(1);
   const [showKNN, setShowKNN] = useState(false);
 
+  // Perceptron state
+  const [showPerceptron, setShowPerceptron] = useState(false);
+  const [perceptronWeights, setPerceptronWeights] = useState<{ w0: number; w1: number; w2: number }>({ w0: 0, w1: 0, w2: 0 });
+  const [learningRate, setLearningRate] = useState(0.1);
+  const [maxIterations, setMaxIterations] = useState(100);
+  const [isTraining, setIsTraining] = useState(false);
+  const [trainingHistory, setTrainingHistory] = useState<Array<{iteration: number; weights: {w0: number; w1: number; w2: number}; errors: number}>>([]);
+  
+  // Step-by-step training state
+  const [stepByStepMode, setStepByStepMode] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [currentIteration, setCurrentIteration] = useState(0);
+  const [trainingSteps, setTrainingSteps] = useState<Array<{
+    iteration: number;
+    pointIndex: number;
+    point: Pt;
+    oldWeights: {w0: number; w1: number; w2: number};
+    prediction: 1 | -1;
+    actual: 1 | -1;
+    isCorrect: boolean;
+    newWeights: {w0: number; w1: number; w2: number};
+    weightChange: {w0: number; w1: number; w2: number};
+  }>>([]);
+  const [autoPlaySpeed, setAutoPlaySpeed] = useState(1000); // ms between steps
+
   const svgRef = useRef<SVGSVGElement | null>(null);
   const width = 620;
   const height = 420;
@@ -334,6 +491,23 @@ export default function SVMPlayground() {
     return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
   }, [draggingId, toWorld]);
 
+  // Auto-play effect for step-by-step training
+  useEffect(() => {
+    if (!stepByStepMode || !isTraining || currentStep >= trainingSteps.length) return;
+    
+    const timer = setTimeout(() => {
+      const step = trainingSteps[currentStep];
+      setPerceptronWeights(step.newWeights);
+      setCurrentStep(prev => prev + 1);
+      
+      if (currentStep >= trainingSteps.length - 1) {
+        setIsTraining(false);
+      }
+    }, autoPlaySpeed);
+    
+    return () => clearTimeout(timer);
+  }, [stepByStepMode, isTraining, currentStep, trainingSteps, autoPlaySpeed]);
+
   const linePoints = useMemo(() => {
     // Compute two endpoints of the line across the viewport: n·x + b = 0
     // Direction vector t is perpendicular to n
@@ -394,19 +568,23 @@ export default function SVMPlayground() {
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 text-slate-900">
       <div className="max-w-7xl mx-auto">
         <header className="flex items-center justify-between gap-4 mb-6">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Human SVM & k-NN Playground</h1>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">ML Classification Playground</h1>
           <div className="flex items-center gap-4">
-            <div className="text-sm md:text-base text-slate-600">Drag points • Rotate/shift line • Watch margins, SVs & metrics update</div>
+            <div className="text-sm md:text-base text-slate-600">Interactive ML algorithms • Drag points • Train models • Compare approaches</div>
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => setShowKNN(false)} 
-                className={`px-3 py-1.5 rounded-xl text-sm ${!showKNN ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+                onClick={() => {
+                  setShowKNN(false);
+                  setShowPerceptron(false);
+                }} 
+                className={`px-3 py-1.5 rounded-xl text-sm ${!showKNN && !showPerceptron ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-900'}`}
               >
                 SVM Mode
               </button>
               <button 
                 onClick={() => {
-                  setShowKNN(true)
+                  setShowKNN(true);
+                  setShowPerceptron(false);
                   // Ensure we have data when switching to k-NN mode
                   if (points.length === 0) {
                     setPoints(presetLayout("clusters"))
@@ -414,9 +592,25 @@ export default function SVMPlayground() {
                   // Ensure test point is in visible area
                   setTestPoint({ x: 0, y: 0 })
                 }} 
-                className={`px-3 py-1.5 rounded-xl text-sm ${showKNN ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+                className={`px-3 py-1.5 rounded-xl text-sm ${showKNN && !showPerceptron ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-900'}`}
               >
                 k-NN Mode
+              </button>
+              <button 
+                onClick={() => {
+                  setShowKNN(false);
+                  setShowPerceptron(true);
+                  // Ensure we have data when switching to Perceptron mode
+                  if (points.length === 0) {
+                    setPoints(presetLayout("clusters"))
+                  }
+                  // Reset perceptron weights
+                  setPerceptronWeights({ w0: 0, w1: 0, w2: 0 });
+                  setTrainingHistory([]);
+                }} 
+                className={`px-3 py-1.5 rounded-xl text-sm ${showPerceptron ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+              >
+                Perceptron Mode
               </button>
             </div>
           </div>
@@ -425,7 +619,11 @@ export default function SVMPlayground() {
         {/* Linear SVM intuition - Full width */}
         <div className="bg-white rounded-2xl shadow p-4 md:p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">{showKNN ? '1) k-Nearest Neighbors Classification' : '1) Max‑Margin & Soft‑Margin Intuition'}</h2>
+            <h2 className="text-xl font-semibold">
+              {showPerceptron ? '1) Perceptron Learning Algorithm' : 
+               showKNN ? '1) k-Nearest Neighbors Classification' : 
+               '1) Max‑Margin & Soft‑Margin Intuition'}
+            </h2>
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => setPoints(randomPoints())} className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-sm shadow">Randomize</button>
               <button onClick={() => setPoints(presetLayout("clusters"))} className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-900 text-sm">Clusters</button>
@@ -467,8 +665,41 @@ export default function SVMPlayground() {
                 <line x1={toScreen(world.xMin,0).x} y1={toScreen(world.xMin,0).y} x2={toScreen(world.xMax,0).x} y2={toScreen(world.xMax,0).y} stroke="#e5e7eb" />
                 <line x1={toScreen(0,world.yMin).x} y1={toScreen(0,world.yMin).y} x2={toScreen(0,world.yMax).x} y2={toScreen(0,world.yMax).y} stroke="#e5e7eb" />
 
-                {/* SVM-specific elements - only show when not in k-NN mode */}
-                {!showKNN && (
+                {/* Perceptron-specific elements */}
+                {showPerceptron && (() => {
+                  // Compute perceptron decision boundary: w0 + w1*x + w2*y = 0 => y = -(w0 + w1*x)/w2
+                  const { w0, w1, w2 } = perceptronWeights;
+                  if (Math.abs(w2) > 1e-9) {
+                    const y1 = -(w0 + w1 * world.xMin) / w2;
+                    const y2 = -(w0 + w1 * world.xMax) / w2;
+                    const A = toScreen(world.xMin, y1);
+                    const B = toScreen(world.xMax, y2);
+                    return (
+                      <>
+                        <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#8b5cf6" strokeWidth={3} />
+                        <text x={(A.x + B.x) / 2} y={(A.y + B.y) / 2 - 10} className="text-sm font-semibold fill-purple-600" textAnchor="middle">
+                          Perceptron Boundary
+                        </text>
+                      </>
+                    );
+                  } else if (Math.abs(w1) > 1e-9) {
+                    const x = -w0 / w1;
+                    const A = toScreen(x, world.yMin);
+                    const B = toScreen(x, world.yMax);
+                    return (
+                      <>
+                        <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#8b5cf6" strokeWidth={3} />
+                        <text x={A.x + 10} y={(A.y + B.y) / 2} className="text-sm font-semibold fill-purple-600">
+                          Perceptron Boundary
+                        </text>
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* SVM-specific elements - only show when not in k-NN or Perceptron mode */}
+                {!showKNN && !showPerceptron && (
                   <>
                     {/* Margin lines */}
                     <line x1={toScreen(marginLines.upA.x, marginLines.upA.y).x} y1={toScreen(marginLines.upA.x, marginLines.upA.y).y} x2={toScreen(marginLines.upB.x, marginLines.upB.y).x} y2={toScreen(marginLines.upB.x, marginLines.upB.y).y} stroke="#34d399" strokeDasharray="6 6" strokeWidth={2} />
@@ -539,21 +770,321 @@ export default function SVMPlayground() {
                 )}
 
                 {/* Data points */}
-                {points.map((p) => renderPoint(p, { toScreen, n, bias, marginHalf, SVs, setHoverId, setDraggingId, hoverId, showKNN, nearestNeighbors }))}
+                {points.map((p) => {
+                  // Check if this is the current point being processed in step-by-step mode
+                  const isCurrentStep = showPerceptron && stepByStepMode && trainingSteps.length > 0 && currentStep < trainingSteps.length && 
+                                       trainingSteps[currentStep]?.point.id === p.id;
+                  
+                  return renderPoint(p, { 
+                    toScreen, 
+                    n, 
+                    bias, 
+                    marginHalf, 
+                    SVs, 
+                    setHoverId, 
+                    setDraggingId, 
+                    hoverId, 
+                    showKNN, 
+                    nearestNeighbors,
+                    isCurrentPerceptronStep: isCurrentStep
+                  });
+                })}
               </svg>
 
               {/* Legend */}
               <div className="absolute top-2 left-2 bg-white/80 backdrop-blur rounded-xl px-3 py-2 text-xs shadow flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full" style={{ background: "#2563eb" }}></span> Class +1</div>
                 <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full" style={{ background: "#f97316" }}></span> Class −1</div>
-                <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#10b981" }}></span> Support Vectors</div>
-                <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#f59e0b" }}></span> Inside Margin</div>
-                <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#ef4444" }}></span> Misclassified</div>
+                {!showKNN && !showPerceptron && (
+                  <>
+                    <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#10b981" }}></span> Support Vectors</div>
+                    <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#f59e0b" }}></span> Inside Margin</div>
+                    <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#ef4444" }}></span> Misclassified</div>
+                  </>
+                )}
+                {showKNN && (
+                  <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#10b981" }}></span> k-Nearest</div>
+                )}
+                {showPerceptron && (
+                  <div className="flex items-center gap-1"><span className="inline-block w-4 h-1" style={{ background: "#8b5cf6" }}></span> Decision Boundary</div>
+                )}
               </div>
+            {/* MetricsCard positioned directly under plot */}
+            <div className="mt-4">
+              <MetricsCard metrics={metrics} />
+            </div>
             </div>
 
             {/* Controls + Readouts */}
             <div className="space-y-4">
+              {/* Perceptron Controls */}
+              {showPerceptron && (
+                <>
+                  <div className="bg-slate-50 rounded-2xl p-4 border">
+                    <h3 className="font-semibold mb-2">Perceptron Controls</h3>
+                    
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center">
+                          <label className="text-xs font-medium">w₀ (bias)</label>
+                          <div className="text-lg font-mono">{perceptronWeights.w0.toFixed(3)}</div>
+                        </div>
+                        <div className="text-center">
+                          <label className="text-xs font-medium">w₁</label>
+                          <div className="text-lg font-mono">{perceptronWeights.w1.toFixed(3)}</div>
+                        </div>
+                        <div className="text-center">
+                          <label className="text-xs font-medium">w₂</label>
+                          <div className="text-lg font-mono">{perceptronWeights.w2.toFixed(3)}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Learning Rate (α):</label>
+                        <input
+                          type="number"
+                          min="0.01"
+                          max="1"
+                          step="0.01"
+                          value={learningRate}
+                          onChange={(e) => setLearningRate(parseFloat(e.target.value) || 0.1)}
+                          className="w-full p-2 border rounded"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Max Iterations:</label>
+                        <input
+                          type="number"
+                          min="10"
+                          max="1000"
+                          step="10"
+                          value={maxIterations}
+                          onChange={(e) => setMaxIterations(parseInt(e.target.value) || 100)}
+                          className="w-full p-2 border rounded"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <label className="text-sm font-medium">Training Mode:</label>
+                          <select
+                            value={stepByStepMode ? 'step' : 'auto'}
+                            onChange={(e) => setStepByStepMode(e.target.value === 'step')}
+                            className="flex-1 p-1 border rounded text-sm"
+                          >
+                            <option value="auto">Auto (Batch)</option>
+                            <option value="step">Step-by-Step</option>
+                          </select>
+                        </div>
+
+                        {stepByStepMode && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Auto-play Speed:</label>
+                            <input
+                              type="range"
+                              min="200"
+                              max="2000"
+                              step="100"
+                              value={autoPlaySpeed}
+                              onChange={(e) => setAutoPlaySpeed(parseInt(e.target.value))}
+                              className="w-full"
+                            />
+                            <div className="text-xs text-center">{autoPlaySpeed}ms per step</div>
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            if (points.length === 0) return;
+                            setIsTraining(true);
+                            setTrainingHistory([]);
+                            setCurrentStep(0);
+                            
+                            if (stepByStepMode) {
+                              // Generate all steps for step-by-step mode
+                              const steps = generatePerceptronSteps(points, learningRate, maxIterations);
+                              setTrainingSteps(steps);
+                              if (steps.length > 0) {
+                                setPerceptronWeights(steps[0].oldWeights);
+                              }
+                            } else {
+                              // Regular batch training
+                              const result = trainPerceptron(points, learningRate, maxIterations, (iter, weights, errors) => {
+                                setTimeout(() => {
+                                  setPerceptronWeights(weights);
+                                  setTrainingHistory(prev => [...prev, {iteration: iter, weights: {...weights}, errors}]);
+                                }, iter * 50);
+                              });
+                              
+                              setTimeout(() => {
+                                setPerceptronWeights(result.weights);
+                                setIsTraining(false);
+                              }, result.history.length * 50);
+                            }
+                          }}
+                          disabled={isTraining || points.length === 0}
+                          className="w-full px-3 py-2 rounded-xl bg-purple-600 text-white text-sm shadow hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                          {isTraining ? 'Training...' : stepByStepMode ? 'Start Step-by-Step' : 'Train Perceptron'}
+                        </button>
+
+                        {stepByStepMode && trainingSteps.length > 0 && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                if (currentStep > 0) {
+                                  const newStep = currentStep - 1;
+                                  setCurrentStep(newStep);
+                                  setPerceptronWeights(trainingSteps[newStep].newWeights);
+                                }
+                              }}
+                              disabled={currentStep === 0}
+                              className="flex-1 px-2 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            >
+                              ← Prev
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                setIsTraining(!isTraining);
+                              }}
+                              disabled={currentStep >= trainingSteps.length}
+                              className="flex-1 px-2 py-1 rounded text-sm bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-400"
+                            >
+                              {isTraining ? 'Pause' : 'Play'}
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                if (currentStep < trainingSteps.length - 1) {
+                                  const newStep = currentStep + 1;
+                                  setCurrentStep(newStep);
+                                  setPerceptronWeights(trainingSteps[newStep].newWeights);
+                                }
+                              }}
+                              disabled={currentStep >= trainingSteps.length - 1}
+                              className="flex-1 px-2 py-1 rounded text-sm bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            >
+                              Next →
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <button
+                        onClick={() => {
+                          setPerceptronWeights({ w0: Math.random() * 0.2 - 0.1, w1: Math.random() * 0.2 - 0.1, w2: Math.random() * 0.2 - 0.1 });
+                          setTrainingHistory([]);
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-500 text-white text-sm shadow hover:bg-slate-600"
+                      >
+                        Reset Weights
+                      </button>
+                    </div>
+
+                    <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                      <h4 className="text-sm font-medium text-purple-800 mb-2">Perceptron Algorithm</h4>
+                      <div className="text-xs text-purple-700 space-y-1 font-mono">
+                        <div><strong>Input:</strong> T training instances (X₀, Y₀), (X₁, Y₁), ..., (Xₜ₋₁, Yₜ₋₁)</div>
+                        <div><strong>Where:</strong> Xᵢ = ⟨xᵢ,₀, xᵢ,₁, ..., xᵢ,ₙ₋₁⟩ (N input features)</div>
+                        <div><strong>Output:</strong> Decision boundary hyperplane W = ⟨w₀, w₁, ..., wₙ₋₁⟩</div>
+                        <div className="mt-2"><strong>Algorithm:</strong></div>
+                        <div>1. Initialize W</div>
+                        <div>2. Do:</div>
+                        <div className="ml-4">For i = 0 to T-1:</div>
+                        <div className="ml-8">For j = 0 to N-1:</div>
+                        <div className="ml-12">wⱼ = wⱼ + α(Yᵢ - h(Xᵢ)) × xᵢ,ⱼ</div>
+                        <div>3. Until min classification error</div>
+                      </div>
+                    </div>
+                    
+                    {/* Step-by-Step Details */}
+                    {stepByStepMode && trainingSteps.length > 0 && currentStep < trainingSteps.length && (
+                      <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                        <div className="text-sm font-medium text-purple-800 mb-2">
+                          Step {currentStep + 1} of {trainingSteps.length}
+                        </div>
+                        <div className="text-xs text-purple-700 space-y-1">
+                          {(() => {
+                            const step = trainingSteps[currentStep];
+                            return (
+                              <>
+                                <div><strong>Iteration:</strong> {step.iteration + 1}</div>
+                                <div><strong>Point:</strong> ({step.point.x.toFixed(2)}, {step.point.y.toFixed(2)})</div>
+                                <div><strong>Actual y:</strong> {step.actual}</div>
+                                <div><strong>Predicted ŷ:</strong> {step.prediction}</div>
+                                <div className={`${step.isCorrect ? 'text-green-700' : 'text-red-700'} font-medium`}>
+                                  {step.isCorrect ? '✓ Correct' : '✗ Misclassified'}
+                                </div>
+                                {!step.isCorrect && (
+                                  <>
+                                    <div className="mt-1 text-xs">
+                                      <strong>Weight Updates:</strong>
+                                    </div>
+                                    <div className="ml-2 font-mono text-xs">
+                                      <div>Δw₀ = {step.weightChange.w0.toFixed(3)}</div>
+                                      <div>Δw₁ = {step.weightChange.w1.toFixed(3)}</div>
+                                      <div>Δw₂ = {step.weightChange.w2.toFixed(3)}</div>
+                                    </div>
+                                    <div className="mt-1 text-xs">
+                                      <strong>New Weights:</strong>
+                                    </div>
+                                    <div className="ml-2 font-mono text-xs">
+                                      <div>w₀ = {step.newWeights.w0.toFixed(3)}</div>
+                                      <div>w₁ = {step.newWeights.w1.toFixed(3)}</div>
+                                      <div>w₂ = {step.newWeights.w2.toFixed(3)}</div>
+                                    </div>
+                                  </>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Regular Training Progress */}
+                    {!stepByStepMode && trainingHistory.length > 0 && (
+                      <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                        <div className="text-sm font-medium text-blue-800 mb-2">Training Progress</div>
+                        <div className="text-xs text-blue-700">
+                          <div>Iteration: {trainingHistory[trainingHistory.length - 1]?.iteration + 1}</div>
+                          <div>Errors: {trainingHistory[trainingHistory.length - 1]?.errors}</div>
+                          {trainingHistory[trainingHistory.length - 1]?.errors === 0 && (
+                            <div className="text-green-700 font-medium">✓ Converged!</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Perceptron Algorithm Explanation - Added to fill space */}
+                  <div className="bg-purple-50 rounded-2xl p-4 border border-purple-200">
+                    <h4 className="text-sm font-medium text-purple-800 mb-2">How Perceptron Works</h4>
+                    <div className="text-xs text-purple-700 space-y-2">
+                      <div>
+                        <strong>1. Initialization:</strong> Start with random weights w₀, w₁, w₂
+                      </div>
+                      <div>
+                        <strong>2. For each point:</strong> 
+                        <div className="ml-2 mt-1">
+                          • Compute activation: a = w₀ + w₁x + w₂y<br/>
+                          • Predict: ŷ = 1 if a ≥ 0, else ŷ = -1<br/>
+                          • If wrong: update weights by α(y-ŷ)x
+                        </div>
+                      </div>
+                      <div>
+                        <strong>3. Convergence:</strong> Repeat until no misclassifications
+                      </div>
+                      <div className="mt-2 p-2 bg-white rounded text-xs">
+                        <strong>Key Insight:</strong> The perceptron finds <em>any</em> separating line if one exists, unlike SVM which finds the <em>optimal</em> one with maximum margin.
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* k-NN Controls */}
               {showKNN && (
                 <>
@@ -636,45 +1167,179 @@ export default function SVMPlayground() {
                   </div>
                 </>
               )}
-              <div className="bg-slate-50 rounded-2xl p-4 border">
-                <h3 className="font-semibold mb-2">Decision Boundary</h3>
-                <label className="block text-sm mb-1">Rotate (θ)</label>
-                <input type="range" min={0} max={Math.PI} step={0.01} value={theta} onChange={e => setTheta(parseFloat(e.target.value))} className="w-full" />
-                <div className="text-xs text-slate-600 mb-2">θ = {theta.toFixed(2)} rad</div>
 
-                <label className="block text-sm mb-1">Shift (bias b)</label>
-                <input type="range" min={-6} max={6} step={0.02} value={bias} onChange={e => setBias(parseFloat(e.target.value))} className="w-full" />
-                <div className="text-xs text-slate-600">b = {bias.toFixed(2)} (moves line along its normal)</div>
-              </div>
+              {/* SVM-specific controls - only show in SVM mode */}
+              {!showKNN && !showPerceptron && (
+                <>
+                  <div className="bg-slate-50 rounded-2xl p-4 border">
+                    <h3 className="font-semibold mb-2">Decision Boundary</h3>
+                    <label className="block text-sm mb-1">Rotate (θ)</label>
+                    <input type="range" min={0} max={Math.PI} step={0.01} value={theta} onChange={e => setTheta(parseFloat(e.target.value))} className="w-full" />
+                    <div className="text-xs text-slate-600 mb-2">θ = {theta.toFixed(2)} rad</div>
 
-              <div className="bg-slate-50 rounded-2xl p-4 border">
-                <h3 className="font-semibold mb-2">Soft‑Margin Feel</h3>
-                <label className="block text-sm mb-1">Penalty (C)</label>
-                <input type="range" min={0} max={4} step={0.1} value={C} onChange={e => setC(parseFloat(e.target.value))} className="w-full" />
-                <div className="text-xs text-slate-600 mb-3">Small C → tolerate violations (wider margin). Large C → punish violations.</div>
+                    <label className="block text-sm mb-1">Shift (bias b)</label>
+                    <input type="range" min={-6} max={6} step={0.02} value={bias} onChange={e => setBias(parseFloat(e.target.value))} className="w-full" />
+                    <div className="text-xs text-slate-600">b = {bias.toFixed(2)} (moves line along its normal)</div>
+                  </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <SmallStat label="Half‑Margin" value={marginHalf.toFixed(2)} />
-                  <SmallStat label="Violations" value={String(violations)} />
-                  <SmallStat label="Score" value={score.toFixed(2)} tone={score >= 0 ? "pos" : "neg"} />
-                </div>
-              </div>
+                  <div className="bg-slate-50 rounded-2xl p-4 border">
+                    <h3 className="font-semibold mb-2">Soft‑Margin Feel</h3>
+                    <label className="block text-sm mb-1">Penalty (C)</label>
+                    <input type="range" min={0} max={4} step={0.1} value={C} onChange={e => setC(parseFloat(e.target.value))} className="w-full" />
+                    <div className="text-xs text-slate-600 mb-3">Small C → tolerate violations (wider margin). Large C → punish violations.</div>
 
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <SmallStat label="Half‑Margin" value={marginHalf.toFixed(2)} />
+                      <SmallStat label="Violations" value={String(violations)} />
+                      <SmallStat label="Score" value={score.toFixed(2)} tone={score >= 0 ? "pos" : "neg"} />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Data Editing - available in all modes */}
               <div className="bg-slate-50 rounded-2xl p-4 border">
                 <h3 className="font-semibold mb-2">Data Editing</h3>
                 <div className="flex gap-2 flex-wrap">
                   <button onClick={() => setPoints(ps => ps.concat({ id: Math.random().toString(36).slice(2), x: 0, y: 0, label: 1 }))} className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-sm shadow">Add +1 at (0,0)</button>
                   <button onClick={() => setPoints(ps => ps.concat({ id: Math.random().toString(36).slice(2), x: 0, y: 0, label: -1 }))} className="px-3 py-1.5 rounded-xl bg-orange-500 text-white text-sm shadow">Add −1 at (0,0)</button>
                 </div>
-                <p className="text-xs text-slate-600 mt-2">Tip: drag a point; hover to see coordinates; widen the green dashed margins while reducing violations.</p>
+                <p className="text-xs text-slate-600 mt-2">Tip: drag a point; hover to see coordinates{!showKNN && !showPerceptron ? '; widen the green dashed margins while reducing violations' : ''}.</p>
               </div>
 
-              <MetricsCard metrics={metrics} />
+            </div>
+          </div>
 
-              {/* H0, H1, H2 Planes Analysis */}
-              <div className="bg-slate-50 rounded-2xl p-4 border">
+          {/* Train/Test & Cross-Validation - Moved here to reduce white space */}
+          <div className="bg-slate-50 rounded-2xl p-4 border mt-6">
+            <h3 className="text-xl font-semibold mb-3">Train/Test Split & Cross-Validation</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="bg-white rounded-xl p-4 border">
+                  <h4 className="font-semibold mb-2">Train/Test Split</h4>
+                  <div className="flex items-center gap-4">
+                    <label className="text-sm">Train %</label>
+                    <input type="range" min={0.5} max={0.9} step={0.05} value={trainRatio} onChange={e => setTrainRatio(parseFloat(e.target.value))} className="flex-1" />
+                    <div className="text-sm w-16 text-right">{Math.round(trainRatio * 100)}%</div>
+                  </div>
+                  <div className="mt-3 flex gap-2 flex-wrap">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🎯 Auto-Fit button clicked, points:', points.length, 'trainRatio:', trainRatio);
+                        try {
+                          if (points.length === 0) {
+                            console.warn('No points to train on');
+                            return;
+                          }
+                          const { train, test } = splitTrainTest(points, trainRatio);
+                          console.log(`📊 Split: ${train.length} train, ${test.length} test`);
+
+                          if (train.length === 0) {
+                            console.warn('Train set is empty');
+                            return;
+                          }
+
+                          const fit = fitLinearSVM(train, C);
+                          console.log('🔧 Fit result:', { theta: fit.theta, bias: fit.bias, score: fit.score });
+
+                          setTheta(fit.theta);
+                          setBias(fit.bias);
+
+                          console.log(`✅ Trained on ${train.length} points: θ=${fit.theta.toFixed(2)}, b=${fit.bias.toFixed(2)}`);
+
+                          // Compute metrics on test set for feedback
+                          if (test.length > 0) {
+                            const n = { x: Math.cos(fit.theta), y: Math.sin(fit.theta) };
+                            const testMetrics = computeMetrics(test, n, fit.bias);
+                            console.log(`📈 Test accuracy: ${(testMetrics.acc * 100).toFixed(1)}%`);
+                          }
+                        } catch (error) {
+                          console.error('❌ Error in Auto-Fit:', error);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-sm shadow hover:bg-emerald-700 active:bg-emerald-800 transition-colors duration-150 cursor-pointer select-none"
+                      title="Train SVM on training subset and update the decision boundary"
+                    >
+                      🎯 Auto‑Fit on Train → Set Line
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🔀 Reshuffle button clicked, current points:', points.length);
+                        try {
+                          if (points.length === 0) {
+                            console.warn('No points to shuffle');
+                            return;
+                          }
+
+                          // Fisher-Yates shuffle for proper randomization
+                          const shuffled = [...points];
+                          for (let i = shuffled.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                          }
+
+                          setPoints(shuffled);
+                          console.log('✅ Points reshuffled successfully');
+                        } catch (error) {
+                          console.error('❌ Error in Reshuffle:', error);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-900 text-sm hover:bg-slate-300 active:bg-slate-400 transition-colors duration-150 cursor-pointer select-none"
+                      title="Randomly reorder the same set of points for different train/test splits"
+                    >
+                      🔀 Reshuffle (same set)
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-2">We fit θ and b using only the training subset (grid search), then evaluate with the live metrics.</p>
+                </div>
+
+                <div className="bg-white rounded-xl p-4 border">
+                  <h4 className="font-semibold mb-2">k‑Fold Cross‑Validation</h4>
+                  <div className="flex items-center gap-4">
+                    <label className="text-sm">k</label>
+                    <input type="range" min={3} max={8} step={1} value={k} onChange={e => setK(parseInt(e.target.value))} className="flex-1" />
+                    <div className="text-sm w-10 text-right">{k}</div>
+                    <button onClick={() => setCv(kFold(points, k, C))} className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-sm shadow">Run k‑Fold</button>
+                  </div>
+                  {cv && (
+                    <div className="grid grid-cols-5 gap-2 text-center mt-3">
+                      <SmallStat label="Mean Acc" value={`${(cv.mean.acc * 100).toFixed(1)}%`} />
+                      <SmallStat label="Mean Prec" value={`${(cv.mean.prec * 100).toFixed(1)}%`} />
+                      <SmallStat label="Mean Recall" value={`${(cv.mean.rec * 100).toFixed(1)}%`} />
+                      <SmallStat label="Mean F1" value={`${(cv.mean.f1 * 100).toFixed(1)}%`} />
+                      <SmallStat label="Mean Hinge" value={cv.mean.avgHinge.toFixed(2)} />
+                    </div>
+                  )}
+                  <p className="text-xs text-slate-600 mt-2">Rotate folds, train on k−1, validate on the held‑out fold, then average.</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-4 border h-full">
+                <h4 className="font-semibold mb-2">Why these metrics?</h4>
+                <ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">
+                  <li><span className="font-medium">Accuracy</span>: overall correctness (can mislead on class imbalance).</li>
+                  <li><span className="font-medium">Precision</span>: of predicted +1, how many were truly +1?</li>
+                  <li><span className="font-medium">Recall</span>: of actual +1, how many did we catch?</li>
+                  <li><span className="font-medium">F1</span>: harmonic mean of precision & recall.</li>
+                  <li><span className="font-medium">Hinge loss</span>: penalizes errors and low‑margin correct points; lower is better.</li>
+                </ul>
+                <p className="text-xs text-slate-600 mt-2">Tune C and refit to see generalization change across folds.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Analysis Sections - Moved below canvas to reduce white space */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
+            {/* H0, H1, H2 Planes Analysis - Only show for SVM */}
+            {!showKNN && !showPerceptron && (
+              <div className="bg-slate-50 rounded-2xl p-4 border lg:col-span-2">
                 <h3 className="font-semibold mb-2">H0, H1, H2 Plane Analysis</h3>
-                <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <div className="font-medium text-slate-700 mb-1">SVM Parameters:</div>
                     <div className="bg-white rounded-xl p-3 border font-mono text-xs space-y-1">
@@ -696,21 +1361,12 @@ export default function SVMPlayground() {
                       <div><span className="text-emerald-600">H2:</span> {n.x.toFixed(3)}x₁ + {n.y.toFixed(3)}x₂ + {bias.toFixed(3)} = -1</div>
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <div className="font-medium text-slate-700 mb-1">Rearranged (b' = b ± 1):</div>
-                    <div className="bg-white rounded-xl p-3 border font-mono text-xs space-y-1">
-                      <div><span className="text-slate-600">H0:</span> {n.x.toFixed(3)}x₁ + {n.y.toFixed(3)}x₂ + {bias.toFixed(3)} = 0</div>
-                      <div><span className="text-emerald-600">H1:</span> {n.x.toFixed(3)}x₁ + {n.y.toFixed(3)}x₂ + {(bias - 1).toFixed(3)} = 0</div>
-                      <div><span className="text-emerald-600">H2:</span> {n.x.toFixed(3)}x₁ + {n.y.toFixed(3)}x₂ + {(bias + 1).toFixed(3)} = 0</div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <SmallStat label="SVs Found" value={String(SVs.length)} />
-                    <SmallStat label="Violations" value={String(violations)} />
-                    <SmallStat label="Half Margin" value={marginHalf.toFixed(3)} />
-                  </div>
+                <div className="grid grid-cols-3 gap-2 text-center mt-3">
+                  <SmallStat label="SVs Found" value={String(SVs.length)} />
+                  <SmallStat label="Violations" value={String(violations)} />
+                  <SmallStat label="Half Margin" value={marginHalf.toFixed(3)} />
                 </div>
 
                 <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
@@ -722,12 +1378,55 @@ export default function SVMPlayground() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* Algorithm Comparison Card */}
+            <div className="bg-slate-50 rounded-2xl p-4 border">
+              <h3 className="font-semibold mb-2">Algorithm Summary</h3>
+              <div className="space-y-3 text-sm">
+                {showPerceptron && (
+                  <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
+                    <h4 className="font-medium text-purple-800 mb-1">Perceptron</h4>
+                    <div className="text-xs text-purple-700 space-y-1">
+                      <div>• Error-driven learning</div>
+                      <div>• Guaranteed convergence if linearly separable</div>
+                      <div>• Simple update rule: w ← w + α(y-ŷ)x</div>
+                      <div>• Current weights: ({perceptronWeights.w0.toFixed(2)}, {perceptronWeights.w1.toFixed(2)}, {perceptronWeights.w2.toFixed(2)})</div>
+                    </div>
+                  </div>
+                )}
+                
+                {showKNN && (
+                  <div className="p-3 bg-green-50 rounded-xl border border-green-200">
+                    <h4 className="font-medium text-green-800 mb-1">k-NN</h4>
+                    <div className="text-xs text-green-700 space-y-1">
+                      <div>• Lazy learning (no training phase)</div>
+                      <div>• Local decision boundaries</div>
+                      <div>• k = {kNN}, distance: {distanceMethod}</div>
+                      {knnPrediction && <div>• Current prediction: Class {knnPrediction === 1 ? '+1' : '-1'}</div>}
+                    </div>
+                  </div>
+                )}
+                
+                {!showKNN && !showPerceptron && (
+                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
+                    <h4 className="font-medium text-blue-800 mb-1">SVM</h4>
+                    <div className="text-xs text-blue-700 space-y-1">
+                      <div>• Margin maximization</div>
+                      <div>• Global optimal solution</div>
+                      <div>• Support vectors: {SVs.length}</div>
+                      <div>• Margin: {(2 * marginHalf).toFixed(3)}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Kernel Hopscotch - Full width with better spacing */}
-        <div className="bg-white rounded-2xl shadow p-4 md:p-6 mb-6">
+        {/* Kernel Hopscotch - Only show in SVM mode */}
+        {!showKNN && !showPerceptron && (
+          <div className="bg-white rounded-2xl shadow p-4 md:p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">2) Kernel Hopscotch — Feature lift z = r^2</h2>
             <div className="flex gap-2">
@@ -770,8 +1469,10 @@ export default function SVMPlayground() {
             </p>
           </div>
         </div>
+        )}
 
-        {/* Equations — SVM at a glance */}
+        {/* Equations — SVM at a glance - Only show in SVM mode */}
+        {!showKNN && !showPerceptron && (
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl p-5 shadow border">
             <h2 className="text-xl font-semibold mb-3">3) Equations — SVM at a glance</h2>
@@ -847,139 +1548,99 @@ export default function SVMPlayground() {
             <p className="text-xs text-slate-500 mt-2">Use Auto‑Fit above to mimic the slides' construction with a coarse grid search.</p>
           </div>
         </div>
+        )}
 
-        {/* Topic 3 ML Playground */}
-        <div className="mt-6 bg-white rounded-2xl p-5 shadow border">
-          <h2 className="text-xl font-semibold mb-3">4) Topic 3 ML Playground — Train/Test & k‑Fold CV</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6">
-            <div className="space-y-4">
-              <div className="bg-slate-50 rounded-2xl p-4 border">
-                <h3 className="font-semibold mb-2">Train/Test Split</h3>
-                <div className="flex items-center gap-4">
-                  <label className="text-sm">Train %</label>
-                  <input type="range" min={0.5} max={0.9} step={0.05} value={trainRatio} onChange={e => setTrainRatio(parseFloat(e.target.value))} className="flex-1" />
-                  <div className="text-sm w-16 text-right">{Math.round(trainRatio * 100)}%</div>
+        {/* Tests & Sanity Checks - Only show in SVM mode */}
+        {!showKNN && !showPerceptron && (
+          <>
+            <TestsPanel />
+
+            {/* Footer: quick prompts - Only show in SVM mode */}
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <PromptCard title="Quick Check #1" text="If you remove a non‑support vector inside the class cluster, does the line move? Why or why not?" />
+              <PromptCard title="Quick Check #2" text="Increase C. What happens to violations and to the margin width?" />
+              <PromptCard title="Quick Check #3" text="In the ring example, where do most ring points land in z = r^2 space? How does the threshold separate classes?" />
+            </div>
+          </>
+        )}
+
+        {/* Perceptron Algorithm Explanations */}
+        {showPerceptron && (
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl p-5 shadow border">
+              <h2 className="text-xl font-semibold mb-3">Perceptron Learning Algorithm</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">Algorithm Overview</h4>
+                  <p className="text-sm text-gray-600">
+                    A linear binary classifier that learns a decision boundary by iteratively updating weights based on misclassified examples. 
+                    The algorithm is guaranteed to converge if the data is linearly separable.
+                  </p>
                 </div>
-                <div className="mt-3 flex gap-2 flex-wrap">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('🎯 Auto-Fit button clicked, points:', points.length, 'trainRatio:', trainRatio);
-                      try {
-                        if (points.length === 0) {
-                          console.warn('No points to train on');
-                          return;
-                        }
-                        const { train, test } = splitTrainTest(points, trainRatio);
-                        console.log(`📊 Split: ${train.length} train, ${test.length} test`);
-
-                        if (train.length === 0) {
-                          console.warn('Train set is empty');
-                          return;
-                        }
-
-                        const fit = fitLinearSVM(train, C);
-                        console.log('🔧 Fit result:', { theta: fit.theta, bias: fit.bias, score: fit.score });
-
-                        setTheta(fit.theta);
-                        setBias(fit.bias);
-
-                        console.log(`✅ Trained on ${train.length} points: θ=${fit.theta.toFixed(2)}, b=${fit.bias.toFixed(2)}`);
-
-                        // Compute metrics on test set for feedback
-                        if (test.length > 0) {
-                          const n = { x: Math.cos(fit.theta), y: Math.sin(fit.theta) };
-                          const testMetrics = computeMetrics(test, n, fit.bias);
-                          console.log(`📈 Test accuracy: ${(testMetrics.acc * 100).toFixed(1)}%`);
-                        }
-                      } catch (error) {
-                        console.error('❌ Error in Auto-Fit:', error);
-                      }
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-sm shadow hover:bg-emerald-700 active:bg-emerald-800 transition-colors duration-150 cursor-pointer select-none"
-                    title="Train SVM on training subset and update the decision boundary"
-                  >
-                    🎯 Auto‑Fit on Train → Set Line
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('🔀 Reshuffle button clicked, current points:', points.length);
-                      try {
-                        if (points.length === 0) {
-                          console.warn('No points to shuffle');
-                          return;
-                        }
-
-                        // Fisher-Yates shuffle for proper randomization
-                        const shuffled = [...points];
-                        for (let i = shuffled.length - 1; i > 0; i--) {
-                          const j = Math.floor(Math.random() * (i + 1));
-                          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                        }
-
-                        setPoints(shuffled);
-                        console.log('✅ Points reshuffled successfully');
-                      } catch (error) {
-                        console.error('❌ Error in Reshuffle:', error);
-                      }
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-900 text-sm hover:bg-slate-300 active:bg-slate-400 transition-colors duration-150 cursor-pointer select-none"
-                    title="Randomly reorder the same set of points for different train/test splits"
-                  >
-                    🔀 Reshuffle (same set)
-                  </button>
-                </div>
-                <p className="text-xs text-slate-600 mt-2">We fit θ and b using only the training subset (grid search), then evaluate with the live metrics.</p>
-              </div>
-
-              <div className="bg-slate-50 rounded-2xl p-4 border">
-                <h3 className="font-semibold mb-2">k‑Fold Cross‑Validation</h3>
-                <div className="flex items-center gap-4">
-                  <label className="text-sm">k</label>
-                  <input type="range" min={3} max={8} step={1} value={k} onChange={e => setK(parseInt(e.target.value))} className="flex-1" />
-                  <div className="text-sm w-10 text-right">{k}</div>
-                  <button onClick={() => setCv(kFold(points, k, C))} className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-sm shadow">Run k‑Fold</button>
-                </div>
-                {cv && (
-                  <div className="grid grid-cols-5 gap-2 text-center mt-3">
-                    <SmallStat label="Mean Acc" value={`${(cv.mean.acc * 100).toFixed(1)}%`} />
-                    <SmallStat label="Mean Prec" value={`${(cv.mean.prec * 100).toFixed(1)}%`} />
-                    <SmallStat label="Mean Recall" value={`${(cv.mean.rec * 100).toFixed(1)}%`} />
-                    <SmallStat label="Mean F1" value={`${(cv.mean.f1 * 100).toFixed(1)}%`} />
-                    <SmallStat label="Mean Hinge" value={cv.mean.avgHinge.toFixed(2)} />
+                
+                <div>
+                  <h4 className="font-medium mb-2">Mathematical Foundation</h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Decision function:</strong> h(x) = sign(w₀ + w₁x₁ + w₂x₂)</p>
+                    <p><strong>Update rule:</strong> wⱼ ← wⱼ + α(y - ŷ)xⱼ</p>
+                    <p><strong>Learning rate α:</strong> Controls the step size of updates</p>
                   </div>
-                )}
-                <p className="text-xs text-slate-600 mt-2">Rotate folds, train on k−1, validate on the held‑out fold, then average.</p>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Convergence Properties</h4>
+                  <p className="text-sm text-gray-600">
+                    If the data is linearly separable, the perceptron is guaranteed to find a separating hyperplane in finite steps. 
+                    For non-separable data, it may oscillate indefinitely.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="bg-slate-50 rounded-2xl p-4 border h-full">
-              <h3 className="font-semibold mb-2">Why these metrics?</h3>
-              <ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">
-                <li><span className="font-medium">Accuracy</span>: overall correctness (can mislead on class imbalance).</li>
-                <li><span className="font-medium">Precision</span>: of predicted +1, how many were truly +1?</li>
-                <li><span className="font-medium">Recall</span>: of actual +1, how many did we catch?</li>
-                <li><span className="font-medium">F1</span>: harmonic mean of precision & recall.</li>
-                <li><span className="font-medium">Hinge loss</span>: penalizes errors and low‑margin correct points; lower is better.</li>
-              </ul>
-              <p className="text-xs text-slate-600 mt-2">Tune C and refit to see generalization change across folds.</p>
+            <div className="bg-white rounded-2xl p-5 shadow border">
+              <h2 className="text-xl font-semibold mb-3">Perceptron vs SVM vs k-NN</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">Learning Approach</h4>
+                  <p className="text-sm text-gray-600">
+                    <strong>Perceptron:</strong> Error-driven updates, finds any separating line<br />
+                    <strong>SVM:</strong> Margin maximization, finds optimal separating line<br />
+                    <strong>k-NN:</strong> Instance-based, no explicit boundary
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Decision Boundary</h4>
+                  <p className="text-sm text-gray-600">
+                    <strong>Perceptron:</strong> Linear, may not be unique<br />
+                    <strong>SVM:</strong> Linear with maximum margin<br />
+                    <strong>k-NN:</strong> Non-linear, locally adaptive
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Guarantees</h4>
+                  <p className="text-sm text-gray-600">
+                    <strong>Perceptron:</strong> Convergence if linearly separable<br />
+                    <strong>SVM:</strong> Global optimum, handles non-separable data<br />
+                    <strong>k-NN:</strong> No convergence issues, always produces result
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Computational Complexity</h4>
+                  <p className="text-sm text-gray-600">
+                    <strong>Perceptron:</strong> O(n) per iteration, fast training<br />
+                    <strong>SVM:</strong> O(n²) training, but better generalization<br />
+                    <strong>k-NN:</strong> O(1) training, O(n) prediction
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Tests & Sanity Checks */}
-        <TestsPanel />
-
-        {/* Footer: quick prompts */}
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <PromptCard title="Quick Check #1" text="If you remove a non‑support vector inside the class cluster, does the line move? Why or why not?" />
-          <PromptCard title="Quick Check #2" text="Increase C. What happens to violations and to the margin width?" />
-          <PromptCard title="Quick Check #3" text="In the ring example, where do most ring points land in z = r^2 space? How does the threshold separate classes?" />
-        </div>
+        )}
 
         {/* k-NN Algorithm Explanations */}
         {showKNN && (
@@ -1187,8 +1848,9 @@ function renderPoint(p: Pt, ctx: {
   hoverId: string | null;
   showKNN?: boolean;
   nearestNeighbors?: Array<{point: Pt, distance: number}>;
+  isCurrentPerceptronStep?: boolean;
 }) {
-  const { toScreen, n, bias, marginHalf, SVs, setHoverId, setDraggingId, hoverId, showKNN, nearestNeighbors } = ctx;
+  const { toScreen, n, bias, marginHalf, SVs, setHoverId, setDraggingId, hoverId, showKNN, nearestNeighbors, isCurrentPerceptronStep } = ctx;
   const pos = toScreen(p.x, p.y);
   const isSV = SVs.includes(p.id);
   const d = signedDistance(p, n, bias);
@@ -1199,7 +1861,10 @@ function renderPoint(p: Pt, ctx: {
   const fill = p.label === 1 ? "#2563eb" : "#f97316"; // blue / orange
   let ring = "#111827"; // default gray
   
-  if (showKNN && nearestNeighbors) {
+  if (isCurrentPerceptronStep) {
+    // Special highlighting for current step in Perceptron mode
+    ring = "#8b5cf6"; // purple for current step
+  } else if (showKNN && nearestNeighbors) {
     const isNearest = nearestNeighbors.some(({ point: np }) => np.id === p.id)
     ring = isNearest ? "#10b981" : "#111827" // green for nearest neighbors, gray otherwise
   } else {
@@ -1209,12 +1874,26 @@ function renderPoint(p: Pt, ctx: {
   return (
     <g key={p.id} onMouseEnter={() => setHoverId(p.id)} onMouseLeave={() => setHoverId(null)}>
       <circle
-        cx={pos.x} cy={pos.y} r={isSV ? 8 : 6}
+        cx={pos.x} cy={pos.y} r={isCurrentPerceptronStep ? 10 : isSV ? 8 : 6}
         fill={fill}
-        stroke={ring} strokeWidth={isSV ? 3 : 2}
+        stroke={ring} strokeWidth={isCurrentPerceptronStep ? 4 : isSV ? 3 : 2}
         onMouseDown={() => setDraggingId(p.id)}
         style={{ cursor: "grab" }}
       />
+      {/* Pulsing animation for current step */}
+      {isCurrentPerceptronStep && (
+        <circle
+          cx={pos.x} cy={pos.y} r={15}
+          fill="none" 
+          stroke="#8b5cf6" 
+          strokeWidth={2}
+          strokeDasharray="3 3"
+          opacity={0.6}
+        >
+          <animate attributeName="r" values="15;20;15" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.6;0.3;0.6" dur="2s" repeatCount="indefinite" />
+        </circle>
+      )}
       {hoverId === p.id && (
         <text x={pos.x + 10} y={pos.y - 10} className="text-xs fill-gray-800 select-none">
           ({p.x.toFixed(1)}, {p.y.toFixed(1)})
