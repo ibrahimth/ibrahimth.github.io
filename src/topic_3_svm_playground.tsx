@@ -1008,7 +1008,7 @@ export default function SVMPlayground() {
                               setPerceptronWeights(result.weights);
                               setIsTraining(false);
 
-                              console.log(`✅ Perceptron Auto-Fit completed: ${result.converged ? 'converged' : 'max iterations reached'} after ${result.iterations} iterations`);
+                              console.log(`✅ Perceptron Auto-Fit completed after ${result.history.length} iterations`);
                               console.log(`Final weights: w0=${result.weights.w0.toFixed(3)}, w1=${result.weights.w1.toFixed(3)}, w2=${result.weights.w2.toFixed(3)}`);
                             }}
                             className="flex-1 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-sm shadow hover:bg-emerald-700 active:bg-emerald-800 transition-colors duration-150"
@@ -1253,9 +1253,9 @@ export default function SVMPlayground() {
                           console.log('🎯 k-NN Auto-Fit: Optimizing k and distance method...');
 
                           const maxK = Math.min(15, Math.floor(points.length * 0.7)); // Don't go too high with k
-                          const methods = ['euclidean', 'manhattan', 'cosine'];
+                          const methods: ('euclidean' | 'manhattan' | 'cosine')[] = ['euclidean', 'manhattan', 'cosine'];
                           let bestK = kNN;
-                          let bestMethod = distanceMethod;
+                          let bestMethod: 'euclidean' | 'manhattan' | 'cosine' = distanceMethod;
                           let bestAccuracy = 0;
 
                           // Simple validation: try different k values and distance methods
@@ -1314,7 +1314,7 @@ export default function SVMPlayground() {
 
                           // Apply best parameters
                           setKNN(bestK);
-                          setDistanceMethod(bestMethod as any);
+                          setDistanceMethod(bestMethod);
                           console.log(`✅ k-NN Auto-Fit completed: k=${bestK}, method=${bestMethod}, accuracy=${(bestAccuracy * 100).toFixed(1)}%`);
                         }}
                         className="flex-1 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-sm shadow hover:bg-emerald-700 active:bg-emerald-800 transition-colors duration-150"
