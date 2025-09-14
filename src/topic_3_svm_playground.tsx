@@ -467,7 +467,71 @@ export default function SVMPlayground() {
 
   const n = useMemo<N2>(() => ({ x: Math.cos(theta), y: Math.sin(theta) }), [theta]);
   const { marginHalf, SVs, violations } = useMemo(() => computeMarginAndSVs(points, n, bias), [points, n, bias]);
-  const metrics = useMemo(() => computeMetrics(points, n, bias), [points, n, bias]);
+  // Compute metrics based on current mode
+  const metrics = useMemo(() => {
+    if (showKNN) {
+      // For k-NN mode, compute metrics based on k-NN classification of all points
+      let TP = 0, TN = 0, FP = 0, FN = 0;
+      
+      points.forEach(point => {
+        // Calculate distances to all other points
+        const distances = points.filter(p => p.id !== point.id).map(p => ({
+          point: p,
+          distance: getDistance(point, p)
+        }));
+        
+        distances.sort((a, b) => a.distance - b.distance);
+        const kNearest = distances.slice(0, Math.min(kNN, distances.length));
+        
+        // Count votes for each class
+        const votes: Record<number, number> = {};
+        kNearest.forEach(({ point: np }) => {
+          votes[np.label] = (votes[np.label] || 0) + 1;
+        });
+        
+        const predictedClass = Object.keys(votes).reduce((a, b) => 
+          votes[parseInt(a)] > votes[parseInt(b)] ? a : b
+        );
+        const pred = parseInt(predictedClass);
+        
+        if (pred === 1 && point.label === 1) TP++;
+        else if (pred === -1 && point.label === -1) TN++;
+        else if (pred === 1 && point.label === -1) FP++;
+        else if (pred === -1 && point.label === 1) FN++;
+      });
+      
+      const total = TP + TN + FP + FN;
+      const acc = total > 0 ? (TP + TN) / total : 0;
+      const prec = (TP + FP) > 0 ? TP / (TP + FP) : 0;
+      const rec = (TP + FN) > 0 ? TP / (TP + FN) : 0;
+      const f1 = (prec + rec) > 0 ? 2 * prec * rec / (prec + rec) : 0;
+      
+      return { TP, TN, FP, FN, acc, prec, rec, f1, avgHinge: 0 };
+    } else if (showPerceptron) {
+      // For perceptron mode, compute metrics based on perceptron classification
+      let TP = 0, TN = 0, FP = 0, FN = 0;
+      
+      points.forEach(point => {
+        const pred = perceptronClassify(point.x, point.y, perceptronWeights.w0, perceptronWeights.w1, perceptronWeights.w2);
+        
+        if (pred === 1 && point.label === 1) TP++;
+        else if (pred === -1 && point.label === -1) TN++;
+        else if (pred === 1 && point.label === -1) FP++;
+        else if (pred === -1 && point.label === 1) FN++;
+      });
+      
+      const total = TP + TN + FP + FN;
+      const acc = total > 0 ? (TP + TN) / total : 0;
+      const prec = (TP + FP) > 0 ? TP / (TP + FP) : 0;
+      const rec = (TP + FN) > 0 ? TP / (TP + FN) : 0;
+      const f1 = (prec + rec) > 0 ? 2 * prec * rec / (prec + rec) : 0;
+      
+      return { TP, TN, FP, FN, acc, prec, rec, f1, avgHinge: 0 };
+    } else {
+      // SVM mode - use original metrics
+      return computeMetrics(points, n, bias);
+    }
+  }, [points, n, bias, showKNN, showPerceptron, kNN, getDistance, perceptronWeights]);
 
   // A simple score that rewards margin and penalizes violations with C
   const score = useMemo(() => 2 * marginHalf - C * violations, [marginHalf, C, violations]);
@@ -534,7 +598,7 @@ export default function SVMPlayground() {
     };
   }, [linePoints, marginHalf, n]);
   
-  // Handle canvas click for both SVM and k-NN
+  // Handle canvas click for all modes
   const handleCanvasClick = (e: React.MouseEvent<SVGElement>) => {
     const svg = e.currentTarget
     const rect = svg.getBoundingClientRect()
@@ -558,6 +622,28 @@ export default function SVMPlayground() {
           x: clamp(worldCoords.x, world.xMin, world.xMax), 
           y: clamp(worldCoords.y, world.yMin, world.yMax) 
         })
+      }
+    } else if (showPerceptron) {
+      if (e.ctrlKey || e.metaKey) {
+        // Add new training point in Perceptron mode
+        const newPoint: Pt = {
+          id: Math.random().toString(36).slice(2),
+          x: clamp(worldCoords.x, world.xMin, world.xMax),
+          y: clamp(worldCoords.y, world.yMin, world.yMax),
+          label: selectedClass
+        }
+        setPoints([...points, newPoint])
+      }
+    } else {
+      // SVM mode - add new points with Ctrl/Cmd + Click
+      if (e.ctrlKey || e.metaKey) {
+        const newPoint: Pt = {
+          id: Math.random().toString(36).slice(2),
+          x: clamp(worldCoords.x, world.xMin, world.xMax),
+          y: clamp(worldCoords.y, world.yMin, world.yMax),
+          label: selectedClass
+        }
+        setPoints([...points, newPoint])
       }
     }
   }
@@ -1195,6 +1281,82 @@ export default function SVMPlayground() {
                     </div>
                   </div>
                 </>
+              )}
+
+              {/* k-NN Point Controls */}
+              {showKNN && (
+                <div className="bg-slate-50 rounded-2xl p-4 border">
+                  <h3 className="font-semibold mb-2">Point Controls</h3>
+                  
+                  <div className="space-y-2 mb-3">
+                    <label className="text-sm font-medium">New Point Class:</label>
+                    <select
+                      value={selectedClass}
+                      onChange={(e) => setSelectedClass(parseInt(e.target.value) as 1 | -1)}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value={1}>Class +1</option>
+                      <option value={-1}>Class -1</option>
+                    </select>
+                  </div>
+
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Instructions:</strong></p>
+                    <p>• Ctrl/Cmd + Click to add training points</p>
+                    <p>• Click to move test point</p>
+                    <p>• Drag points to move them</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Perceptron Controls - add selectedClass */}
+              {showPerceptron && (
+                <div className="bg-slate-50 rounded-2xl p-4 border">
+                  <h3 className="font-semibold mb-2">Point Controls</h3>
+                  
+                  <div className="space-y-2 mb-3">
+                    <label className="text-sm font-medium">New Point Class:</label>
+                    <select
+                      value={selectedClass}
+                      onChange={(e) => setSelectedClass(parseInt(e.target.value) as 1 | -1)}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value={1}>Class +1</option>
+                      <option value={-1}>Class -1</option>
+                    </select>
+                  </div>
+
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Instructions:</strong></p>
+                    <p>• Ctrl/Cmd + Click to add training points</p>
+                    <p>• Drag points to move them</p>
+                  </div>
+                </div>
+              )}
+
+              {/* SVM Point Controls */}
+              {!showKNN && !showPerceptron && (
+                <div className="bg-slate-50 rounded-2xl p-4 border">
+                  <h3 className="font-semibold mb-2">Point Controls</h3>
+                  
+                  <div className="space-y-2 mb-3">
+                    <label className="text-sm font-medium">New Point Class:</label>
+                    <select
+                      value={selectedClass}
+                      onChange={(e) => setSelectedClass(parseInt(e.target.value) as 1 | -1)}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value={1}>Class +1</option>
+                      <option value={-1}>Class -1</option>
+                    </select>
+                  </div>
+
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Instructions:</strong></p>
+                    <p>• Ctrl/Cmd + Click to add training points</p>
+                    <p>• Drag points to move them</p>
+                  </div>
+                </div>
               )}
 
               {/* Data Editing - available in all modes */}
