@@ -980,13 +980,52 @@ export default function SVMPlayground() {
                           </div>
                         )}
 
+                        <div className="flex gap-2 mb-2">
+                          <button
+                            onClick={() => {
+                              if (points.length === 0) {
+                                console.warn('No training points available for Perceptron Auto-Fit');
+                                return;
+                              }
+
+                              console.log('🎯 Perceptron Auto-Fit: Starting automatic training...');
+
+                              // Reset weights to start fresh
+                              setPerceptronWeights({ w0: 0, w1: 0, w2: 0 });
+                              setIsTraining(true);
+                              setTrainingHistory([]);
+                              setCurrentStep(0);
+
+                              // Use optimal learning rate and max iterations for auto-fit
+                              const autoLearningRate = 0.1; // Good default
+                              const autoMaxIterations = 1000; // Higher for convergence
+
+                              // Always use batch mode for auto-fit
+                              const result = trainPerceptron(points, autoLearningRate, autoMaxIterations, (iter, weights, errors) => {
+                                setTrainingHistory(prev => [...prev, { iteration: iter, weights: { ...weights }, errors }]);
+                              });
+
+                              setPerceptronWeights(result.weights);
+                              setIsTraining(false);
+
+                              console.log(`✅ Perceptron Auto-Fit completed: ${result.converged ? 'converged' : 'max iterations reached'} after ${result.iterations} iterations`);
+                              console.log(`Final weights: w0=${result.weights.w0.toFixed(3)}, w1=${result.weights.w1.toFixed(3)}, w2=${result.weights.w2.toFixed(3)}`);
+                            }}
+                            className="flex-1 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-sm shadow hover:bg-emerald-700 active:bg-emerald-800 transition-colors duration-150"
+                            title="Automatically train the perceptron with optimal settings"
+                            disabled={isTraining || points.length === 0}
+                          >
+                            🎯 Auto‑Fit
+                          </button>
+                        </div>
+
                         <button
                           onClick={() => {
                             if (points.length === 0) return;
                             setIsTraining(true);
                             setTrainingHistory([]);
                             setCurrentStep(0);
-                            
+
                             if (stepByStepMode) {
                               // Generate all steps for step-by-step mode
                               const steps = generatePerceptronSteps(points, learningRate, maxIterations);
@@ -1200,6 +1239,89 @@ export default function SVMPlayground() {
                         <option value="manhattan">Manhattan Distance</option>
                         <option value="cosine">Cosine Similarity</option>
                       </select>
+                    </div>
+
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        onClick={() => {
+                          if (points.length === 0) {
+                            console.warn('No training points available for k-NN optimization');
+                            return;
+                          }
+
+                          // Auto-optimize k value and distance method based on cross-validation
+                          console.log('🎯 k-NN Auto-Fit: Optimizing k and distance method...');
+
+                          const maxK = Math.min(15, Math.floor(points.length * 0.7)); // Don't go too high with k
+                          const methods = ['euclidean', 'manhattan', 'cosine'];
+                          let bestK = kNN;
+                          let bestMethod = distanceMethod;
+                          let bestAccuracy = 0;
+
+                          // Simple validation: try different k values and distance methods
+                          for (const method of methods) {
+                            for (let k = 1; k <= maxK; k += 2) { // Try odd values for k
+                              let correctPredictions = 0;
+                              let totalPredictions = 0;
+
+                              // Leave-one-out cross validation
+                              points.forEach((testPoint, testIdx) => {
+                                const trainPoints = points.filter((_, idx) => idx !== testIdx);
+                                if (trainPoints.length === 0) return;
+
+                                // Calculate distances using the current method
+                                const getDistanceForMethod = (p1: any, p2: any) => {
+                                  if (method === 'euclidean') {
+                                    return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+                                  } else if (method === 'manhattan') {
+                                    return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+                                  } else if (method === 'cosine') {
+                                    const dot = p1.x * p2.x + p1.y * p2.y;
+                                    const mag1 = Math.sqrt(p1.x ** 2 + p1.y ** 2) || 1e-10;
+                                    const mag2 = Math.sqrt(p2.x ** 2 + p2.y ** 2) || 1e-10;
+                                    return 1 - (dot / (mag1 * mag2));
+                                  }
+                                  return 0;
+                                };
+
+                                const distances = trainPoints.map(point => ({
+                                  point,
+                                  distance: getDistanceForMethod(testPoint, point)
+                                }));
+
+                                distances.sort((a, b) => a.distance - b.distance);
+                                const kNearest = distances.slice(0, Math.min(k, distances.length));
+
+                                // Majority vote
+                                const votes = { 1: 0, '-1': 0 };
+                                kNearest.forEach(({ point }) => {
+                                  votes[point.label.toString() as '1' | '-1']++;
+                                });
+
+                                const predictedClass = votes['1'] > votes['-1'] ? 1 : -1;
+                                if (predictedClass === testPoint.label) correctPredictions++;
+                                totalPredictions++;
+                              });
+
+                              const accuracy = totalPredictions > 0 ? correctPredictions / totalPredictions : 0;
+                              if (accuracy > bestAccuracy) {
+                                bestAccuracy = accuracy;
+                                bestK = k;
+                                bestMethod = method;
+                              }
+                            }
+                          }
+
+                          // Apply best parameters
+                          setKNN(bestK);
+                          setDistanceMethod(bestMethod as any);
+                          console.log(`✅ k-NN Auto-Fit completed: k=${bestK}, method=${bestMethod}, accuracy=${(bestAccuracy * 100).toFixed(1)}%`);
+                        }}
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-sm shadow hover:bg-emerald-700 active:bg-emerald-800 transition-colors duration-150"
+                        title="Automatically optimize k value and distance method using cross-validation"
+                      >
+                        🎯 Auto‑Fit
+                      </button>
                     </div>
 
                     <div className="space-y-2 mb-3">
