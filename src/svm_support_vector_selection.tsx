@@ -235,37 +235,41 @@ export default function SVMInteractiveAux() {
   const H1 = useMemo(()=>({ A:{x:H0.A.x + n.x*half, y:H0.A.y + n.y*half}, B:{x:H0.B.x + n.x*half, y:H0.B.y + n.y*half} }),[H0,n,half]);
   const H2 = useMemo(()=>({ A:{x:H0.A.x - n.x*half, y:H0.A.y - n.y*half}, B:{x:H0.B.x - n.x*half, y:H0.B.y - n.y*half} }),[H0,n,half]);
 
-  // Auxiliary margins from user pair (perpendicular to the segment connecting them)
+  // Auxiliary margins from user pair - showing the maximum margin SVM between just these 2 points
   const auxLines = useMemo(()=>{
     if (!auxPair?.a || !auxPair?.b) return null;
     const A = pts.find(p=>p.id===auxPair.a);
     const B = pts.find(p=>p.id===auxPair.b);
     if (!A || !B || A.label===B.label) return null;
 
-    // Auxiliary margins: parallel lines through each point, perpendicular to the line AB
+    // For two points, the optimal hyperplane is at the midpoint, perpendicular to the line AB
     const dx = B.x - A.x, dy = B.y - A.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist === 0) return null;
 
-    // Direction vector perpendicular to AB (this is the direction of the auxiliary margin lines)
-    const tAux = { x: -dy, y: dx };
-    const tLen = Math.hypot(tAux.x, tAux.y);
-    if (tLen === 0) return null; // A and B are the same point
+    // Midpoint between A and B (where the decision boundary passes)
+    const mid = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
 
-    // Normalize the direction vector
-    const tNorm = { x: tAux.x / tLen, y: tAux.y / tLen };
+    // Normal vector pointing from A toward B
+    const normal = { x: dx / dist, y: dy / dist };
 
-    // Create parallel lines through A and B
-    const makeLine = (point: typeof A) => ({
-      A: { x: point.x - L * tNorm.x, y: point.y - L * tNorm.y },
-      B: { x: point.x + L * tNorm.x, y: point.y + L * tNorm.y }
+    // Tangent vector (perpendicular to normal) - direction of the decision boundary
+    const tangent = { x: -normal.y, y: normal.x };
+
+    // Half the distance between points = margin
+    const margin = dist / 2;
+
+    // Create the three lines: H+1, H0 (decision boundary), H-1
+    const makeParallelLine = (offset: number) => ({
+      A: { x: mid.x + offset * normal.x - L * tangent.x, y: mid.y + offset * normal.y - L * tangent.y },
+      B: { x: mid.x + offset * normal.x + L * tangent.x, y: mid.y + offset * normal.y + L * tangent.y }
     });
 
-    // Calculate margin value (distance between the parallel lines)
-    const margin = Math.hypot(dx, dy);
-
     return {
-      La: makeLine(A),   // line through point A
-      Lb: makeLine(B),   // line through point B
-      margin: margin
+      H0: makeParallelLine(0),        // Decision boundary (through midpoint)
+      La: makeParallelLine(margin),   // H+1 margin (closer to B)
+      Lb: makeParallelLine(-margin),  // H-1 margin (closer to A)
+      margin: dist
     };
   },[auxPair, pts]);
 
@@ -325,9 +329,12 @@ export default function SVMInteractiveAux() {
             <line x1={toScreen(WORLD.xmin,0).sx} y1={toScreen(WORLD.xmin,0).sy} x2={toScreen(WORLD.xmax,0).sx} y2={toScreen(WORLD.xmax,0).sy} stroke="#cbd5e1" />
             <line x1={toScreen(0,WORLD.ymin).sx} y1={toScreen(0,WORLD.ymin).sy} x2={toScreen(0,WORLD.ymax).sx} y2={toScreen(0,WORLD.ymax).sy} stroke="#cbd5e1" />
 
-            {/* Auxiliary margins (red dashed) */}
+            {/* Auxiliary margins (red dashed) - showing SVM for just the selected pair */}
             {auxLines && (
               <>
+                {/* Decision boundary for auxiliary pair */}
+                <line x1={toScreen(auxLines.H0.A.x, auxLines.H0.A.y).sx} y1={toScreen(auxLines.H0.A.x, auxLines.H0.A.y).sy} x2={toScreen(auxLines.H0.B.x, auxLines.H0.B.y).sx} y2={toScreen(auxLines.H0.B.x, auxLines.H0.B.y).sy} stroke="#ef4444" strokeWidth={2} />
+                {/* Margin lines for auxiliary pair */}
                 <line x1={toScreen(auxLines.La.A.x, auxLines.La.A.y).sx} y1={toScreen(auxLines.La.A.x, auxLines.La.A.y).sy} x2={toScreen(auxLines.La.B.x, auxLines.La.B.y).sx} y2={toScreen(auxLines.La.B.x, auxLines.La.B.y).sy} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2} />
                 <line x1={toScreen(auxLines.Lb.A.x, auxLines.Lb.A.y).sx} y1={toScreen(auxLines.Lb.A.x, auxLines.Lb.A.y).sy} x2={toScreen(auxLines.Lb.B.x, auxLines.Lb.B.y).sx} y2={toScreen(auxLines.Lb.B.x, auxLines.Lb.B.y).sy} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2} />
               </>
