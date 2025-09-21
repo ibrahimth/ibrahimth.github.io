@@ -2,18 +2,20 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * COE 292 — SVM Interactive (SVG)
- * Goal: Add / remove points; recompute and PLOT the NEW maximum margin. Also show
- * an "auxiliary margin" pair (red dashed) based on a user‑chosen cross‑class pair,
- * as in the lecture figures.
+ * -------------------------------------------------
+ * Fixes applied:
+ *  • Removed stray "refine/return" block that caused: SyntaxError 'return outside of function'.
+ *  • Kept a clean, closed‑form max‑margin fitter that scans θ and solves b analytically.
+ *  • Auxiliary margins (red dashed) are perpendicular to the selected (+1, −1) pair
+ *    and PASS THROUGH those two points (matches lecture construction).
+ *  • Added a tiny "Sanity Tests" section to validate math at runtime.
  *
- * Key interactions
+ * Interactions
  *  • Click a point → toggle active/inactive
  *  • Shift+Click a point → permanently delete
  *  • Drag a point → move it
  *  • Add Mode → click empty canvas to place a new +1 or −1 point
- *  • Aux Pair: click "Select pair" then click one +1 and one −1 → shows red dashed
- *    auxiliary margins perpendicular to the segment joining them. Click "Clear" to remove.
- *  • Auto‑Fit always recomputes after any change and animates H0/H1/H2 to the new optimum.
+ *  • Aux Pair → click “Select pair”, then click one +1 and one −1 → red dashed helpers
  */
 
 // ---------- World & helpers ----------
@@ -35,7 +37,7 @@ function toWorld(sx: number, sy: number) {
 // ---------- Types ----------
 type Pt = { id: string; x: number; y: number; label: 1 | -1; active: boolean };
 
-// ---------- Init data (≈ your p1,p2,p3,n1,n2,n3) ----------
+// ---------- Init data (≈ p1,p2,p3,n1,n2,n3) ----------
 const INIT: Pt[] = [
   { id: "p1", x: 1,   y: 4,   label: +1, active: true },
   { id: "p2", x: 0,   y: 2,   label: +1, active: true },
@@ -54,7 +56,6 @@ function computeMarginAndSVs(points: Pt[], n: {x:number;y:number}, b: number) {
   const neg = points.filter(p => p.active && p.label === -1);
   if (pos.length === 0 || neg.length === 0) return { half: 0, svIds: [] as string[], violations: Infinity };
 
-  // functional margins on each side among correctly classified points
   let minPos = Infinity, minNeg = Infinity; const eps = 1e-6; const svIds = new Set<string>();
   let violations = 0;
   for (const p of points) {
@@ -68,7 +69,6 @@ function computeMarginAndSVs(points: Pt[], n: {x:number;y:number}, b: number) {
   const half = Math.min(minPos, minNeg);
   if (!isFinite(half) || half <= eps) return { half: 0, svIds: [], violations };
 
-  // SVs = points lying on the margins (within small tolerance)
   for (const p of points) {
     if (!p.active) continue; const d = Math.abs(signedDist(p, n, b));
     if (Math.abs(d - half) <= 1e-3) svIds.add(p.id);
@@ -76,93 +76,43 @@ function computeMarginAndSVs(points: Pt[], n: {x:number;y:number}, b: number) {
   return { half, svIds: [...svIds], violations };
 }
 
-// Coarse + refined search over θ∈[0,π) and b∈[bmin,bmax] to maximize hard‑margin (penalize violations strongly)
-function fitMaxMargin(points: Pt[], currentTheta?: number) {
+// Analytic max‑margin for a given orientation (hard‑margin). We scan θ and compute
+// the best feasible margin and corresponding b in closed form.
+function fitMaxMargin(points: Pt[]) {
   const act = points.filter(p => p.active);
-  const pos = act.filter(p => p.label === +1); const neg = act.filter(p => p.label === -1);
-  if (pos.length === 0 || neg.length === 0) return { valid:false } as const;
+  const pos = act.filter(p => p.label === +1);
+  const neg = act.filter(p => p.label === -1);
+  if (pos.length === 0 || neg.length === 0) return { valid: false } as const;
 
-  // Bias range heuristic from extreme projections
-  const xs = act.map(p => p.x), ys = act.map(p => p.y);
-  const xrange = Math.max(...xs) - Math.min(...xs); const yrange = Math.max(...ys) - Math.min(...ys);
+  let best = { valid: false, theta: 0, b: 0, half: 0, svIds: [] as string[] };
+  const STEPS = 720; // 0.25° resolution
+  for (let i = 0; i < STEPS; i++) {
+    const theta = (i / STEPS) * Math.PI; // [0, π)
+    const n = { x: Math.cos(theta), y: Math.sin(theta) }; // unit normal
 
-  let best = { valid:false, theta: 0, b: 0, half: 0, svIds: [] as string[] };
-  const tryThetaB = (theta:number, b:number, stabilityBonus: number = 0) => {
-    const n = { x: Math.cos(theta), y: Math.sin(theta) };
-    const { half, svIds, violations } = computeMarginAndSVs(points, n, b);
+    // Projections along n
+    const posProj = pos.map(p => n.x * p.x + n.y * p.y);
+    const negProj = neg.map(p => n.x * p.x + n.y * p.y);
+    const minPos = Math.min(...posProj);
+    const maxNeg = Math.max(...negProj);
 
-    if (violations > 0) return; // Skip invalid solutions
+    // Half‑margin for this θ (feasible iff > 0)
+    const half = (minPos - maxNeg) / 2;
+    if (half <= 1e-9) continue; // not separable for this θ
 
-    // Calculate stability penalty for large orientation changes
-    let stabilityPenalty = 0;
-    if (currentTheta !== undefined && best.valid) {
-      const angleDiff = Math.min(
-        Math.abs(theta - currentTheta),
-        Math.abs(theta - currentTheta + Math.PI),
-        Math.abs(theta - currentTheta - Math.PI)
-      );
+    // Optimal bias that centers H0 between the two extreme supports
+    const b = - (minPos + maxNeg) / 2;
 
-      // If angle change is > 30 degrees, require significant margin improvement
-      if (angleDiff > Math.PI/6) {
-        const improvementRatio = half / (best.half || 0.001);
-        // Require at least 25% improvement for major orientation changes
-        if (improvementRatio < 1.25) {
-          stabilityPenalty = (best.half || 0) * 0.5; // Large penalty
-        }
-      }
-    }
+    // Support vectors = points that achieve the extremes
+    const eps = 1e-4;
+    const svIds = act.filter(p => {
+      const s = n.x * p.x + n.y * p.y;
+      return (p.label === 1 ? Math.abs(s - minPos) <= eps : Math.abs(s - maxNeg) <= eps);
+    }).map(p => p.id);
 
-    const score = half + stabilityBonus - stabilityPenalty;
-    if (!best.valid || score > best.half) {
-      best = { valid:true, theta, b, half, svIds };
-    }
-  };
-
-  // Coarse θ/b search
-  for (let i=0;i<181;i++){
-    const theta = (i/180)*Math.PI;
-    const n = { x: Math.cos(theta), y: Math.sin(theta) };
-
-    // Add stability bonus for angles close to current orientation
-    let stabilityBonus = 0;
-    if (currentTheta !== undefined) {
-      const angleDiff = Math.min(
-        Math.abs(theta - currentTheta),
-        Math.abs(theta - currentTheta + Math.PI),
-        Math.abs(theta - currentTheta - Math.PI)
-      );
-      // Stronger stability bonus for staying close to current orientation
-      if (angleDiff < Math.PI/6) { // Within 30 degrees
-        stabilityBonus = Math.max(0, (Math.PI/6 - angleDiff) / (Math.PI/6)) * 0.05;
-      }
-    }
-
-    // Project all points to get a safe bias span
-    const projs = act.map(p => -(n.x*p.x + n.y*p.y));
-    const pmin = Math.min(...projs), pmax = Math.max(...projs);
-    const pad = 1.2 * Math.hypot(xrange, yrange) / 8; // small slack
-    const bmin = pmin - pad, bmax = pmax + pad;
-    for (let j=0;j<=160;j++){
-      const t = j/160; const b = bmin + t*(bmax-bmin);
-      tryThetaB(theta, b, stabilityBonus);
-    }
+    if (!best.valid || half > best.half) best = { valid: true, theta, b, half, svIds };
   }
-  // Local refine around best
-  if (!best.valid) return best;
-  const refine = (center:number, rad:number, steps:number) => {
-    for (let i=0;i<=steps;i++){
-      const theta = center - rad + (2*rad*i)/steps;
-      const n = { x: Math.cos(theta), y: Math.sin(theta) };
-      const projs = act.map(p => -(n.x*p.x + n.y*p.y));
-      const bmin = Math.min(...projs) - 0.5, bmax = Math.max(...projs) + 0.5;
-      for (let j=0;j<=steps;j++){
-        const b = bmin + (bmax-bmin)*j/steps; tryThetaB(theta,b);
-      }
-    }
-  };
-  refine(best.theta, 0.08, 80);
-  refine(best.theta, 0.02, 120);
-return best;
+  return best as const;
 }
 
 // ---------- Component ----------
@@ -180,15 +130,11 @@ export default function SVMInteractiveAux() {
   const [b, setB] = useState(0);
   const [half, setHalf] = useState(0);
   const [svIds, setSvIds] = useState<string[]>([]);
-  const [isInitialFit, setIsInitialFit] = useState(true);
 
   // Refit on any data change
   useEffect(()=>{
-    // For initial fit or when half is 0 (reset state), don't apply stability constraints
-    const shouldUseStability = !isInitialFit && half > 0;
-    const fit = fitMaxMargin(pts, shouldUseStability ? theta : undefined);
+    const fit = fitMaxMargin(pts);
     if (!fit.valid){ setSvIds([]); setHalf(0); return; }
-    // soft animation by interpolation
     const startTheta = theta, startB = b, startHalf = half;
     const targetTheta = fit.theta, targetB = fit.b, targetHalf = fit.half;
     const T = 550; let raf = 0; let t0: number | null = null;
@@ -197,10 +143,7 @@ export default function SVMInteractiveAux() {
       setTheta(startTheta + (targetTheta-startTheta)*w);
       setB(startB + (targetB-startB)*w);
       setHalf(startHalf + (targetHalf-startHalf)*w);
-      if (u<1) raf=requestAnimationFrame(step); else {
-        setSvIds(fit.svIds);
-        setIsInitialFit(false); // Mark that we've completed the first fit
-      }
+      if (u<1) raf=requestAnimationFrame(step); else setSvIds(fit.svIds);
     };
     raf=requestAnimationFrame(step); return ()=> cancelAnimationFrame(raf);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -235,53 +178,37 @@ export default function SVMInteractiveAux() {
   const H1 = useMemo(()=>({ A:{x:H0.A.x + n.x*half, y:H0.A.y + n.y*half}, B:{x:H0.B.x + n.x*half, y:H0.B.y + n.y*half} }),[H0,n,half]);
   const H2 = useMemo(()=>({ A:{x:H0.A.x - n.x*half, y:H0.A.y - n.y*half}, B:{x:H0.B.x - n.x*half, y:H0.B.y - n.y*half} }),[H0,n,half]);
 
-  // Auxiliary margins from user pair - showing the maximum margin SVM between just these 2 points
-  const auxLines = useMemo(()=>{
+  // Auxiliary margins from user pair (perpendicular to the segment connecting them)
+  const auxLines = useMemo(() => {
     if (!auxPair?.a || !auxPair?.b) return null;
-    const A = pts.find(p=>p.id===auxPair.a);
-    const B = pts.find(p=>p.id===auxPair.b);
-    if (!A || !B || A.label===B.label) return null;
+    const A = pts.find(p => p.id === auxPair.a && p.active);
+    const B = pts.find(p => p.id === auxPair.b && p.active);
+    if (!A || !B || A.label === B.label) return null;
 
-    // For two points, the optimal hyperplane is at the midpoint, perpendicular to the line AB
+    // Normal parallel to AB; dashed lines pass THROUGH A and B respectively
     const dx = B.x - A.x, dy = B.y - A.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist === 0) return null;
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-9) return null;
+    const nAux = { x: dx / len, y: dy / len };
+    const tAux = { x: -nAux.y, y: nAux.x };
 
-    // Midpoint between A and B (where the decision boundary passes)
-    const mid = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
-
-    // Normal vector pointing from A toward B
-    const normal = { x: dx / dist, y: dy / dist };
-
-    // Tangent vector (perpendicular to normal) - direction of the decision boundary
-    const tangent = { x: -normal.y, y: normal.x };
-
-    // Half the distance between points = margin
-    const margin = dist / 2;
-
-    // Create the three lines: H+1, H0 (decision boundary), H-1
-    const makeParallelLine = (offset: number) => ({
-      A: { x: mid.x + offset * normal.x - L * tangent.x, y: mid.y + offset * normal.y - L * tangent.y },
-      B: { x: mid.x + offset * normal.x + L * tangent.x, y: mid.y + offset * normal.y + L * tangent.y }
-    });
-
-    return {
-      H0: makeParallelLine(0),        // Decision boundary (through midpoint)
-      La: makeParallelLine(margin),   // H+1 margin (closer to B)
-      Lb: makeParallelLine(-margin),  // H-1 margin (closer to A)
-      margin: dist
+    const lineThrough = (P: { x: number; y: number }) => {
+      const b = - (nAux.x * P.x + nAux.y * P.y); // n·x + b = 0 through P
+      const x0 = { x: -b * nAux.x, y: -b * nAux.y };
+      return {
+        A: { x: x0.x - L * tAux.x, y: x0.y - L * tAux.y },
+        B: { x: x0.x + L * tAux.x, y: x0.y + L * tAux.y },
+      };
     };
-  },[auxPair, pts]);
+
+    return { La: lineThrough(A), Lb: lineThrough(B) };
+  }, [auxPair, pts]);
 
   // Utilities
   const deletePoint = (id:string)=> setPts(ps=> ps.filter(p=> p.id !== id));
-  const resetAll = ()=> {
-    setPts(INIT.map(p=>({...p})));
-    setIsInitialFit(true); // Reset to allow unconstrained optimization
-  };
+  const resetAll = ()=> setPts(INIT.map(p=>({...p})));
   const restoreAll = ()=> setPts(ps=>ps.map(p=>({...p, active:true})));
   const autoPairClosest = ()=>{
-    // pick closest opposite‑class active pair (Euclidean)
     const act = pts.filter(p=>p.active);
     let best:{a:string;b:string;d:number}|null=null;
     for (const a of act) for (const b of act){ if (a.label===b.label) continue; const d=(a.x-b.x)**2+(a.y-b.y)**2; if(!best||d<best.d) best={a:a.id,b:b.id,d}; }
@@ -329,12 +256,9 @@ export default function SVMInteractiveAux() {
             <line x1={toScreen(WORLD.xmin,0).sx} y1={toScreen(WORLD.xmin,0).sy} x2={toScreen(WORLD.xmax,0).sx} y2={toScreen(WORLD.xmax,0).sy} stroke="#cbd5e1" />
             <line x1={toScreen(0,WORLD.ymin).sx} y1={toScreen(0,WORLD.ymin).sy} x2={toScreen(0,WORLD.ymax).sx} y2={toScreen(0,WORLD.ymax).sy} stroke="#cbd5e1" />
 
-            {/* Auxiliary margins (red dashed) - showing SVM for just the selected pair */}
+            {/* Auxiliary margins (red dashed) */}
             {auxLines && (
               <>
-                {/* Decision boundary for auxiliary pair */}
-                <line x1={toScreen(auxLines.H0.A.x, auxLines.H0.A.y).sx} y1={toScreen(auxLines.H0.A.x, auxLines.H0.A.y).sy} x2={toScreen(auxLines.H0.B.x, auxLines.H0.B.y).sx} y2={toScreen(auxLines.H0.B.x, auxLines.H0.B.y).sy} stroke="#ef4444" strokeWidth={2} />
-                {/* Margin lines for auxiliary pair */}
                 <line x1={toScreen(auxLines.La.A.x, auxLines.La.A.y).sx} y1={toScreen(auxLines.La.A.x, auxLines.La.A.y).sy} x2={toScreen(auxLines.La.B.x, auxLines.La.B.y).sx} y2={toScreen(auxLines.La.B.x, auxLines.La.B.y).sy} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2} />
                 <line x1={toScreen(auxLines.Lb.A.x, auxLines.Lb.A.y).sx} y1={toScreen(auxLines.Lb.A.x, auxLines.Lb.A.y).sy} x2={toScreen(auxLines.Lb.B.x, auxLines.Lb.B.y).sx} y2={toScreen(auxLines.Lb.B.x, auxLines.Lb.B.y).sy} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2} />
               </>
@@ -354,9 +278,8 @@ export default function SVMInteractiveAux() {
               const r = isSV?8:6;
               return (
                 <g key={p.id}
-                   onMouseDown={(e)=>{ setDragId(p.id); }}
+                   onMouseDown={()=>{ setDragId(p.id); }}
                    onClick={(e)=>{
-                     // If pair selection mode → record the pair; else handle add/delete/toggle
                      if (pairMode){
                        setAuxPair(prev=>{
                          if (!prev || (!prev.a && !prev.b)) return { a: p.label===1? p.id: undefined, b: p.label===-1? p.id: undefined };
@@ -365,10 +288,10 @@ export default function SVMInteractiveAux() {
                          if (prev.a && prev.b) return { a: p.label===1? p.id: prev.a, b: p.label===-1? p.id: prev.b };
                          return { a: p.label===1? p.id: undefined, b: p.label===-1? p.id: undefined };
                        });
-                     } else if (e.shiftKey) {
-                       deletePoint(p.id); // permanent delete
+                     } else if ((e as React.MouseEvent).shiftKey) {
+                       deletePoint(p.id);
                      } else {
-                       setPts(ps=>ps.map(q=> q.id===p.id?{...q, active:!q.active}:q)); // toggle
+                       setPts(ps=>ps.map(q=> q.id===p.id?{...q, active:!q.active}:q));
                      }
                    }}
                    style={{ cursor: "pointer" }}>
@@ -382,7 +305,7 @@ export default function SVMInteractiveAux() {
             <text x={WIDTH-PAD-260} y={PAD-18} className="text-sm fill-gray-700">marg. d = {(2*half).toFixed(3)}  |  θ = {(theta*180/Math.PI).toFixed(1)}°</text>
             <text x={PAD} y={PAD-18} className="text-sm fill-gray-700">
               {addMode.enabled ? `Add mode: click empty canvas to place a ${addMode.label===1?'+1':'−1'} point (Esc to cancel)` :
-               auxPair?.a && auxPair?.b && auxLines ? `Aux pair: margin = ${auxLines.margin.toFixed(3)}` :
+               auxPair?.a && auxPair?.b ? "Aux pair set (red dashed)" :
                pairMode? "Click one +1 and one −1 to set aux pair" : "Click a point to toggle; Shift+Click to delete; drag to move"}
             </text>
 
@@ -414,7 +337,7 @@ export default function SVMInteractiveAux() {
               <button className="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-900 hover:bg-rose-200" onClick={autoPairClosest}>Auxiliary: Auto closest pair</button>
               <button className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200" onClick={()=> setAuxPair(null)}>Clear aux</button>
             </div>
-            <p className="text-xs text-gray-500">Auxiliary margins are perpendicular to the line joining the selected opposite‑class pair (matching the red dashed lines in the slides). They help visualize which third point must become a support.</p>
+            <p className="text-xs text-gray-500">Auxiliary margins are perpendicular to the line joining the selected opposite‑class pair and pass through those two points.</p>
           </div>
 
           {/* Add / Remove */}
@@ -447,7 +370,71 @@ export default function SVMInteractiveAux() {
           <div className="text-xs text-gray-500">
             Tip: removing a non‑support point usually does NOT change H0. Removing a support often does, because it changes which constraints are active at optimum.
           </div>
+
+          {/* --- Sanity Tests (runtime) --- */}
+          <SanityTests />
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Tiny runtime tests to validate math ----------
+function SanityTests() {
+  type T = { name: string; pass: boolean; details: string };
+  const tests: T[] = [];
+
+  // Test 1: two points only (+1 and −1) → margin = distance/2, both are SVs
+  const A: Pt = { id: 'A', x: 1, y: 1, label: 1, active: true };
+  const B: Pt = { id: 'B', x: 4, y: 5, label: -1, active: true };
+  const fitAB = fitMaxMargin([A, B]);
+  const distAB = Math.hypot(B.x - A.x, B.y - A.y);
+  tests.push({
+    name: 'Two points (opposite classes) separable',
+    pass: !!fitAB.valid && Math.abs(2*fitAB.half - distAB) < 1e-2 && (fitAB.svIds.includes('A') && fitAB.svIds.includes('B')),
+    details: `half=${fitAB.half?.toFixed(3)}, dist/2=${(distAB/2).toFixed(3)}, SVs=${fitAB.svIds?.join(',')}`,
+  });
+
+  // Test 2: clearly separable clusters (horizontal split)
+  const C1: Pt[] = [
+    { id: 'c1', x: 1, y: 1, label: -1, active: true },
+    { id: 'c2', x: 2, y: 1.2, label: -1, active: true },
+    { id: 'c3', x: 3, y: 1.1, label: -1, active: true },
+  ];
+  const C2: Pt[] = [
+    { id: 'd1', x: 1, y: 6, label: 1, active: true },
+    { id: 'd2', x: 2, y: 6.2, label: 1, active: true },
+    { id: 'd3', x: 3, y: 5.7, label: 1, active: true },
+  ];
+  const fitSep = fitMaxMargin([...C1, ...C2]);
+  tests.push({
+    name: 'Separable clusters → valid fit with positive margin',
+    pass: !!fitSep.valid && fitSep.half > 0.3,
+    details: `valid=${fitSep.valid}, half=${fitSep.half?.toFixed(3)}`,
+  });
+
+  // Test 3: non‑separable (labels conflict)
+  const bad: Pt[] = [
+    { id: 'k1', x: 0, y: 0, label: 1, active: true },
+    { id: 'k2', x: 0.2, y: 0.2, label: -1, active: true },
+    { id: 'k3', x: 0.1, y: 0.1, label: 1, active: true },
+  ];
+  const fitBad = fitMaxMargin(bad);
+  tests.push({
+    name: 'Non‑separable tiny set',
+    pass: !fitBad.valid, details: `valid=${fitBad.valid}`
+  });
+
+  return (
+    <div className="mt-3 border-t pt-3">
+      <div className="text-xs font-semibold mb-2">Sanity Tests</div>
+      <div className="grid grid-cols-1 gap-2">
+        {tests.map((t, i) => (
+          <div key={i} className={`rounded-md p-2 text-xs border ${t.pass ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+            <div className="font-medium">{t.pass ? '✓ PASS' : '✗ FAIL'} — {t.name}</div>
+            <div className="opacity-80 font-mono">{t.details}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
