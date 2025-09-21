@@ -192,61 +192,39 @@ export default function SVMInteractiveAux() {
   const H1 = useMemo(()=>({ A:{x:H0.A.x + n.x*half, y:H0.A.y + n.y*half}, B:{x:H0.B.x + n.x*half, y:H0.B.y + n.y*half} }),[H0,n,half]);
   const H2 = useMemo(()=>({ A:{x:H0.A.x - n.x*half, y:H0.A.y - n.y*half}, B:{x:H0.B.x - n.x*half, y:H0.B.y - n.y*half} }),[H0,n,half]);
 
-  // Auxiliary margins: find maximum margin that passes through the selected pair
+  // Auxiliary margins from user pair (perpendicular to the segment connecting them)
   const auxLines = useMemo(()=>{
     if (!auxPair?.a || !auxPair?.b) return null;
-    const A = pts.find(p=>p.id===auxPair.a && p.active);
-    const B = pts.find(p=>p.id===auxPair.b && p.active);
-    if (!A || !B || A.label===B.label) return null;
+    const A = pts.find(p=>p.id===auxPair.a && p.active); const Bp = pts.find(p=>p.id===auxPair.b && p.active);
+    if (!A || !Bp || A.label===Bp.label) return null;
+    const dx = Bp.x - A.x, dy = Bp.y - A.y; // pair vector
+    // ✅ Correct construction: auxiliary margins must be PERPENDICULAR to the pair AB.
+    // That means their NORMAL is PARALLEL to AB (n_aux ∥ AB), and the line DIRECTION is t_aux ⟂ AB.
+    const thetaPair = Math.atan2(dy, dx);      // along the pair
+    const nAux = { x: Math.cos(thetaPair), y: Math.sin(thetaPair) }; // normal parallel to AB
+    const tAux = { x: -nAux.y, y: nAux.x };    // line direction (perpendicular to AB)
 
-    // Find the line passing through A and B
-    const dx = B.x - A.x, dy = B.y - A.y;
-    if (Math.abs(dx) < 1e-10 && Math.abs(dy) < 1e-10) return null; // same point
+    // Place two parallel lines so that A and B lie on them, symmetrically around the midline.
+    // Lines: nAux·x + c = ±k, where c = -(sA + sB)/2, k = (sA - sB)/2, sP = nAux·P
+    const sA = nAux.x*A.x + nAux.y*A.y;
+    const sB = nAux.x*Bp.x + nAux.y*Bp.y;
+    const c  = -(sA + sB)/2;      // midline shift
+    const k  =  (sA - sB)/2;      // half distance between the two margins in signed projection
 
-    // Normal vector to the line AB (perpendicular to AB)
-    const len = Math.sqrt(dx*dx + dy*dy);
-    const nAux = { x: -dy/len, y: dx/len }; // perpendicular to AB, normalized
-
-    // The decision boundary passes through both A and B, so:
-    // nAux·A + b = 0 and nAux·B + b = 0
-    // This means nAux·A = nAux·B, which should be true if nAux ⟂ AB
-    const bAux = -(nAux.x * A.x + nAux.y * A.y);
-
-    // Verify B is also on the line (should be close to 0)
-    const checkB = nAux.x * B.x + nAux.y * B.y + bAux;
-    if (Math.abs(checkB) > 1e-6) {
-      // If not exactly on line, use midpoint
-      const midX = (A.x + B.x) / 2, midY = (A.y + B.y) / 2;
-      const bAux2 = -(nAux.x * midX + nAux.y * midY);
-      return null; // Skip if points don't align properly
-    }
-
-    // Calculate margin for this orientation
-    const { half: auxHalf } = computeMarginAndSVs(pts, nAux, bAux);
-
-    // Generate the margin lines
-    const tAux = { x: -nAux.y, y: nAux.x }; // tangent direction
-    const linePoint = { x: -bAux*nAux.x, y: -bAux*nAux.y };
-
-    const H0aux = {
-      A: {x: linePoint.x - L*tAux.x, y: linePoint.y - L*tAux.y},
-      B: {x: linePoint.x + L*tAux.x, y: linePoint.y + L*tAux.y}
+    const makeSeg = (sign:number)=>{
+      const b = c + sign*k;                 // nAux·x + b = 0
+      const x0 = { x: -b*nAux.x, y: -b*nAux.y }; // any point on the line
+      return { A:{ x: x0.x - L*tAux.x, y: x0.y - L*tAux.y }, B:{ x: x0.x + L*tAux.x, y: x0.y + L*tAux.y } };
     };
-    const H1aux = {
-      A: {x: H0aux.A.x + nAux.x*auxHalf, y: H0aux.A.y + nAux.y*auxHalf},
-      B: {x: H0aux.B.x + nAux.x*auxHalf, y: H0aux.B.y + nAux.y*auxHalf}
-    };
-    const H2aux = {
-      A: {x: H0aux.A.x - nAux.x*auxHalf, y: H0aux.A.y - nAux.y*auxHalf},
-      B: {x: H0aux.B.x - nAux.x*auxHalf, y: H0aux.B.y - nAux.y*auxHalf}
-    };
+
+    // Calculate auxiliary margin value (distance between the two lines)
+    const auxMargin = 2 * Math.abs(k);
 
     return {
-      H0: H0aux,
-      H1: H1aux,
-      H2: H2aux,
-      margin: 2 * auxHalf,
-      theta: Math.atan2(nAux.y, nAux.x) * 180 / Math.PI
+      La: makeSeg(+1),
+      Lb: makeSeg(-1),
+      margin: auxMargin,
+      theta: thetaPair * 180 / Math.PI
     };
   },[auxPair, pts]);
 
@@ -303,12 +281,11 @@ export default function SVMInteractiveAux() {
             <line x1={toScreen(WORLD.xmin,0).sx} y1={toScreen(WORLD.xmin,0).sy} x2={toScreen(WORLD.xmax,0).sx} y2={toScreen(WORLD.xmax,0).sy} stroke="#cbd5e1" />
             <line x1={toScreen(0,WORLD.ymin).sx} y1={toScreen(0,WORLD.ymin).sy} x2={toScreen(0,WORLD.ymax).sx} y2={toScreen(0,WORLD.ymax).sy} stroke="#cbd5e1" />
 
-            {/* Auxiliary margins (red dashed) - Maximum margin through selected pair */}
+            {/* Auxiliary margins (red dashed) */}
             {auxLines && (
               <>
-                <line x1={toScreen(auxLines.H1.A.x, auxLines.H1.A.y).sx} y1={toScreen(auxLines.H1.A.x, auxLines.H1.A.y).sy} x2={toScreen(auxLines.H1.B.x, auxLines.H1.B.y).sx} y2={toScreen(auxLines.H1.B.x, auxLines.H1.B.y).sy} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2} />
-                <line x1={toScreen(auxLines.H0.A.x, auxLines.H0.A.y).sx} y1={toScreen(auxLines.H0.A.x, auxLines.H0.A.y).sy} x2={toScreen(auxLines.H0.B.x, auxLines.H0.B.y).sx} y2={toScreen(auxLines.H0.B.x, auxLines.H0.B.y).sy} stroke="#ef4444" strokeWidth={2} />
-                <line x1={toScreen(auxLines.H2.A.x, auxLines.H2.A.y).sx} y1={toScreen(auxLines.H2.A.x, auxLines.H2.A.y).sy} x2={toScreen(auxLines.H2.B.x, auxLines.H2.B.y).sx} y2={toScreen(auxLines.H2.B.x, auxLines.H2.B.y).sy} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2} />
+                <line x1={toScreen(auxLines.La.A.x, auxLines.La.A.y).sx} y1={toScreen(auxLines.La.A.x, auxLines.La.A.y).sy} x2={toScreen(auxLines.La.B.x, auxLines.La.B.y).sx} y2={toScreen(auxLines.La.B.x, auxLines.La.B.y).sy} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2} />
+                <line x1={toScreen(auxLines.Lb.A.x, auxLines.Lb.A.y).sx} y1={toScreen(auxLines.Lb.A.x, auxLines.Lb.A.y).sy} x2={toScreen(auxLines.Lb.B.x, auxLines.Lb.B.y).sx} y2={toScreen(auxLines.Lb.B.x, auxLines.Lb.B.y).sy} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2} />
               </>
             )}
 
@@ -386,7 +363,7 @@ export default function SVMInteractiveAux() {
               <button className="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-900 hover:bg-rose-200" onClick={autoPairClosest}>Auxiliary: Auto closest pair</button>
               <button className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200" onClick={()=> setAuxPair(null)}>Clear aux</button>
             </div>
-            <p className="text-xs text-gray-500">Auxiliary margins show the maximum margin decision boundary that passes through the two selected points from opposite classes. The red lines display the margin boundaries and margin value for this constraint.</p>
+            <p className="text-xs text-gray-500">Auxiliary margins are perpendicular to the line joining the selected opposite‑class pair (matching the red dashed lines in the slides). They help visualize which third point must become a support.</p>
           </div>
 
           {/* Add / Remove */}
