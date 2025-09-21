@@ -2,13 +2,15 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * COE 292 — SVM Interactive (SVG)
- * Goal: Remove/restore points; recompute and PLOT the NEW maximum margin. Also show
+ * Goal: Add / remove points; recompute and PLOT the NEW maximum margin. Also show
  * an "auxiliary margin" pair (red dashed) based on a user‑chosen cross‑class pair,
  * as in the lecture figures.
  *
  * Key interactions
  *  • Click a point → toggle active/inactive
- *  • Drag a point → move it (hold for a second and drag)
+ *  • Shift+Click a point → permanently delete
+ *  • Drag a point → move it
+ *  • Add Mode → click empty canvas to place a new +1 or −1 point
  *  • Aux Pair: click "Select pair" then click one +1 and one −1 → shows red dashed
  *    auxiliary margins perpendicular to the segment joining them. Click "Clear" to remove.
  *  • Auto‑Fit always recomputes after any change and animates H0/H1/H2 to the new optimum.
@@ -133,6 +135,9 @@ export default function SVMInteractiveAux() {
   const [auxPair, setAuxPair] = useState<{a?: string; b?: string} | null>(null);
   const [pairMode, setPairMode] = useState(false);
 
+  // Add mode state
+  const [addMode, setAddMode] = useState<{enabled:boolean; label: 1|-1}>({ enabled:false, label: 1 });
+
   // Current optimum (animate to updates)
   const [theta, setTheta] = useState(Math.PI/4);
   const [b, setB] = useState(0);
@@ -172,6 +177,12 @@ export default function SVMInteractiveAux() {
     return ()=>{ window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [dragId]);
 
+  // Escape cancels add mode
+  useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{ if (e.key==='Escape') setAddMode(m=>({...m, enabled:false})); };
+    window.addEventListener('keydown', onKey); return ()=> window.removeEventListener('keydown', onKey);
+  },[]);
+
   // Derived geometry
   const n = useMemo(()=>({ x: Math.cos(theta), y: Math.sin(theta) }),[theta]);
   const linePoint = useMemo(()=>({ x: -b*n.x, y: -b*n.y }),[b,n]); // any point on H0
@@ -210,7 +221,7 @@ export default function SVMInteractiveAux() {
   },[auxPair, pts]);
 
   // Utilities
-  const togglePoint = (id:string)=> setPts(ps=>ps.map(p=>p.id===id?{...p, active:!p.active}:p));
+  const deletePoint = (id:string)=> setPts(ps=> ps.filter(p=> p.id !== id));
   const resetAll = ()=> setPts(INIT.map(p=>({...p})));
   const restoreAll = ()=> setPts(ps=>ps.map(p=>({...p, active:true})));
   const autoPairClosest = ()=>{
@@ -221,11 +232,26 @@ export default function SVMInteractiveAux() {
     if (best) setAuxPair({ a: best.a, b: best.b });
   };
 
+  const nextId = (label:1|-1)=>{
+    const prefix = label===1? 'p' : 'n';
+    const used = new Set(pts.map(p=>p.id));
+    let k = 1; while (used.has(`${prefix}${k}`)) k++; return `${prefix}${k}`;
+  };
+
+  const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!addMode.enabled) return;
+    if (e.target !== e.currentTarget) return; // only empty canvas
+    const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+    const w = toWorld(e.clientX-rect.left, e.clientY-rect.top);
+    const id = nextId(addMode.label);
+    setPts(ps => ps.concat({ id, x: clamp(w.x, WORLD.xmin, WORLD.xmax), y: clamp(w.y, WORLD.ymin, WORLD.ymax), label: addMode.label, active: true }));
+  };
+
   // ---------- Render ----------
   return (
     <div className="w-full h-full p-4 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Interactive SVM — Remove points, new maximum margin + auxiliary margins</h1>
+        <h1 className="text-2xl font-semibold">Interactive SVM — Add/Remove points, new maximum margin + auxiliary margins</h1>
         <div className="flex items-center gap-2">
           <button onClick={restoreAll} className="px-3 py-1.5 rounded-xl bg-blue-100 text-blue-900 hover:bg-blue-200">Restore all</button>
           <button onClick={resetAll} className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Reset</button>
@@ -234,7 +260,7 @@ export default function SVMInteractiveAux() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
         <div className="rounded-2xl shadow p-3 bg-white">
-          <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="rounded-xl border border-gray-200 bg-white select-none">
+          <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="rounded-xl border border-gray-200 bg-white select-none" onClick={handleSvgClick}>
             {/* Grid & axes */}
             {Array.from({length: WORLD.xmax - WORLD.xmin + 1}).map((_,i)=>{
               const x = WORLD.xmin + i; const a = toScreen(x, WORLD.ymin), bpt = toScreen(x, WORLD.ymax);
@@ -271,7 +297,7 @@ export default function SVMInteractiveAux() {
                 <g key={p.id}
                    onMouseDown={(e)=>{ setDragId(p.id); }}
                    onClick={(e)=>{
-                     // If pair selection mode → record the pair; else toggle active
+                     // If pair selection mode → record the pair; else handle add/delete/toggle
                      if (pairMode){
                        setAuxPair(prev=>{
                          if (!prev || (!prev.a && !prev.b)) return { a: p.label===1? p.id: undefined, b: p.label===-1? p.id: undefined };
@@ -280,8 +306,10 @@ export default function SVMInteractiveAux() {
                          if (prev.a && prev.b) return { a: p.label===1? p.id: prev.a, b: p.label===-1? p.id: prev.b };
                          return { a: p.label===1? p.id: undefined, b: p.label===-1? p.id: undefined };
                        });
+                     } else if (e.shiftKey) {
+                       deletePoint(p.id); // permanent delete
                      } else {
-                       setPts(ps=>ps.map(q=> q.id===p.id?{...q, active:!q.active}:q));
+                       setPts(ps=>ps.map(q=> q.id===p.id?{...q, active:!q.active}:q)); // toggle
                      }
                    }}
                    style={{ cursor: "pointer" }}>
@@ -293,7 +321,11 @@ export default function SVMInteractiveAux() {
 
             {/* Labels */}
             <text x={WIDTH-PAD-260} y={PAD-18} className="text-sm fill-gray-700">marg. d = {(2*half).toFixed(3)}  |  θ = {(theta*180/Math.PI).toFixed(1)}°</text>
-            <text x={PAD} y={PAD-18} className="text-sm fill-gray-700">{auxPair?.a && auxPair?.b ? "Aux pair set (red dashed)" : pairMode? "Click one +1 and one −1 to set aux pair" : "Click a point to remove/restore; drag to move"}</text>
+            <text x={PAD} y={PAD-18} className="text-sm fill-gray-700">
+              {addMode.enabled ? `Add mode: click empty canvas to place a ${addMode.label===1?'+1':'−1'} point (Esc to cancel)` :
+               auxPair?.a && auxPair?.b ? "Aux pair set (red dashed)" :
+               pairMode? "Click one +1 and one −1 to set aux pair" : "Click a point to toggle; Shift+Click to delete; drag to move"}
+            </text>
 
             {/* Legend */}
             <g>
@@ -316,7 +348,7 @@ export default function SVMInteractiveAux() {
         <div className="rounded-2xl shadow bg-white p-4 space-y-4 text-sm text-gray-700 leading-6">
           <h2 className="text-lg font-semibold">Controls</h2>
           <div className="space-y-2">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button className={`px-3 py-1.5 rounded-xl ${pairMode? 'bg-rose-600 text-white':'bg-rose-100 text-rose-900 hover:bg-rose-200'}`} onClick={()=> setPairMode(m=>!m)}>
                 {pairMode? 'Selecting… click +1 then −1':'Auxiliary: Select pair'}
               </button>
@@ -326,13 +358,16 @@ export default function SVMInteractiveAux() {
             <p className="text-xs text-gray-500">Auxiliary margins are perpendicular to the line joining the selected opposite‑class pair (matching the red dashed lines in the slides). They help visualize which third point must become a support.</p>
           </div>
 
+          {/* Add / Remove */}
           <div className="space-y-3">
-            <div className="font-medium">Quick actions</div>
+            <div className="font-medium">Add / Remove</div>
             <div className="flex flex-wrap gap-2">
-              <button className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white" onClick={()=> setPts(ps=>ps.map(p=>({...p, active: true})))}>Enable all points</button>
+              <button className={`px-3 py-1.5 rounded-xl ${addMode.enabled && addMode.label===1? 'bg-blue-600 text-white':'bg-blue-100 text-blue-900 hover:bg-blue-200'}`} onClick={()=> setAddMode({enabled:true,label:1})}>➕ Add +1 (click canvas)</button>
+              <button className={`px-3 py-1.5 rounded-xl ${addMode.enabled && addMode.label===-1? 'bg-orange-600 text-white':'bg-orange-100 text-orange-900 hover:bg-orange-200'}`} onClick={()=> setAddMode({enabled:true,label:-1})}>➕ Add −1 (click canvas)</button>
+              <button className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200" onClick={()=> setAddMode(m=>({...m,enabled:false}))}>Cancel Add</button>
               <button className="px-3 py-1.5 rounded-xl bg-slate-200" onClick={()=> setPts(ps=> ps.length>0? ps.slice(0,-1): ps)}>Remove last</button>
-              <button className="px-3 py-1.5 rounded-xl bg-blue-600 text-white" onClick={()=>{ /* recompute triggers automatically */ }}>Recompute (auto)</button>
             </div>
+            <div className="text-xs text-gray-500">In add mode, click an empty spot on the canvas to place a point. Shift+Click any point to delete it permanently. Regular click toggles active status.</div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
