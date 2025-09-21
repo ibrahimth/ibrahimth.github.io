@@ -111,7 +111,7 @@ function fitMaxMargin(points: Pt[]) {
     }
   }
   // Local refine around best
-  if (!best.valid) return best as const;
+  if (!best.valid) return best;
   const refine = (center:number, rad:number, steps:number) => {
     for (let i=0;i<=steps;i++){
       const theta = center - rad + (2*rad*i)/steps;
@@ -125,7 +125,7 @@ function fitMaxMargin(points: Pt[]) {
   };
   refine(best.theta, 0.08, 80);
   refine(best.theta, 0.02, 120);
-  return best as const;
+  return best;
 }
 
 // ---------- Component ----------
