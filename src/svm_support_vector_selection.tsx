@@ -162,7 +162,7 @@ function fitMaxMargin(points: Pt[], currentTheta?: number) {
   };
   refine(best.theta, 0.08, 80);
   refine(best.theta, 0.02, 120);
-  return best;
+return best;
 }
 
 // ---------- Component ----------
@@ -238,36 +238,42 @@ export default function SVMInteractiveAux() {
   // Auxiliary margins from user pair (perpendicular to the segment connecting them)
   const auxLines = useMemo(()=>{
     if (!auxPair?.a || !auxPair?.b) return null;
-    const A = pts.find(p=>p.id===auxPair.a && p.active); const Bp = pts.find(p=>p.id===auxPair.b && p.active);
-    if (!A || !Bp || A.label===Bp.label) return null;
-    const dx = Bp.x - A.x, dy = Bp.y - A.y; // pair vector
-    // ✅ Correct construction: auxiliary margins must be PERPENDICULAR to the pair AB.
-    // That means their NORMAL is PARALLEL to AB (n_aux ∥ AB), and the line DIRECTION is t_aux ⟂ AB.
-    const thetaPair = Math.atan2(dy, dx);      // along the pair
-    const nAux = { x: Math.cos(thetaPair), y: Math.sin(thetaPair) }; // normal parallel to AB
-    const tAux = { x: -nAux.y, y: nAux.x };    // line direction (perpendicular to AB)
+    const A = pts.find(p=>p.id===auxPair.a && p.active);
+    const B = pts.find(p=>p.id===auxPair.b && p.active);
+    if (!A || !B || A.label===B.label) return null;
 
-    // Place two parallel lines so that A and B lie on them, symmetrically around the midline.
-    // Lines: nAux·x + c = ±k, where c = -(sA + sB)/2, k = (sA - sB)/2, sP = nAux·P
-    const sA = nAux.x*A.x + nAux.y*A.y;
-    const sB = nAux.x*Bp.x + nAux.y*Bp.y;
-    const c  = -(sA + sB)/2;      // midline shift
-    const k  =  (sA - sB)/2;      // half distance between the two margins in signed projection
+    // The auxiliary margin is the maximum margin hyperplane between just these two points
+    // The optimal hyperplane is perpendicular to the line connecting A and B,
+    // positioned at the midpoint, with margin = distance/2
+    const dx = B.x - A.x, dy = B.y - A.y;
+    const dist = Math.hypot(dx, dy);
+    const auxMargin = dist / 2;
 
-    const makeSeg = (sign:number)=>{
-      const b = c + sign*k;                 // nAux·x + b = 0
-      const x0 = { x: -b*nAux.x, y: -b*nAux.y }; // any point on the line
-      return { A:{ x: x0.x - L*tAux.x, y: x0.y - L*tAux.y }, B:{ x: x0.x + L*tAux.x, y: x0.y + L*tAux.y } };
+    // Normal vector pointing from A toward B (perpendicular to the hyperplane)
+    const nAux = { x: dx / dist, y: dy / dist };
+
+    // Midpoint between A and B (hyperplane passes through here)
+    const mid = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
+
+    // Line direction (perpendicular to normal)
+    const tAux = { x: -nAux.y, y: nAux.x };
+
+    // The auxiliary margins are at distance ±auxMargin from the midpoint
+    const makeLine = (offset: number) => {
+      const center = {
+        x: mid.x + offset * nAux.x,
+        y: mid.y + offset * nAux.y
+      };
+      return {
+        A: { x: center.x - L * tAux.x, y: center.y - L * tAux.y },
+        B: { x: center.x + L * tAux.x, y: center.y + L * tAux.y }
+      };
     };
 
-    // Calculate auxiliary margin value (distance between the two lines)
-    const auxMargin = 2 * Math.abs(k);
-
     return {
-      La: makeSeg(+1),
-      Lb: makeSeg(-1),
-      margin: auxMargin,
-      theta: thetaPair * 180 / Math.PI
+      La: makeLine(auxMargin),   // margin on A's side
+      Lb: makeLine(-auxMargin),  // margin on B's side
+      margin: auxMargin * 2
     };
   },[auxPair, pts]);
 
@@ -377,7 +383,7 @@ export default function SVMInteractiveAux() {
             <text x={WIDTH-PAD-260} y={PAD-18} className="text-sm fill-gray-700">marg. d = {(2*half).toFixed(3)}  |  θ = {(theta*180/Math.PI).toFixed(1)}°</text>
             <text x={PAD} y={PAD-18} className="text-sm fill-gray-700">
               {addMode.enabled ? `Add mode: click empty canvas to place a ${addMode.label===1?'+1':'−1'} point (Esc to cancel)` :
-               auxPair?.a && auxPair?.b && auxLines ? `Aux pair: margin = ${auxLines.margin.toFixed(3)}, θ = ${auxLines.theta.toFixed(1)}°` :
+               auxPair?.a && auxPair?.b && auxLines ? `Aux pair: margin = ${auxLines.margin.toFixed(3)}` :
                pairMode? "Click one +1 and one −1 to set aux pair" : "Click a point to toggle; Shift+Click to delete; drag to move"}
             </text>
 
