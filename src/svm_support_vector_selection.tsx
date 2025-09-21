@@ -180,10 +180,13 @@ export default function SVMInteractiveAux() {
   const [b, setB] = useState(0);
   const [half, setHalf] = useState(0);
   const [svIds, setSvIds] = useState<string[]>([]);
+  const [isInitialFit, setIsInitialFit] = useState(true);
 
   // Refit on any data change
   useEffect(()=>{
-    const fit = fitMaxMargin(pts, theta);
+    // For initial fit or when half is 0 (reset state), don't apply stability constraints
+    const shouldUseStability = !isInitialFit && half > 0;
+    const fit = fitMaxMargin(pts, shouldUseStability ? theta : undefined);
     if (!fit.valid){ setSvIds([]); setHalf(0); return; }
     // soft animation by interpolation
     const startTheta = theta, startB = b, startHalf = half;
@@ -194,7 +197,10 @@ export default function SVMInteractiveAux() {
       setTheta(startTheta + (targetTheta-startTheta)*w);
       setB(startB + (targetB-startB)*w);
       setHalf(startHalf + (targetHalf-startHalf)*w);
-      if (u<1) raf=requestAnimationFrame(step); else setSvIds(fit.svIds);
+      if (u<1) raf=requestAnimationFrame(step); else {
+        setSvIds(fit.svIds);
+        setIsInitialFit(false); // Mark that we've completed the first fit
+      }
     };
     raf=requestAnimationFrame(step); return ()=> cancelAnimationFrame(raf);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -267,7 +273,10 @@ export default function SVMInteractiveAux() {
 
   // Utilities
   const deletePoint = (id:string)=> setPts(ps=> ps.filter(p=> p.id !== id));
-  const resetAll = ()=> setPts(INIT.map(p=>({...p})));
+  const resetAll = ()=> {
+    setPts(INIT.map(p=>({...p})));
+    setIsInitialFit(true); // Reset to allow unconstrained optimization
+  };
   const restoreAll = ()=> setPts(ps=>ps.map(p=>({...p, active:true})));
   const autoPairClosest = ()=>{
     // pick closest opposite‑class active pair (Euclidean)
