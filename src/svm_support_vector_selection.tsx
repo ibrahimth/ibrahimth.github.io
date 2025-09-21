@@ -238,8 +238,8 @@ export default function SVMInteractiveAux() {
   // Auxiliary margins from user pair (perpendicular to the segment connecting them)
   const auxLines = useMemo(()=>{
     if (!auxPair?.a || !auxPair?.b) return null;
-    const A = pts.find(p=>p.id===auxPair.a && p.active);
-    const B = pts.find(p=>p.id===auxPair.b && p.active);
+    const A = pts.find(p=>p.id===auxPair.a);
+    const B = pts.find(p=>p.id===auxPair.b);
     if (!A || !B || A.label===B.label) return null;
 
     // Auxiliary margins: parallel lines through each point, perpendicular to the line AB
