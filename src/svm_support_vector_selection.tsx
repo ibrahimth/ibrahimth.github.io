@@ -242,38 +242,30 @@ export default function SVMInteractiveAux() {
     const B = pts.find(p=>p.id===auxPair.b && p.active);
     if (!A || !B || A.label===B.label) return null;
 
-    // The auxiliary margin is the maximum margin hyperplane between just these two points
-    // The optimal hyperplane is perpendicular to the line connecting A and B,
-    // positioned at the midpoint, with margin = distance/2
+    // Auxiliary margins: parallel lines through each point, perpendicular to the line AB
     const dx = B.x - A.x, dy = B.y - A.y;
-    const dist = Math.hypot(dx, dy);
-    const auxMargin = dist / 2;
 
-    // Normal vector pointing from A toward B (perpendicular to the hyperplane)
-    const nAux = { x: dx / dist, y: dy / dist };
+    // Direction vector perpendicular to AB (this is the direction of the auxiliary margin lines)
+    const tAux = { x: -dy, y: dx };
+    const tLen = Math.hypot(tAux.x, tAux.y);
+    if (tLen === 0) return null; // A and B are the same point
 
-    // Midpoint between A and B (hyperplane passes through here)
-    const mid = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
+    // Normalize the direction vector
+    const tNorm = { x: tAux.x / tLen, y: tAux.y / tLen };
 
-    // Line direction (perpendicular to normal)
-    const tAux = { x: -nAux.y, y: nAux.x };
+    // Create parallel lines through A and B
+    const makeLine = (point: typeof A) => ({
+      A: { x: point.x - L * tNorm.x, y: point.y - L * tNorm.y },
+      B: { x: point.x + L * tNorm.x, y: point.y + L * tNorm.y }
+    });
 
-    // The auxiliary margins are at distance ±auxMargin from the midpoint
-    const makeLine = (offset: number) => {
-      const center = {
-        x: mid.x + offset * nAux.x,
-        y: mid.y + offset * nAux.y
-      };
-      return {
-        A: { x: center.x - L * tAux.x, y: center.y - L * tAux.y },
-        B: { x: center.x + L * tAux.x, y: center.y + L * tAux.y }
-      };
-    };
+    // Calculate margin value (distance between the parallel lines)
+    const margin = Math.hypot(dx, dy);
 
     return {
-      La: makeLine(auxMargin),   // margin on A's side
-      Lb: makeLine(-auxMargin),  // margin on B's side
-      margin: auxMargin * 2
+      La: makeLine(A),   // line through point A
+      Lb: makeLine(B),   // line through point B
+      margin: margin
     };
   },[auxPair, pts]);
 
