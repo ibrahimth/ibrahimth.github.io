@@ -77,7 +77,7 @@ function computeMarginAndSVs(points: Pt[], n: {x:number;y:number}, b: number) {
 }
 
 // Coarse + refined search over θ∈[0,π) and b∈[bmin,bmax] to maximize hard‑margin (penalize violations strongly)
-function fitMaxMargin(points: Pt[]) {
+function fitMaxMargin(points: Pt[], currentTheta?: number) {
   const act = points.filter(p => p.active);
   const pos = act.filter(p => p.label === +1); const neg = act.filter(p => p.label === -1);
   if (pos.length === 0 || neg.length === 0) return { valid:false } as const;
@@ -87,19 +87,33 @@ function fitMaxMargin(points: Pt[]) {
   const xrange = Math.max(...xs) - Math.min(...xs); const yrange = Math.max(...ys) - Math.min(...ys);
 
   let best = { valid:false, theta: 0, b: 0, half: 0, svIds: [] as string[] };
-  const tryThetaB = (theta:number, b:number) => {
+  const tryThetaB = (theta:number, b:number, stabilityBonus: number = 0) => {
     const n = { x: Math.cos(theta), y: Math.sin(theta) };
     const { half, svIds, violations } = computeMarginAndSVs(points, n, b);
-    // Hard‑margin: forbid violations
-    const score = (violations === 0 ? half : -1e6 * violations);
-    if (!best.valid || score > (best.half)) {
+    // Hard‑margin: forbid violations, add stability bonus for orientations close to current
+    const score = (violations === 0 ? half + stabilityBonus : -1e6 * violations);
+    if (!best.valid || score > (best.half + (best.valid ? 0 : 0))) {
       best = { valid:true, theta, b, half, svIds };
     }
   };
 
-  // Coarse θ/b
+  // Coarse θ/b search
   for (let i=0;i<181;i++){
-    const theta = (i/180)*Math.PI; const n = { x: Math.cos(theta), y: Math.sin(theta) };
+    const theta = (i/180)*Math.PI;
+    const n = { x: Math.cos(theta), y: Math.sin(theta) };
+
+    // Add stability bonus for angles close to current orientation
+    let stabilityBonus = 0;
+    if (currentTheta !== undefined) {
+      const angleDiff = Math.min(
+        Math.abs(theta - currentTheta),
+        Math.abs(theta - currentTheta + Math.PI),
+        Math.abs(theta - currentTheta - Math.PI)
+      );
+      // Small bonus (up to 5% of typical margins) for staying close to current orientation
+      stabilityBonus = Math.max(0, 0.1 - angleDiff) * 0.01;
+    }
+
     // Project all points to get a safe bias span
     const projs = act.map(p => -(n.x*p.x + n.y*p.y));
     const pmin = Math.min(...projs), pmax = Math.max(...projs);
@@ -107,7 +121,7 @@ function fitMaxMargin(points: Pt[]) {
     const bmin = pmin - pad, bmax = pmax + pad;
     for (let j=0;j<=160;j++){
       const t = j/160; const b = bmin + t*(bmax-bmin);
-      tryThetaB(theta, b);
+      tryThetaB(theta, b, stabilityBonus);
     }
   }
   // Local refine around best
@@ -146,7 +160,7 @@ export default function SVMInteractiveAux() {
 
   // Refit on any data change
   useEffect(()=>{
-    const fit = fitMaxMargin(pts);
+    const fit = fitMaxMargin(pts, theta);
     if (!fit.valid){ setSvIds([]); setHalf(0); return; }
     // soft animation by interpolation
     const startTheta = theta, startB = b, startHalf = half;
