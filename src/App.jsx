@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Topic1Studio from './topic_1_interactive_studio_coe_292.jsx'
 import Topic2Studio from './topic_2_interactive_studio_coe_292.tsx'
 import SVMPlayground from './topic_3_svm_playground.tsx'
-import SVMSupportVectorSelection from './svm_support_vector_selection.jsx'
+import SVMInteractiveAux from './svm_support_vector_selection.tsx';
 
 function TabButton({ id, isActive, onClick, children }) {
   const base = {
