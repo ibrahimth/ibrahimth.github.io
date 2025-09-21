@@ -90,9 +90,30 @@ function fitMaxMargin(points: Pt[], currentTheta?: number) {
   const tryThetaB = (theta:number, b:number, stabilityBonus: number = 0) => {
     const n = { x: Math.cos(theta), y: Math.sin(theta) };
     const { half, svIds, violations } = computeMarginAndSVs(points, n, b);
-    // Hard‑margin: forbid violations, add stability bonus for orientations close to current
-    const score = (violations === 0 ? half + stabilityBonus : -1e6 * violations);
-    if (!best.valid || score > (best.half + (best.valid ? 0 : 0))) {
+
+    if (violations > 0) return; // Skip invalid solutions
+
+    // Calculate stability penalty for large orientation changes
+    let stabilityPenalty = 0;
+    if (currentTheta !== undefined && best.valid) {
+      const angleDiff = Math.min(
+        Math.abs(theta - currentTheta),
+        Math.abs(theta - currentTheta + Math.PI),
+        Math.abs(theta - currentTheta - Math.PI)
+      );
+
+      // If angle change is > 30 degrees, require significant margin improvement
+      if (angleDiff > Math.PI/6) {
+        const improvementRatio = half / (best.half || 0.001);
+        // Require at least 25% improvement for major orientation changes
+        if (improvementRatio < 1.25) {
+          stabilityPenalty = (best.half || 0) * 0.5; // Large penalty
+        }
+      }
+    }
+
+    const score = half + stabilityBonus - stabilityPenalty;
+    if (!best.valid || score > best.half) {
       best = { valid:true, theta, b, half, svIds };
     }
   };
@@ -110,8 +131,10 @@ function fitMaxMargin(points: Pt[], currentTheta?: number) {
         Math.abs(theta - currentTheta + Math.PI),
         Math.abs(theta - currentTheta - Math.PI)
       );
-      // Small bonus (up to 5% of typical margins) for staying close to current orientation
-      stabilityBonus = Math.max(0, 0.1 - angleDiff) * 0.01;
+      // Stronger stability bonus for staying close to current orientation
+      if (angleDiff < Math.PI/6) { // Within 30 degrees
+        stabilityBonus = Math.max(0, (Math.PI/6 - angleDiff) / (Math.PI/6)) * 0.05;
+      }
     }
 
     // Project all points to get a safe bias span
