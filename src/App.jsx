@@ -131,7 +131,7 @@ export default function App() {
         hidden={active !== 'svm'}
         style={{ display: active === 'svm' ? 'block' : 'none' }}
       >
-        <SVMSupportVectorSelection />
+        <SVMInteractiveAux />
       </section>
     </div>
   )
