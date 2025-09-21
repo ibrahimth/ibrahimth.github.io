@@ -42,7 +42,7 @@ function TabButton({ id, isActive, onClick, children }) {
 }
 
 export default function App() {
-  const [active, setActive] = useState('topic3')
+  const [active, setActive] = useState('topic1')
 
   return (
     <div style={{ padding: '1rem' }}>
