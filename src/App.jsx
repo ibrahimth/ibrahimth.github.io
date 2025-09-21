@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Topic1Studio from './topic_1_interactive_studio_coe_292.jsx'
 import Topic2Studio from './topic_2_interactive_studio_coe_292.tsx'
 import SVMPlayground from './topic_3_svm_playground.tsx'
+import SVMSupportVectorSelection from './svm_support_vector_selection.jsx'
 
 function TabButton({ id, isActive, onClick, children }) {
   const base = {
@@ -15,14 +16,14 @@ function TabButton({ id, isActive, onClick, children }) {
     background: 'white',
   }
   const active = {
-    background: '#1d4ed8',       // blue-700
+    background: '#1d4ed8',
     color: 'white',
     borderColor: '#1d4ed8',
     boxShadow: '0 1px 6px rgba(0,0,0,0.08)',
   }
   const inactive = {
-    color: '#1e3a8a',            // blue-900-ish
-    borderColor: '#bfdbfe',      // blue-200
+    color: '#1e3a8a',
+    borderColor: '#bfdbfe',
   }
   const style = { ...base, ...(isActive ? active : inactive) }
 
@@ -45,7 +46,6 @@ export default function App() {
 
   return (
     <div style={{ padding: '1rem' }}>
-      {/* Tab list */}
       <nav
         role="tablist"
         aria-label="COE 292 Interactive Studios"
@@ -55,10 +55,10 @@ export default function App() {
           flexWrap: 'wrap',
           gap: '0.25rem',
           marginBottom: '1rem',
-          background: '#f1f5f9',        // slate-100
+          background: '#f1f5f9',
           padding: '0.5rem',
           borderRadius: '9999px',
-          border: '1px solid #e2e8f0',  // slate-200
+          border: '1px solid #e2e8f0',
         }}
       >
         <TabButton
@@ -84,9 +84,16 @@ export default function App() {
         >
           Topic 3 — k-NN Classification
         </TabButton>
+
+        <TabButton
+          id="tab-svm"
+          isActive={active === 'svm'}
+          onClick={() => setActive('svm')}
+        >
+          SVM — Support Vector Selection
+        </TabButton>
       </nav>
 
-      {/* Panels */}
       <section
         id="tab-topic1-panel"
         role="tabpanel"
@@ -115,6 +122,16 @@ export default function App() {
         style={{ display: active === 'topic3' ? 'block' : 'none' }}
       >
         <SVMPlayground />
+      </section>
+
+      <section
+        id="tab-svm-panel"
+        role="tabpanel"
+        aria-labelledby="tab-svm"
+        hidden={active !== 'svm'}
+        style={{ display: active === 'svm' ? 'block' : 'none' }}
+      >
+        <SVMSupportVectorSelection />
       </section>
     </div>
   )
