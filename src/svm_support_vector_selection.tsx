@@ -127,6 +127,9 @@ export default function SVMInteractiveAux() {
   // Add mode state
   const [addMode, setAddMode] = useState<{enabled:boolean; label: 1|-1}>({ enabled:false, label: 1 });
 
+  // Select-then-click interaction mode
+  const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
+
   // Responsive canvas size
   const [canvasSize, setCanvasSize] = useState({ width: 820, height: 600 });
 
@@ -274,12 +277,26 @@ export default function SVMInteractiveAux() {
   };
 
   const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!addMode.enabled) return;
     if (e.target !== e.currentTarget) return; // only empty canvas
     const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
     const w = toWorld(e.clientX-rect.left, e.clientY-rect.top);
-    const id = nextId(addMode.label);
-    setPts(ps => ps.concat({ id, x: clamp(w.x, WORLD.xmin, WORLD.xmax), y: clamp(w.y, WORLD.ymin, WORLD.ymax), label: addMode.label, active: true }));
+
+    // If a point is selected, move it to the clicked location
+    if (selectedPointId) {
+      setPts(ps => ps.map(p =>
+        p.id === selectedPointId
+          ? { ...p, x: clamp(w.x, WORLD.xmin, WORLD.xmax), y: clamp(w.y, WORLD.ymin, WORLD.ymax) }
+          : p
+      ));
+      setSelectedPointId(null); // Deselect after moving
+      return;
+    }
+
+    // Add mode functionality
+    if (addMode.enabled) {
+      const id = nextId(addMode.label);
+      setPts(ps => ps.concat({ id, x: clamp(w.x, WORLD.xmin, WORLD.xmax), y: clamp(w.y, WORLD.ymin, WORLD.ymax), label: addMode.label, active: true }));
+    }
   };
 
   // ---------- Render ----------
@@ -333,7 +350,7 @@ export default function SVMInteractiveAux() {
               const s = toScreen(p.x,p.y); const active = p.active;
               const isSV = svIds.includes(p.id);
               const fill = p.label===1?"#2563eb":"#f97316";
-              const stroke = !active?"#d1d5db": isSV?"#f59e0b":"#111827";
+              const stroke = selectedPointId === p.id ? "#8b5cf6" : !active?"#d1d5db": isSV?"#f59e0b":"#111827";
               const r = isSV?8:6;
               return (
                 <g key={p.id}
@@ -351,12 +368,30 @@ export default function SVMInteractiveAux() {
                        });
                      } else if ((e as React.MouseEvent).shiftKey) {
                        deletePoint(p.id);
-                     } else {
+                     } else if (selectedPointId === p.id) {
+                       // Second click on selected point - toggle active state
                        setPts(ps=>ps.map(q=> q.id===p.id?{...q, active:!q.active}:q));
+                       setSelectedPointId(null);
+                     } else {
+                       // First click - select point for movement
+                       setSelectedPointId(p.id);
                      }
                    }}
                    style={{ cursor: "pointer" }}>
-                  <circle cx={s.sx} cy={s.sy} r={r} fill={active?fill:"#f3f4f6"} stroke={stroke} strokeWidth={isSV?3:2} />
+                  <circle cx={s.sx} cy={s.sy} r={r} fill={active?fill:"#f3f4f6"} stroke={stroke} strokeWidth={selectedPointId === p.id ? 4 : isSV?3:2} />
+                  {selectedPointId === p.id && (
+                    <circle
+                      cx={s.sx} cy={s.sy} r={r + 8}
+                      fill="none"
+                      stroke="#8b5cf6"
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      opacity={0.8}
+                    >
+                      <animate attributeName="r" values={`${r + 8};${r + 12};${r + 8}`} dur="1.5s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" values="0.8;0.4;0.8" dur="1.5s" repeatCount="indefinite" />
+                    </circle>
+                  )}
                   <text x={s.sx+10} y={s.sy-10} className="text-xs fill-gray-700 select-none">{p.id} ({p.x.toFixed(1)},{p.y.toFixed(1)})</text>
                 </g>
               );
@@ -368,7 +403,7 @@ export default function SVMInteractiveAux() {
               {addMode.enabled ? `Add mode: ${window.innerWidth < 768 ? 'tap' : 'click'} empty canvas to place a ${addMode.label===1?'+1':'−1'} point (Esc to cancel)` :
                auxPair?.a && auxPair?.b ? "Aux pair set (red dashed)" :
                pairMode? `${window.innerWidth < 768 ? 'Tap' : 'Click'} one +1 and one −1 to set aux pair` :
-               window.innerWidth < 768 ? "Tap point to toggle; drag to move" : "Click a point to toggle; Shift+Click to delete; drag to move"}
+               window.innerWidth < 768 ? "Tap point to select (purple circle) → tap canvas to move • Tap selected point to toggle active" : "Click point to select → click canvas to move • Click selected point to toggle • Shift+Click to delete • Or drag to move"}
             </text>
 
             {/* Legend */}

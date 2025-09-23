@@ -655,7 +655,18 @@ export default function SVMPlayground() {
     const x = clientX - rect.left
     const y = clientY - rect.top
     const worldCoords = toWorld(x, y)
-    
+
+    // If a point is selected, move it to the clicked location
+    if (selectedPointId) {
+      setPoints(pts => pts.map(pt =>
+        pt.id === selectedPointId
+          ? { ...pt, x: clamp(worldCoords.x, world.xMin, world.xMax), y: clamp(worldCoords.y, world.yMin, world.yMax) }
+          : pt
+      ));
+      setSelectedPointId(null); // Deselect after moving
+      return;
+    }
+
     if (showKNN) {
       if (hasModifier) {
         // Add new training point in k-NN mode
@@ -717,36 +728,27 @@ export default function SVMPlayground() {
   // Mobile add point mode
   const [addPointMode, setAddPointMode] = useState(false);
 
-  // Long-press detection for mobile class switching
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  // Select-then-click interaction mode
+  const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
+
 
   const handlePointTouch = (e: React.TouchEvent, pointId: string) => {
     e.stopPropagation();
     e.preventDefault();
 
-    // Start dragging immediately
-    setDraggingId(pointId);
-
-    // Set up long-press timer for class switching (500ms)
-    const timer = setTimeout(() => {
-      // Long press detected - switch class and stop dragging
+    // Use select-then-click pattern - much better for mobile!
+    if (selectedPointId === pointId) {
+      // Double-tap to deselect or switch class
       setPoints(pts => pts.map(pt =>
         pt.id === pointId ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
       ));
-      setDraggingId(null);
-      setLongPressTimer(null);
-    }, 500);
-
-    setLongPressTimer(timer);
-  };
-
-  const handleTouchEnd = () => {
-    // Clear long-press timer if touch ends
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      setLongPressTimer(null);
+      setSelectedPointId(null);
+    } else {
+      // Select this point
+      setSelectedPointId(pointId);
     }
   };
+
 
 
   // ---------- JSX ----------
@@ -758,7 +760,7 @@ export default function SVMPlayground() {
           <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
             <div className="text-xs md:text-sm lg:text-base text-slate-600">
               <span className="hidden md:inline">Interactive ML algorithms • Drag points • Train models • Compare approaches</span>
-              <span className="md:hidden">Tap and drag points • Use Add Point button for new points</span>
+              <span className="md:hidden">Tap point to select → tap canvas to move • Use Add Point button for new points</span>
             </div>
             <div className="flex items-center gap-2">
               <button 
@@ -1043,8 +1045,8 @@ export default function SVMPlayground() {
                 </button>
               </div>
               <div className="text-xs md:text-sm text-slate-600 mt-2 space-y-1">
-                <p><strong>Desktop:</strong> Drag points • Double-click to switch class • Ctrl+Click to add points</p>
-                <p><strong>Mobile:</strong> Tap and drag to move • Long-press (0.5s) to switch class • Use "Add Point" button then tap canvas</p>
+                <p><strong>Desktop:</strong> Drag points OR click to select then click canvas • Double-click to switch class • Ctrl+Click to add points</p>
+                <p><strong>Mobile:</strong> Tap point to select (purple circle) then tap canvas to move • Tap selected point again to switch class • Use "Add Point" button then tap canvas</p>
               </div>
             </div>
             </div>
@@ -2294,6 +2296,11 @@ function renderPoint(p: Pt, ctx: {
     ring = mis ? "#ef4444" : insideMargin ? "#f59e0b" : isSV ? "#10b981" : "#111827"; // red, amber, green, gray
   }
 
+  // Override ring color if point is selected
+  if (selectedPointId === p.id) {
+    ring = "#8b5cf6"; // Purple for selected
+  }
+
   return (
     <g key={p.id} onMouseEnter={() => setHoverId(p.id)} onMouseLeave={() => setHoverId(null)}>
       <circle
@@ -2301,17 +2308,37 @@ function renderPoint(p: Pt, ctx: {
         transform={draggingId === p.id ? "scale(1.2)" : undefined}
         transformOrigin={`${pos.x} ${pos.y}`}
         fill={fill}
-        stroke={ring} strokeWidth={isCurrentPerceptronStep ? 4 : isSV ? 3 : 2}
-        onMouseDown={() => setDraggingId(p.id)}
-        onDoubleClick={() => {
-          setPoints(pts => pts.map(pt =>
-            pt.id === p.id ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
-          ));
+        stroke={ring} strokeWidth={selectedPointId === p.id ? 4 : isCurrentPerceptronStep ? 4 : isSV ? 3 : 2}
+        onClick={() => {
+          if (selectedPointId === p.id) {
+            // Double-click to deselect or switch class
+            setPoints(pts => pts.map(pt =>
+              pt.id === p.id ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
+            ));
+            setSelectedPointId(null);
+          } else {
+            // Select this point
+            setSelectedPointId(p.id);
+          }
         }}
+        onMouseDown={() => setDraggingId(p.id)} // Keep drag for desktop
         onTouchStart={(e) => handlePointTouch(e, p.id)}
-        onTouchEnd={handleTouchEnd}
         style={{ cursor: "grab", touchAction: "none" }}
       />
+      {/* Selection indicator */}
+      {selectedPointId === p.id && (
+        <circle
+          cx={pos.x} cy={pos.y} r={16}
+          fill="none"
+          stroke="#8b5cf6"
+          strokeWidth={2}
+          strokeDasharray="4 4"
+          opacity={0.8}
+        >
+          <animate attributeName="r" values="16;20;16" dur="1.5s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.8;0.4;0.8" dur="1.5s" repeatCount="indefinite" />
+        </circle>
+      )}
       {/* Pulsing animation for current step */}
       {isCurrentPerceptronStep && (
         <circle
