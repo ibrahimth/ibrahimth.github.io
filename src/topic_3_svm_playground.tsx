@@ -982,18 +982,22 @@ export default function SVMPlayground() {
                   const isCurrentStep = showPerceptron && stepByStepMode && trainingSteps.length > 0 && currentStep < trainingSteps.length && 
                                        trainingSteps[currentStep]?.point.id === p.id;
                   
-                  return renderPoint(p, { 
-                    toScreen, 
-                    n, 
-                    bias, 
-                    marginHalf, 
-                    SVs, 
-                    setHoverId, 
-                    setDraggingId, 
-                    hoverId, 
-                    showKNN, 
+                  return renderPoint(p, {
+                    toScreen,
+                    n,
+                    bias,
+                    marginHalf,
+                    SVs,
+                    setHoverId,
+                    setDraggingId,
+                    hoverId,
+                    showKNN,
                     nearestNeighbors,
-                    isCurrentPerceptronStep: isCurrentStep
+                    isCurrentPerceptronStep: isCurrentStep,
+                    selectedPointId,
+                    setSelectedPointId,
+                    setPoints,
+                    handlePointTouch
                   });
                 })}
               </svg>
@@ -2262,20 +2266,24 @@ function LiftedPlot({ data, zThresh, onChange, width = 480, height = 320 }: { da
 }
 
 // ---------- Point renderer (extracted to avoid inline closures) ----------
-function renderPoint(p: Pt, ctx: { 
-  toScreen: (x: number, y: number) => { x: number; y: number }; 
-  n: N2; 
-  bias: number; 
-  marginHalf: number; 
-  SVs: string[]; 
-  setHoverId: (s: string | null) => void; 
-  setDraggingId: (s: string) => void; 
+function renderPoint(p: Pt, ctx: {
+  toScreen: (x: number, y: number) => { x: number; y: number };
+  n: N2;
+  bias: number;
+  marginHalf: number;
+  SVs: string[];
+  setHoverId: (s: string | null) => void;
+  setDraggingId: (s: string) => void;
   hoverId: string | null;
   showKNN?: boolean;
   nearestNeighbors?: Array<{point: Pt, distance: number}>;
   isCurrentPerceptronStep?: boolean;
+  selectedPointId?: string | null;
+  setSelectedPointId?: (id: string | null) => void;
+  setPoints?: (fn: (pts: Pt[]) => Pt[]) => void;
+  handlePointTouch?: (e: React.TouchEvent, pointId: string) => void;
 }) {
-  const { toScreen, n, bias, marginHalf, SVs, setHoverId, setDraggingId, hoverId, showKNN, nearestNeighbors, isCurrentPerceptronStep } = ctx;
+  const { toScreen, n, bias, marginHalf, SVs, setHoverId, setDraggingId, hoverId, showKNN, nearestNeighbors, isCurrentPerceptronStep, selectedPointId, setSelectedPointId, setPoints, handlePointTouch } = ctx;
   const pos = toScreen(p.x, p.y);
   const isSV = SVs.includes(p.id);
   const d = signedDistance(p, n, bias);
@@ -2310,19 +2318,19 @@ function renderPoint(p: Pt, ctx: {
         fill={fill}
         stroke={ring} strokeWidth={selectedPointId === p.id ? 4 : isCurrentPerceptronStep ? 4 : isSV ? 3 : 2}
         onClick={() => {
-          if (selectedPointId === p.id) {
+          if (selectedPointId === p.id && setPoints && setSelectedPointId) {
             // Double-click to deselect or switch class
             setPoints(pts => pts.map(pt =>
               pt.id === p.id ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
             ));
             setSelectedPointId(null);
-          } else {
+          } else if (setSelectedPointId) {
             // Select this point
             setSelectedPointId(p.id);
           }
         }}
         onMouseDown={() => setDraggingId(p.id)} // Keep drag for desktop
-        onTouchStart={(e) => handlePointTouch(e, p.id)}
+        onTouchStart={(e) => handlePointTouch?.(e, p.id)}
         style={{ cursor: "grab", touchAction: "none" }}
       />
       {/* Selection indicator */}
