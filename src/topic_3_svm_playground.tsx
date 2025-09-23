@@ -557,10 +557,13 @@ export default function SVMPlayground() {
   // A simple score that rewards margin and penalizes violations with C
   const score = useMemo(() => 2 * marginHalf - C * violations, [marginHalf, C, violations]);
 
+  // Drag/move handler — works on both mouse and touch
   useEffect(() => {
-    if (!draggingId || window.innerWidth < 768) return; // Disable drag on mobile
+    if (!draggingId) return;
+
     const svg = svgRef.current;
     if (!svg) return;
+
     const pt = svg.createSVGPoint();
 
     function updatePosition(clientX: number, clientY: number) {
@@ -570,7 +573,17 @@ export default function SVMPlayground() {
       if (!m) return;
       const { x, y } = pt.matrixTransform(m.inverse());
       const w = toWorld(x, y);
-      setPoints((ps) => ps.map(p => (p.id === draggingId ? { ...p, x: clamp(w.x, world.xMin, world.xMax), y: clamp(w.y, world.yMin, world.yMax) } : p)));
+      setPoints((ps) =>
+        ps.map((p) =>
+          p.id === draggingId
+            ? {
+                ...p,
+                x: clamp(w.x, world.xMin, world.xMax),
+                y: clamp(w.y, world.yMin, world.yMax),
+              }
+            : p
+        )
+      );
     }
 
     function onMouseMove(e: MouseEvent) {
@@ -578,7 +591,8 @@ export default function SVMPlayground() {
     }
 
     function onTouchMove(e: TouchEvent) {
-      e.preventDefault(); // Prevent scrolling
+      // needed so we can prevent scrolling while dragging
+      e.preventDefault();
       if (e.touches.length > 0) {
         updatePosition(e.touches[0].clientX, e.touches[0].clientY);
       }
@@ -586,25 +600,23 @@ export default function SVMPlayground() {
 
     function onEnd() {
       setDraggingId(null);
-      // Also clear any pending long-press timer
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        setLongPressTimer(null);
-      }
     }
 
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onEnd);
+    // passive: false so preventDefault works
     window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("touchend", onEnd);
+    window.addEventListener("touchcancel", onEnd);
 
     return () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onEnd);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
     };
-  }, [draggingId, toWorld]);
+  }, [draggingId, toWorld, setPoints]);
 
   // Auto-play effect for step-by-step training
   useEffect(() => {
@@ -973,8 +985,9 @@ export default function SVMPlayground() {
                     marginHalf,
                     SVs,
                     setHoverId,
-                    setDraggingId,
+                    setDraggingId,              // already there
                     hoverId,
+                    draggingId,                 // <-- pass it in
                     showKNN,
                     nearestNeighbors,
                     isCurrentPerceptronStep: isCurrentStep,
@@ -2249,23 +2262,43 @@ function LiftedPlot({ data, zThresh, onChange, width = 480, height = 320 }: { da
 }
 
 // ---------- Point renderer (extracted to avoid inline closures) ----------
-function renderPoint(p: Pt, ctx: {
-  toScreen: (x: number, y: number) => { x: number; y: number };
-  n: N2;
-  bias: number;
-  marginHalf: number;
-  SVs: string[];
-  setHoverId: (s: string | null) => void;
-  setDraggingId: (s: string) => void;
-  hoverId: string | null;
-  showKNN?: boolean;
-  nearestNeighbors?: Array<{point: Pt, distance: number}>;
-  isCurrentPerceptronStep?: boolean;
-  selectedPointId?: string | null;
-  setSelectedPointId?: (id: string | null) => void;
-  setPoints?: (fn: (pts: Pt[]) => Pt[]) => void;
-}) {
-  const { toScreen, n, bias, marginHalf, SVs, setHoverId, setDraggingId, hoverId, showKNN, nearestNeighbors, isCurrentPerceptronStep, selectedPointId, setSelectedPointId, setPoints } = ctx;
+function renderPoint(
+  p: Pt,
+  ctx: {
+    toScreen: (x: number, y: number) => { x: number; y: number };
+    n: N2;
+    bias: number;
+    marginHalf: number;
+    SVs: string[];
+    setHoverId: (s: string | null) => void;
+    setDraggingId: (s: string | null) => void; // note: accepts null to clear
+    hoverId: string | null;
+    draggingId: string | null;                 // <-- NEW: pass current dragging id
+    showKNN?: boolean;
+    nearestNeighbors?: Array<{ point: Pt; distance: number }>;
+    isCurrentPerceptronStep?: boolean;
+    selectedPointId?: string | null;
+    setSelectedPointId?: (id: string | null) => void;
+    setPoints?: (fn: (pts: Pt[]) => Pt[]) => void;
+  }
+) {
+  const {
+    toScreen,
+    n,
+    bias,
+    marginHalf,
+    SVs,
+    setHoverId,
+    setDraggingId,
+    hoverId,
+    draggingId,
+    showKNN,
+    nearestNeighbors,
+    isCurrentPerceptronStep,
+    selectedPointId,
+    setSelectedPointId,
+    setPoints,
+  } = ctx;
   const pos = toScreen(p.x, p.y);
   const isSV = SVs.includes(p.id);
   const d = signedDistance(p, n, bias);
@@ -2311,32 +2344,31 @@ function renderPoint(p: Pt, ctx: {
             setSelectedPointId(p.id);
           }
         }}
+        // Desktop: start drag on mouse
         onMouseDown={(e) => {
-          // Only use drag on desktop, not mobile
-          if (window.innerWidth >= 768) {
-            setDraggingId(p.id);
-          } else {
-            // On mobile, use click for selection
-            if (selectedPointId === p.id && setPoints && setSelectedPointId) {
-              setPoints(pts => pts.map(pt =>
-                pt.id === p.id ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
-              ));
-              setSelectedPointId(null);
-            } else if (setSelectedPointId) {
-              setSelectedPointId(p.id);
-            }
-          }
-        }}
-        onTouchStart={(e) => {
-          e.stopPropagation();
           e.preventDefault();
-          // Mobile: always use select-then-click
-          if (selectedPointId === p.id && setPoints && setSelectedPointId) {
-            setPoints(pts => pts.map(pt =>
-              pt.id === p.id ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
-            ));
+          setDraggingId(p.id);
+        }}
+        // Mobile: start drag immediately on touch
+        onTouchStart={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDraggingId(p.id);
+        }}
+        // Click toggles/selects when not dragging
+        onClick={() => {
+          if (!setPoints || !setSelectedPointId) return;
+          if (selectedPointId === p.id) {
+            // toggle class when the same point is tapped/clicked
+            setPoints((pts) =>
+              pts.map((pt) =>
+                pt.id === p.id
+                  ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 }
+                  : pt
+              )
+            );
             setSelectedPointId(null);
-          } else if (setSelectedPointId) {
+          } else {
             setSelectedPointId(p.id);
           }
         }}
