@@ -584,7 +584,14 @@ export default function SVMPlayground() {
       }
     }
 
-    function onEnd() { setDraggingId(null); }
+    function onEnd() {
+      setDraggingId(null);
+      // Also clear any pending long-press timer
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        setLongPressTimer(null);
+      }
+    }
 
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onEnd);
@@ -710,25 +717,34 @@ export default function SVMPlayground() {
   // Mobile add point mode
   const [addPointMode, setAddPointMode] = useState(false);
 
-  // Double-tap detection for mobile class switching
-  const [lastTap, setLastTap] = useState<{ time: number; pointId: string } | null>(null);
+  // Long-press detection for mobile class switching
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
 
   const handlePointTouch = (e: React.TouchEvent, pointId: string) => {
     e.stopPropagation();
+    e.preventDefault();
 
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
+    // Start dragging immediately
+    setDraggingId(pointId);
 
-    if (lastTap && lastTap.pointId === pointId && now - lastTap.time < DOUBLE_TAP_DELAY) {
-      // Double tap detected - switch class
+    // Set up long-press timer for class switching (500ms)
+    const timer = setTimeout(() => {
+      // Long press detected - switch class and stop dragging
       setPoints(pts => pts.map(pt =>
         pt.id === pointId ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
       ));
-      setLastTap(null);
-    } else {
-      // Single tap - start dragging
-      setDraggingId(pointId);
-      setLastTap({ time: now, pointId });
+      setDraggingId(null);
+      setLongPressTimer(null);
+    }, 500);
+
+    setLongPressTimer(timer);
+  };
+
+  const handleTouchEnd = () => {
+    // Clear long-press timer if touch ends
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
     }
   };
 
@@ -1028,7 +1044,7 @@ export default function SVMPlayground() {
               </div>
               <div className="text-xs md:text-sm text-slate-600 mt-2 space-y-1">
                 <p><strong>Desktop:</strong> Drag points • Double-click to switch class • Ctrl+Click to add points</p>
-                <p><strong>Mobile:</strong> Tap and drag to move • Double-tap to switch class • Use "Add Point" button then tap canvas</p>
+                <p><strong>Mobile:</strong> Tap and drag to move • Long-press (0.5s) to switch class • Use "Add Point" button then tap canvas</p>
               </div>
             </div>
             </div>
@@ -2282,6 +2298,8 @@ function renderPoint(p: Pt, ctx: {
     <g key={p.id} onMouseEnter={() => setHoverId(p.id)} onMouseLeave={() => setHoverId(null)}>
       <circle
         cx={pos.x} cy={pos.y} r={isCurrentPerceptronStep ? 12 : isSV ? 10 : 8}
+        transform={draggingId === p.id ? "scale(1.2)" : undefined}
+        transformOrigin={`${pos.x} ${pos.y}`}
         fill={fill}
         stroke={ring} strokeWidth={isCurrentPerceptronStep ? 4 : isSV ? 3 : 2}
         onMouseDown={() => setDraggingId(p.id)}
@@ -2291,6 +2309,7 @@ function renderPoint(p: Pt, ctx: {
           ));
         }}
         onTouchStart={(e) => handlePointTouch(e, p.id)}
+        onTouchEnd={handleTouchEnd}
         style={{ cursor: "grab", touchAction: "none" }}
       />
       {/* Pulsing animation for current step */}
