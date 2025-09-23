@@ -20,7 +20,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 // ---------- World & helpers ----------
 const WORLD = { xmin: 0, xmax: 8, ymin: 0, ymax: 8 };
-const WIDTH = 820, HEIGHT = 600, PAD = 50;
+// Responsive sizing - will be overridden by state
+let WIDTH = 820, HEIGHT = 600;
+const PAD = 50;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 function toScreen(x: number, y: number) {
@@ -125,6 +127,37 @@ export default function SVMInteractiveAux() {
   // Add mode state
   const [addMode, setAddMode] = useState<{enabled:boolean; label: 1|-1}>({ enabled:false, label: 1 });
 
+  // Responsive canvas size
+  const [canvasSize, setCanvasSize] = useState({ width: 820, height: 600 });
+
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      const isMobile = window.innerWidth < 768;
+      const isTablet = window.innerWidth < 1024;
+
+      if (isMobile) {
+        const size = { width: Math.min(380, window.innerWidth - 32), height: 300 };
+        setCanvasSize(size);
+        WIDTH = size.width;
+        HEIGHT = size.height;
+      } else if (isTablet) {
+        const size = { width: 600, height: 450 };
+        setCanvasSize(size);
+        WIDTH = size.width;
+        HEIGHT = size.height;
+      } else {
+        const size = { width: 820, height: 600 };
+        setCanvasSize(size);
+        WIDTH = size.width;
+        HEIGHT = size.height;
+      }
+    };
+
+    updateCanvasSize();
+    window.addEventListener('resize', updateCanvasSize);
+    return () => window.removeEventListener('resize', updateCanvasSize);
+  }, []);
+
   // Current optimum (animate to updates)
   const [theta, setTheta] = useState(Math.PI/4);
   const [b, setB] = useState(0);
@@ -149,18 +182,37 @@ export default function SVMInteractiveAux() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(pts.map(p=>({id:p.id,x:p.x,y:p.y,label:p.label,active:p.active})))]);
 
-  // Drag handling
+  // Drag handling with touch support
   const svgRef = useRef<SVGSVGElement|null>(null);
+
   useEffect(()=>{
-    const onMove=(e:MouseEvent)=>{
-      if (!dragId || !svgRef.current) return;
+    if (!dragId || !svgRef.current) return;
+
+    const updatePosition = (clientX: number, clientY: number) => {
+      if (!svgRef.current) return;
       const rect = svgRef.current.getBoundingClientRect();
-      const w = toWorld(e.clientX-rect.left, e.clientY-rect.top);
+      const w = toWorld(clientX - rect.left, clientY - rect.top);
       setPts(ps=>ps.map(p=>p.id===dragId?{...p, x: clamp(w.x, WORLD.xmin, WORLD.xmax), y: clamp(w.y, WORLD.ymin, WORLD.ymax)}:p));
     };
-    const onUp=()=> setDragId(null);
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
-    return ()=>{ window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+
+    const onMouseMove = (e: MouseEvent) => updatePosition(e.clientX, e.clientY);
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length > 0) updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const onEnd = () => setDragId(null);
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onEnd);
+
+    return ()=>{
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onEnd);
+    };
   }, [dragId]);
 
   // Escape cancels add mode
@@ -241,9 +293,16 @@ export default function SVMInteractiveAux() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+      <div className="flex flex-col xl:grid xl:grid-cols-[1fr_320px] gap-4">
         <div className="rounded-2xl shadow p-3 bg-white">
-          <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="rounded-xl border border-gray-200 bg-white select-none" onClick={handleSvgClick}>
+          <svg
+            ref={svgRef}
+            width={canvasSize.width}
+            height={canvasSize.height}
+            className="rounded-xl border border-gray-200 bg-white select-none"
+            onClick={handleSvgClick}
+            style={{ touchAction: "none" }}
+          >
             {/* Grid & axes */}
             {Array.from({length: WORLD.xmax - WORLD.xmin + 1}).map((_,i)=>{
               const x = WORLD.xmin + i; const a = toScreen(x, WORLD.ymin), bpt = toScreen(x, WORLD.ymax);
@@ -279,6 +338,8 @@ export default function SVMInteractiveAux() {
               return (
                 <g key={p.id}
                    onMouseDown={()=>{ setDragId(p.id); }}
+                   onTouchStart={(e)=>{ e.preventDefault(); e.stopPropagation(); setDragId(p.id); }}
+                   style={{ touchAction: "none" }}
                    onClick={(e)=>{
                      if (pairMode){
                        setAuxPair(prev=>{
@@ -303,10 +364,11 @@ export default function SVMInteractiveAux() {
 
             {/* Labels */}
             <text x={WIDTH-PAD-260} y={PAD-18} className="text-sm fill-gray-700">marg. d = {(2*half).toFixed(3)}  |  θ = {(theta*180/Math.PI).toFixed(1)}°</text>
-            <text x={PAD} y={PAD-18} className="text-sm fill-gray-700">
-              {addMode.enabled ? `Add mode: click empty canvas to place a ${addMode.label===1?'+1':'−1'} point (Esc to cancel)` :
+            <text x={PAD} y={PAD-18} className="text-xs md:text-sm fill-gray-700">
+              {addMode.enabled ? `Add mode: ${window.innerWidth < 768 ? 'tap' : 'click'} empty canvas to place a ${addMode.label===1?'+1':'−1'} point (Esc to cancel)` :
                auxPair?.a && auxPair?.b ? "Aux pair set (red dashed)" :
-               pairMode? "Click one +1 and one −1 to set aux pair" : "Click a point to toggle; Shift+Click to delete; drag to move"}
+               pairMode? `${window.innerWidth < 768 ? 'Tap' : 'Click'} one +1 and one −1 to set aux pair` :
+               window.innerWidth < 768 ? "Tap point to toggle; drag to move" : "Click a point to toggle; Shift+Click to delete; drag to move"}
             </text>
 
             {/* Legend */}
