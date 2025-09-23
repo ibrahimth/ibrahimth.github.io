@@ -417,8 +417,29 @@ export default function SVMPlayground() {
   const [autoPlaySpeed, setAutoPlaySpeed] = useState(1000); // ms between steps
 
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const width = 620;
-  const height = 420;
+  // Responsive canvas size
+  const [canvasSize, setCanvasSize] = useState({ width: 620, height: 420 });
+
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      const isMobile = window.innerWidth < 768;
+      const isTablet = window.innerWidth < 1024;
+
+      if (isMobile) {
+        setCanvasSize({ width: Math.min(380, window.innerWidth - 48), height: 280 });
+      } else if (isTablet) {
+        setCanvasSize({ width: 500, height: 350 });
+      } else {
+        setCanvasSize({ width: 620, height: 420 });
+      }
+    };
+
+    updateCanvasSize();
+    window.addEventListener('resize', updateCanvasSize);
+    return () => window.removeEventListener('resize', updateCanvasSize);
+  }, []);
+
+  const { width, height } = canvasSize;
   const { toScreen, toWorld } = useSvgCoords(width, height);
   
   // k-NN distance function
@@ -537,22 +558,45 @@ export default function SVMPlayground() {
   const score = useMemo(() => 2 * marginHalf - C * violations, [marginHalf, C, violations]);
 
   useEffect(() => {
-    function onMove(e: MouseEvent) {
-      if (!draggingId) return;
-      const svg = svgRef.current;
-      if (!svg) return;
-      const pt = svg.createSVGPoint();
-      pt.x = e.clientX; pt.y = e.clientY;
+    if (!draggingId) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    const pt = svg.createSVGPoint();
+
+    function updatePosition(clientX: number, clientY: number) {
+      pt.x = clientX;
+      pt.y = clientY;
       const m = svg.getScreenCTM();
       if (!m) return;
       const { x, y } = pt.matrixTransform(m.inverse());
       const w = toWorld(x, y);
       setPoints((ps) => ps.map(p => (p.id === draggingId ? { ...p, x: clamp(w.x, world.xMin, world.xMax), y: clamp(w.y, world.yMin, world.yMax) } : p)));
     }
-    function onUp() { setDraggingId(null); }
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+
+    function onMouseMove(e: MouseEvent) {
+      updatePosition(e.clientX, e.clientY);
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      e.preventDefault(); // Prevent scrolling
+      if (e.touches.length > 0) {
+        updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }
+
+    function onEnd() { setDraggingId(null); }
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onEnd);
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onEnd);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onEnd);
+    };
   }, [draggingId, toWorld]);
 
   // Auto-play effect for step-by-step training
@@ -598,16 +642,15 @@ export default function SVMPlayground() {
     };
   }, [linePoints, marginHalf, n]);
   
-  // Handle canvas click for all modes
-  const handleCanvasClick = (e: React.MouseEvent<SVGElement>) => {
-    const svg = e.currentTarget
+  // Handle canvas interaction for all modes (mouse and touch)
+  const handleCanvasInteraction = (clientX: number, clientY: number, svg: SVGElement, hasModifier: boolean = false) => {
     const rect = svg.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    const x = clientX - rect.left
+    const y = clientY - rect.top
     const worldCoords = toWorld(x, y)
     
     if (showKNN) {
-      if (e.ctrlKey || e.metaKey) {
+      if (hasModifier) {
         // Add new training point in k-NN mode
         const newPoint: Pt = {
           id: Math.random().toString(36).slice(2),
@@ -624,7 +667,7 @@ export default function SVMPlayground() {
         })
       }
     } else if (showPerceptron) {
-      if (e.ctrlKey || e.metaKey) {
+      if (hasModifier) {
         // Add new training point in Perceptron mode
         const newPoint: Pt = {
           id: Math.random().toString(36).slice(2),
@@ -636,7 +679,7 @@ export default function SVMPlayground() {
       }
     } else {
       // SVM mode - add new points with Ctrl/Cmd + Click
-      if (e.ctrlKey || e.metaKey) {
+      if (hasModifier) {
         const newPoint: Pt = {
           id: Math.random().toString(36).slice(2),
           x: clamp(worldCoords.x, world.xMin, world.xMax),
@@ -647,23 +690,45 @@ export default function SVMPlayground() {
       }
     }
   }
-  
+
+  // Mouse click handler
+  const handleCanvasClick = (e: React.MouseEvent<SVGElement>) => {
+    const hasModifier = e.ctrlKey || e.metaKey;
+    handleCanvasInteraction(e.clientX, e.clientY, e.currentTarget, hasModifier);
+  }
+
+  // Touch handler for canvas
+  const handleCanvasTouch = (e: React.TouchEvent<SVGElement>) => {
+    if (e.touches.length === 1) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      // For mobile, we use addPointMode for adding points
+      handleCanvasInteraction(touch.clientX, touch.clientY, e.currentTarget, addPointMode);
+    }
+  }
+
+  // Mobile add point mode
+  const [addPointMode, setAddPointMode] = useState(false);
+
 
   // ---------- JSX ----------
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 text-slate-900">
+    <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 md:p-6 text-slate-900">
       <div className="max-w-7xl mx-auto">
-        <header className="flex items-center justify-between gap-4 mb-6">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">ML Classification Playground</h1>
-          <div className="flex items-center gap-4">
-            <div className="text-sm md:text-base text-slate-600">Interactive ML algorithms • Drag points • Train models • Compare approaches</div>
+        <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight">ML Classification Playground</h1>
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
+            <div className="text-xs md:text-sm lg:text-base text-slate-600">
+              <span className="hidden md:inline">Interactive ML algorithms • Drag points • Train models • Compare approaches</span>
+              <span className="md:hidden">Tap and drag points • Use Add Point button for new points</span>
+            </div>
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => {
                   setShowKNN(false);
                   setShowPerceptron(false);
                 }} 
-                className={`px-3 py-1.5 rounded-xl text-sm ${!showKNN && !showPerceptron ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+                className={`px-4 py-2 rounded-xl text-sm md:text-base touch-none ${!showKNN && !showPerceptron ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-900'}`}
               >
                 SVM Mode
               </button>
@@ -678,7 +743,7 @@ export default function SVMPlayground() {
                   // Ensure test point is in visible area
                   setTestPoint({ x: 0, y: 0 })
                 }} 
-                className={`px-3 py-1.5 rounded-xl text-sm ${showKNN && !showPerceptron ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+                className={`px-4 py-2 rounded-xl text-sm md:text-base touch-none ${showKNN && !showPerceptron ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-900'}`}
               >
                 k-NN Mode
               </button>
@@ -694,9 +759,17 @@ export default function SVMPlayground() {
                   setPerceptronWeights({ w0: 0, w1: 0, w2: 0 });
                   setTrainingHistory([]);
                 }} 
-                className={`px-3 py-1.5 rounded-xl text-sm ${showPerceptron ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+                className={`px-4 py-2 rounded-xl text-sm md:text-base touch-none ${showPerceptron ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-900'}`}
               >
                 Perceptron Mode
+              </button>
+            </div>
+            <div className="flex items-center gap-2 md:hidden">
+              <button
+                onClick={() => setAddPointMode(!addPointMode)}
+                className={`px-4 py-2 rounded-xl text-sm touch-none ${addPointMode ? 'bg-orange-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+              >
+                {addPointMode ? 'Cancel Add' : 'Add Point'}
               </button>
             </div>
           </div>
@@ -743,10 +816,18 @@ export default function SVMPlayground() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
+          <div className="flex flex-col xl:grid xl:grid-cols-[1fr_350px] gap-4 md:gap-6">
             {/* Canvas */}
             <div className="relative">
-              <svg ref={svgRef} width={width} height={height} className="rounded-2xl border border-slate-200 bg-white" onClick={handleCanvasClick}>
+              <svg
+                ref={svgRef}
+                width={width}
+                height={height}
+                className="rounded-2xl border border-slate-200 bg-white"
+                onClick={handleCanvasClick}
+                onTouchStart={handleCanvasTouch}
+                style={{ touchAction: "none" }}
+              >
                 {/* Axes */}
                 <line x1={toScreen(world.xMin,0).x} y1={toScreen(world.xMin,0).y} x2={toScreen(world.xMax,0).x} y2={toScreen(world.xMax,0).y} stroke="#e5e7eb" />
                 <line x1={toScreen(0,world.yMin).x} y1={toScreen(0,world.yMin).y} x2={toScreen(0,world.yMax).x} y2={toScreen(0,world.yMax).y} stroke="#e5e7eb" />
@@ -2158,11 +2239,12 @@ function renderPoint(p: Pt, ctx: {
   return (
     <g key={p.id} onMouseEnter={() => setHoverId(p.id)} onMouseLeave={() => setHoverId(null)}>
       <circle
-        cx={pos.x} cy={pos.y} r={isCurrentPerceptronStep ? 10 : isSV ? 8 : 6}
+        cx={pos.x} cy={pos.y} r={isCurrentPerceptronStep ? 12 : isSV ? 10 : 8}
         fill={fill}
         stroke={ring} strokeWidth={isCurrentPerceptronStep ? 4 : isSV ? 3 : 2}
         onMouseDown={() => setDraggingId(p.id)}
-        style={{ cursor: "grab" }}
+        onTouchStart={() => setDraggingId(p.id)}
+        style={{ cursor: "grab", touchAction: "none" }}
       />
       {/* Pulsing animation for current step */}
       {isCurrentPerceptronStep && (
