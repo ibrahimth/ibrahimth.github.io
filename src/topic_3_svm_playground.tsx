@@ -710,6 +710,28 @@ export default function SVMPlayground() {
   // Mobile add point mode
   const [addPointMode, setAddPointMode] = useState(false);
 
+  // Double-tap detection for mobile class switching
+  const [lastTap, setLastTap] = useState<{ time: number; pointId: string } | null>(null);
+
+  const handlePointTouch = (e: React.TouchEvent, pointId: string) => {
+    e.stopPropagation();
+
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (lastTap && lastTap.pointId === pointId && now - lastTap.time < DOUBLE_TAP_DELAY) {
+      // Double tap detected - switch class
+      setPoints(pts => pts.map(pt =>
+        pt.id === pointId ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
+      ));
+      setLastTap(null);
+    } else {
+      // Single tap - start dragging
+      setDraggingId(pointId);
+      setLastTap({ time: now, pointId });
+    }
+  };
+
 
   // ---------- JSX ----------
   return (
@@ -979,6 +1001,35 @@ export default function SVMPlayground() {
             {/* MetricsCard positioned directly under plot */}
             <div className="mt-4">
               <MetricsCard metrics={metrics} />
+            </div>
+
+            {/* Data Editing - moved closer to canvas */}
+            <div className="bg-slate-50 rounded-2xl p-4 border mt-4">
+              <h3 className="font-semibold mb-2">Data Editing</h3>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setPoints(ps => ps.concat({ id: Math.random().toString(36).slice(2), x: 0, y: 0, label: 1 }))}
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm md:text-base shadow touch-none"
+                >
+                  Add +1 at (0,0)
+                </button>
+                <button
+                  onClick={() => setPoints(ps => ps.concat({ id: Math.random().toString(36).slice(2), x: 0, y: 0, label: -1 }))}
+                  className="px-4 py-2 rounded-xl bg-orange-500 text-white text-sm md:text-base shadow touch-none"
+                >
+                  Add −1 at (0,0)
+                </button>
+                <button
+                  onClick={() => setPoints([])}
+                  className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm md:text-base shadow touch-none"
+                >
+                  Clear All
+                </button>
+              </div>
+              <div className="text-xs md:text-sm text-slate-600 mt-2 space-y-1">
+                <p><strong>Desktop:</strong> Drag points • Double-click to switch class • Ctrl+Click to add points</p>
+                <p><strong>Mobile:</strong> Tap and drag to move • Double-tap to switch class • Use "Add Point" button then tap canvas</p>
+              </div>
             </div>
             </div>
 
@@ -1562,15 +1613,6 @@ export default function SVMPlayground() {
                 </div>
               )}
 
-              {/* Data Editing - available in all modes */}
-              <div className="bg-slate-50 rounded-2xl p-4 border">
-                <h3 className="font-semibold mb-2">Data Editing</h3>
-                <div className="flex gap-2 flex-wrap">
-                  <button onClick={() => setPoints(ps => ps.concat({ id: Math.random().toString(36).slice(2), x: 0, y: 0, label: 1 }))} className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-sm shadow">Add +1 at (0,0)</button>
-                  <button onClick={() => setPoints(ps => ps.concat({ id: Math.random().toString(36).slice(2), x: 0, y: 0, label: -1 }))} className="px-3 py-1.5 rounded-xl bg-orange-500 text-white text-sm shadow">Add −1 at (0,0)</button>
-                </div>
-                <p className="text-xs text-slate-600 mt-2">Tip: drag a point; hover to see coordinates{!showKNN && !showPerceptron ? '; widen the green dashed margins while reducing violations' : ''}.</p>
-              </div>
 
             </div>
           </div>
@@ -2243,7 +2285,12 @@ function renderPoint(p: Pt, ctx: {
         fill={fill}
         stroke={ring} strokeWidth={isCurrentPerceptronStep ? 4 : isSV ? 3 : 2}
         onMouseDown={() => setDraggingId(p.id)}
-        onTouchStart={() => setDraggingId(p.id)}
+        onDoubleClick={() => {
+          setPoints(pts => pts.map(pt =>
+            pt.id === p.id ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
+          ));
+        }}
+        onTouchStart={(e) => handlePointTouch(e, p.id)}
         style={{ cursor: "grab", touchAction: "none" }}
       />
       {/* Pulsing animation for current step */}
