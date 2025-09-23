@@ -558,7 +558,7 @@ export default function SVMPlayground() {
   const score = useMemo(() => 2 * marginHalf - C * violations, [marginHalf, C, violations]);
 
   useEffect(() => {
-    if (!draggingId) return;
+    if (!draggingId || window.innerWidth < 768) return; // Disable drag on mobile
     const svg = svgRef.current;
     if (!svg) return;
     const pt = svg.createSVGPoint();
@@ -715,12 +715,12 @@ export default function SVMPlayground() {
     handleCanvasInteraction(e.clientX, e.clientY, e.currentTarget, hasModifier);
   }
 
-  // Touch handler for canvas
+  // Touch handler for canvas (using touchend to avoid conflicts with point selection)
   const handleCanvasTouch = (e: React.TouchEvent<SVGElement>) => {
-    if (e.touches.length === 1) {
+    // Only handle if touching empty canvas (not a point)
+    if (e.target === e.currentTarget && e.changedTouches.length === 1) {
       e.preventDefault();
-      const touch = e.touches[0];
-      // For mobile, we use addPointMode for adding points
+      const touch = e.changedTouches[0];
       handleCanvasInteraction(touch.clientX, touch.clientY, e.currentTarget, addPointMode);
     }
   }
@@ -732,22 +732,6 @@ export default function SVMPlayground() {
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
 
 
-  const handlePointTouch = (e: React.TouchEvent, pointId: string) => {
-    e.stopPropagation();
-    e.preventDefault();
-
-    // Use select-then-click pattern - much better for mobile!
-    if (selectedPointId === pointId) {
-      // Double-tap to deselect or switch class
-      setPoints(pts => pts.map(pt =>
-        pt.id === pointId ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
-      ));
-      setSelectedPointId(null);
-    } else {
-      // Select this point
-      setSelectedPointId(pointId);
-    }
-  };
 
 
 
@@ -865,7 +849,7 @@ export default function SVMPlayground() {
                 height={height}
                 className="rounded-2xl border border-slate-200 bg-white"
                 onClick={handleCanvasClick}
-                onTouchStart={handleCanvasTouch}
+                onTouchEnd={handleCanvasTouch}
                 style={{ touchAction: "none" }}
               >
                 {/* Axes */}
@@ -997,7 +981,6 @@ export default function SVMPlayground() {
                     selectedPointId,
                     setSelectedPointId,
                     setPoints,
-                    handlePointTouch
                   });
                 })}
               </svg>
@@ -2281,9 +2264,8 @@ function renderPoint(p: Pt, ctx: {
   selectedPointId?: string | null;
   setSelectedPointId?: (id: string | null) => void;
   setPoints?: (fn: (pts: Pt[]) => Pt[]) => void;
-  handlePointTouch?: (e: React.TouchEvent, pointId: string) => void;
 }) {
-  const { toScreen, n, bias, marginHalf, SVs, setHoverId, setDraggingId, hoverId, showKNN, nearestNeighbors, isCurrentPerceptronStep, selectedPointId, setSelectedPointId, setPoints, handlePointTouch } = ctx;
+  const { toScreen, n, bias, marginHalf, SVs, setHoverId, setDraggingId, hoverId, showKNN, nearestNeighbors, isCurrentPerceptronStep, selectedPointId, setSelectedPointId, setPoints } = ctx;
   const pos = toScreen(p.x, p.y);
   const isSV = SVs.includes(p.id);
   const d = signedDistance(p, n, bias);
@@ -2329,8 +2311,35 @@ function renderPoint(p: Pt, ctx: {
             setSelectedPointId(p.id);
           }
         }}
-        onMouseDown={() => setDraggingId(p.id)} // Keep drag for desktop
-        onTouchStart={(e) => handlePointTouch?.(e, p.id)}
+        onMouseDown={(e) => {
+          // Only use drag on desktop, not mobile
+          if (window.innerWidth >= 768) {
+            setDraggingId(p.id);
+          } else {
+            // On mobile, use click for selection
+            if (selectedPointId === p.id && setPoints && setSelectedPointId) {
+              setPoints(pts => pts.map(pt =>
+                pt.id === p.id ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
+              ));
+              setSelectedPointId(null);
+            } else if (setSelectedPointId) {
+              setSelectedPointId(p.id);
+            }
+          }
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          // Mobile: always use select-then-click
+          if (selectedPointId === p.id && setPoints && setSelectedPointId) {
+            setPoints(pts => pts.map(pt =>
+              pt.id === p.id ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
+            ));
+            setSelectedPointId(null);
+          } else if (setSelectedPointId) {
+            setSelectedPointId(p.id);
+          }
+        }}
         style={{ cursor: "grab", touchAction: "none" }}
       />
       {/* Selection indicator */}
