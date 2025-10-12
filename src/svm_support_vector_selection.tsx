@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  * Fixes applied:
  *  • Removed stray "refine/return" block that caused: SyntaxError 'return outside of function'.
  *  • Kept a clean, closed‑form max‑margin fitter that scans θ and solves b analytically.
- *  • Auxiliary margins (red dashed) are perpendicular to the selected (+1, −1) pair
+ *  • Auxiliary margins (black long-dashed) are perpendicular to the selected (+1, −1) pair
  *    and PASS THROUGH those two points (matches lecture construction).
  *  • Added a tiny "Sanity Tests" section to validate math at runtime.
  *
@@ -15,7 +15,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  *  • Shift+Click a point → permanently delete
  *  • Drag a point → move it
  *  • Add Mode → click empty canvas to place a new +1 or −1 point
- *  • Aux Pair → click “Select pair”, then click one +1 and one −1 → red dashed helpers
+ *  • Aux Pair → click "Select pair", then click one +1 and one −1 → black long-dashed helpers
  */
 
 // ---------- World & helpers ----------
@@ -80,13 +80,13 @@ function computeMarginAndSVs(points: Pt[], n: {x:number;y:number}, b: number) {
 
 // Analytic max‑margin for a given orientation (hard‑margin). We scan θ and compute
 // the best feasible margin and corresponding b in closed form.
-function fitMaxMargin(points: Pt[]) {
+function fitMaxMargin(points: Pt[]): { valid: false } | { valid: true; theta: number; b: number; half: number; svIds: string[] } {
   const act = points.filter(p => p.active);
   const pos = act.filter(p => p.label === +1);
   const neg = act.filter(p => p.label === -1);
-  if (pos.length === 0 || neg.length === 0) return { valid: false } as const;
+  if (pos.length === 0 || neg.length === 0) return { valid: false };
 
-  let best = { valid: false, theta: 0, b: 0, half: 0, svIds: [] as string[] };
+  let best: { valid: false } | { valid: true; theta: number; b: number; half: number; svIds: string[] } = { valid: false };
   const STEPS = 720; // 0.25° resolution
   for (let i = 0; i < STEPS; i++) {
     const theta = (i / STEPS) * Math.PI; // [0, π)
@@ -112,9 +112,9 @@ function fitMaxMargin(points: Pt[]) {
       return (p.label === 1 ? Math.abs(s - minPos) <= eps : Math.abs(s - maxNeg) <= eps);
     }).map(p => p.id);
 
-    if (!best.valid || half > best.half) best = { valid: true, theta, b, half, svIds };
+    if (!best.valid || (best.valid && half > best.half)) best = { valid: true, theta, b, half, svIds };
   }
-  return best as const;
+  return best;
 }
 
 // ---------- Component ----------
@@ -301,12 +301,12 @@ export default function SVMInteractiveAux() {
 
   // ---------- Render ----------
   return (
-    <div className="w-full h-full p-4 flex flex-col gap-4">
+    <div className="w-full h-full p-4 flex flex-col gap-4 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Interactive SVM — Add/Remove points, new maximum margin + auxiliary margins</h1>
+        <h1 className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Interactive SVM — Maximum Margin Classifier</h1>
         <div className="flex items-center gap-2">
-          <button onClick={restoreAll} className="px-3 py-1.5 rounded-xl bg-blue-100 text-blue-900 hover:bg-blue-200">Restore all</button>
-          <button onClick={resetAll} className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Reset</button>
+          <button onClick={restoreAll} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg transition-all">Restore all</button>
+          <button onClick={resetAll} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-md hover:shadow-lg transition-all">Reset</button>
         </div>
       </div>
 
@@ -318,45 +318,57 @@ export default function SVMInteractiveAux() {
             height={canvasSize.height}
             className="rounded-xl border border-gray-200 bg-white select-none"
             onClick={handleSvgClick}
-            style={{ touchAction: "none" }}
           >
             {/* Grid & axes */}
             {Array.from({length: WORLD.xmax - WORLD.xmin + 1}).map((_,i)=>{
               const x = WORLD.xmin + i; const a = toScreen(x, WORLD.ymin), bpt = toScreen(x, WORLD.ymax);
-              return <line key={'vx'+x} x1={a.sx} y1={a.sy} x2={bpt.sx} y2={bpt.sy} stroke="#eef2f7" />;
+              return <line key={'vx'+x} x1={a.sx} y1={a.sy} x2={bpt.sx} y2={bpt.sy} stroke="#000000" strokeWidth="0.5" strokeDasharray="1 3" />;
             })}
             {Array.from({length: WORLD.ymax - WORLD.ymin + 1}).map((_,i)=>{
               const y = WORLD.ymin + i; const a = toScreen(WORLD.xmin, y), bpt = toScreen(WORLD.xmax, y);
-              return <line key={'hz'+y} x1={a.sx} y1={a.sy} x2={bpt.sx} y2={bpt.sy} stroke="#eef2f7" />;
+              return <line key={'hz'+y} x1={a.sx} y1={a.sy} x2={bpt.sx} y2={bpt.sy} stroke="#000000" strokeWidth="0.5" strokeDasharray="1 3" />;
             })}
-            <line x1={toScreen(WORLD.xmin,0).sx} y1={toScreen(WORLD.xmin,0).sy} x2={toScreen(WORLD.xmax,0).sx} y2={toScreen(WORLD.xmax,0).sy} stroke="#cbd5e1" />
-            <line x1={toScreen(0,WORLD.ymin).sx} y1={toScreen(0,WORLD.ymin).sy} x2={toScreen(0,WORLD.ymax).sx} y2={toScreen(0,WORLD.ymax).sy} stroke="#cbd5e1" />
+            <line x1={toScreen(WORLD.xmin,0).sx} y1={toScreen(WORLD.xmin,0).sy} x2={toScreen(WORLD.xmax,0).sx} y2={toScreen(WORLD.xmax,0).sy} stroke="#000000" strokeWidth="2" strokeDasharray="2 2" />
+            <line x1={toScreen(0,WORLD.ymin).sx} y1={toScreen(0,WORLD.ymin).sy} x2={toScreen(0,WORLD.ymax).sx} y2={toScreen(0,WORLD.ymax).sy} stroke="#000000" strokeWidth="2" strokeDasharray="2 2" />
 
-            {/* Auxiliary margins (red dashed) */}
+            {/* Auxiliary margins (black long-dash pattern) */}
             {auxLines && (
               <>
-                <line x1={toScreen(auxLines.La.A.x, auxLines.La.A.y).sx} y1={toScreen(auxLines.La.A.x, auxLines.La.A.y).sy} x2={toScreen(auxLines.La.B.x, auxLines.La.B.y).sx} y2={toScreen(auxLines.La.B.x, auxLines.La.B.y).sy} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2} />
-                <line x1={toScreen(auxLines.Lb.A.x, auxLines.Lb.A.y).sx} y1={toScreen(auxLines.Lb.A.x, auxLines.Lb.A.y).sy} x2={toScreen(auxLines.Lb.B.x, auxLines.Lb.B.y).sx} y2={toScreen(auxLines.Lb.B.x, auxLines.Lb.B.y).sy} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2} />
+                <line x1={toScreen(auxLines.La.A.x, auxLines.La.A.y).sx} y1={toScreen(auxLines.La.A.x, auxLines.La.A.y).sy} x2={toScreen(auxLines.La.B.x, auxLines.La.B.y).sx} y2={toScreen(auxLines.La.B.x, auxLines.La.B.y).sy} stroke="#000000" strokeDasharray="12 6" strokeWidth={3} />
+                <line x1={toScreen(auxLines.Lb.A.x, auxLines.Lb.A.y).sx} y1={toScreen(auxLines.Lb.A.x, auxLines.Lb.A.y).sy} x2={toScreen(auxLines.Lb.B.x, auxLines.Lb.B.y).sx} y2={toScreen(auxLines.Lb.B.x, auxLines.Lb.B.y).sy} stroke="#000000" strokeDasharray="12 6" strokeWidth={3} />
               </>
             )}
 
             {/* SVM margins & boundary */}
-            <line x1={toScreen(H1.A.x,H1.A.y).sx} y1={toScreen(H1.A.x,H1.A.y).sy} x2={toScreen(H1.B.x,H1.B.y).sx} y2={toScreen(H1.B.x,H1.B.y).sy} stroke="#111827" strokeDasharray="6 6" strokeWidth={2} />
-            <line x1={toScreen(H0.A.x,H0.A.y).sx} y1={toScreen(H0.A.x,H0.A.y).sy} x2={toScreen(H0.B.x,H0.B.y).sx} y2={toScreen(H0.B.x,H0.B.y).sy} stroke="#22c55e" strokeWidth={3} />
-            <line x1={toScreen(H2.A.x,H2.A.y).sx} y1={toScreen(H2.A.x,H2.A.y).sy} x2={toScreen(H2.B.x,H2.B.y).sx} y2={toScreen(H2.B.x,H2.B.y).sy} stroke="#111827" strokeDasharray="6 6" strokeWidth={2} />
+            <line x1={toScreen(H1.A.x,H1.A.y).sx} y1={toScreen(H1.A.x,H1.A.y).sy} x2={toScreen(H1.B.x,H1.B.y).sx} y2={toScreen(H1.B.x,H1.B.y).sy} stroke="#3B82F6" strokeDasharray="4 8" strokeWidth={3} />
+            <line x1={toScreen(H0.A.x,H0.A.y).sx} y1={toScreen(H0.A.x,H0.A.y).sy} x2={toScreen(H0.B.x,H0.B.y).sx} y2={toScreen(H0.B.x,H0.B.y).sy} stroke="#8B5CF6" strokeWidth={4} />
+            <line x1={toScreen(H2.A.x,H2.A.y).sx} y1={toScreen(H2.A.x,H2.A.y).sy} x2={toScreen(H2.B.x,H2.B.y).sx} y2={toScreen(H2.B.x,H2.B.y).sy} stroke="#EF4444" strokeDasharray="4 8" strokeWidth={3} />
 
             {/* Points */}
             {pts.map(p=>{
               const s = toScreen(p.x,p.y); const active = p.active;
               const isSV = svIds.includes(p.id);
-              const fill = p.label===1?"#2563eb":"#f97316";
-              const stroke = selectedPointId === p.id ? "#8b5cf6" : !active?"#d1d5db": isSV?"#f59e0b":"#111827";
+              const fill = p.label===1?"#3B82F6":"#EF4444"; // blue for +1, red for -1
+              let stroke = "#000000";
+              let strokeDasharray = "";
+              if (selectedPointId === p.id) {
+                stroke = "#000000";
+                strokeDasharray = "2 2";
+              } else if (!active) {
+                stroke = "#808080";
+                strokeDasharray = "3 3";
+              } else if (isSV) {
+                stroke = "#000000";
+                strokeDasharray = "6 2";
+              } else {
+                stroke = "#000000";
+                strokeDasharray = "";
+              }
               const r = isSV?8:6;
               return (
                 <g key={p.id}
                    onMouseDown={()=>{ setDragId(p.id); }}
                    onTouchStart={(e)=>{ e.preventDefault(); e.stopPropagation(); setDragId(p.id); }}
-                   style={{ touchAction: "none" }}
                    onClick={(e)=>{
                      if (pairMode){
                        setAuxPair(prev=>{
@@ -377,13 +389,13 @@ export default function SVMInteractiveAux() {
                        setSelectedPointId(p.id);
                      }
                    }}
-                   style={{ cursor: "pointer" }}>
-                  <circle cx={s.sx} cy={s.sy} r={r} fill={active?fill:"#f3f4f6"} stroke={stroke} strokeWidth={selectedPointId === p.id ? 4 : isSV?3:2} />
+                   style={{ cursor: "pointer", touchAction: "none" }}>
+                  <circle cx={s.sx} cy={s.sy} r={r} fill={active?fill:"#f3f4f6"} stroke={stroke} strokeWidth={selectedPointId === p.id ? 5 : isSV?4:3} strokeDasharray={strokeDasharray} />
                   {selectedPointId === p.id && (
                     <circle
                       cx={s.sx} cy={s.sy} r={r + 8}
                       fill="none"
-                      stroke="#8b5cf6"
+                      stroke="#000000"
                       strokeWidth={2}
                       strokeDasharray="4 4"
                       opacity={0.8}
@@ -392,70 +404,91 @@ export default function SVMInteractiveAux() {
                       <animate attributeName="opacity" values="0.8;0.4;0.8" dur="1.5s" repeatCount="indefinite" />
                     </circle>
                   )}
-                  <text x={s.sx+10} y={s.sy-10} className="text-xs fill-gray-700 select-none">{p.id} ({p.x.toFixed(1)},{p.y.toFixed(1)})</text>
+                  <text x={s.sx+14} y={s.sy-14} className="text-xl font-bold fill-black select-none" style={{textShadow: '0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 5px white'}}>{p.id}</text>
                 </g>
               );
             })}
 
-            {/* Labels */}
-            <text x={WIDTH-PAD-260} y={PAD-18} className="text-sm fill-gray-700">marg. d = {(2*half).toFixed(3)}  |  θ = {(theta*180/Math.PI).toFixed(1)}°</text>
-            <text x={PAD} y={PAD-18} className="text-xs md:text-sm fill-gray-700">
-              {addMode.enabled ? `Add mode: ${window.innerWidth < 768 ? 'tap' : 'click'} empty canvas to place a ${addMode.label===1?'+1':'−1'} point (Esc to cancel)` :
-               auxPair?.a && auxPair?.b ? "Aux pair set (red dashed)" :
-               pairMode? `${window.innerWidth < 768 ? 'Tap' : 'Click'} one +1 and one −1 to set aux pair` :
-               window.innerWidth < 768 ? "Tap point to select (purple circle) → tap canvas to move • Tap selected point to toggle active" : "Click point to select → click canvas to move • Click selected point to toggle • Shift+Click to delete • Or drag to move"}
-            </text>
-
-            {/* Legend */}
-            <g>
-              <circle cx={PAD+10} cy={HEIGHT-PAD+6} r={6} fill="#2563eb" stroke="#111827" strokeWidth={2} />
-              <text x={PAD+26} y={HEIGHT-PAD+10} className="text-xs fill-gray-700">+1</text>
-              <circle cx={PAD+62} cy={HEIGHT-PAD+6} r={6} fill="#f97316" stroke="#111827" strokeWidth={2} />
-              <text x={PAD+78} y={HEIGHT-PAD+10} className="text-xs fill-gray-700">−1</text>
-              <circle cx={PAD+116} cy={HEIGHT-PAD+6} r={6} fill="#fff" stroke="#f59e0b" strokeWidth={3} />
-              <text x={PAD+132} y={HEIGHT-PAD+10} className="text-xs fill-gray-700">support</text>
-              <line x1={PAD+200} y1={HEIGHT-PAD+6} x2={PAD+240} y2={HEIGHT-PAD+6} stroke="#22c55e" strokeWidth={3}/>
-              <text x={PAD+248} y={HEIGHT-PAD+10} className="text-xs fill-gray-700">H0</text>
-              <line x1={PAD+280} y1={HEIGHT-PAD+6} x2={PAD+320} y2={HEIGHT-PAD+6} stroke="#111827" strokeDasharray="6 6" strokeWidth={2}/>
-              <text x={PAD+328} y={HEIGHT-PAD+10} className="text-xs fill-gray-700">H1/H2</text>
-              <line x1={PAD+372} y1={HEIGHT-PAD+6} x2={PAD+412} y2={HEIGHT-PAD+6} stroke="#ef4444" strokeDasharray="6 6" strokeWidth={2}/>
-              <text x={PAD+420} y={HEIGHT-PAD+10} className="text-xs fill-gray-700">auxiliary</text>
-            </g>
+            {/* خى  */}
+            <text x={WIDTH-PAD-10} y={PAD-18} className="text-lg font-bold fill-black" textAnchor="end">Margin = {(2*half).toFixed(3)}</text>
           </svg>
+
+          {/* Legend below canvas */}
+          <div className="mt-3 p-3 bg-gray-50 rounded-xl">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 items-center text-sm font-semibold">
+              <div className="flex items-center gap-2">
+                <svg width="20" height="20">
+                  <circle cx="10" cy="10" r="7" fill="#3B82F6" stroke="#1E40AF" strokeWidth="3" />
+                </svg>
+                <span className="font-bold text-blue-600">Class +1</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg width="20" height="20">
+                  <circle cx="10" cy="10" r="7" fill="#EF4444" stroke="#B91C1C" strokeWidth="3" />
+                </svg>
+                <span className="font-bold text-red-600">Class −1</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg width="20" height="20">
+                  <circle cx="10" cy="10" r="7" fill="#3B82F6" stroke="#1E40AF" strokeWidth="3" strokeDasharray="6 2" />
+                </svg>
+                <span className="font-semibold">Support Vector</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg width="35" height="20">
+                  <line x1="0" y1="10" x2="35" y2="10" stroke="#8B5CF6" strokeWidth="4"/>
+                </svg>
+                <span className="font-semibold text-purple-600">H₀ Decision Boundary</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg width="35" height="20">
+                  <line x1="0" y1="10" x2="35" y2="10" stroke="#3B82F6" strokeDasharray="4 8" strokeWidth="3"/>
+                  <line x1="0" y1="10" x2="35" y2="10" stroke="#EF4444" strokeDasharray="4 8" strokeWidth="3" transform="translate(0, 5)"/>
+                </svg>
+                <span className="font-semibold text-gray-700">H₁ & H₂ Margins</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg width="35" height="20">
+                  <line x1="0" y1="10" x2="35" y2="10" stroke="#000000" strokeDasharray="12 6" strokeWidth="3"/>
+                </svg>
+                <span>Auxiliary Margins</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-2xl shadow bg-white p-4 space-y-4 text-sm text-gray-700 leading-6">
-          <h2 className="text-lg font-semibold">Controls</h2>
+          <h2 className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Controls</h2>
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
-              <button className={`px-3 py-1.5 rounded-xl ${pairMode? 'bg-rose-600 text-white':'bg-rose-100 text-rose-900 hover:bg-rose-200'}`} onClick={()=> setPairMode(m=>!m)}>
+              <button className={`px-3 py-1.5 rounded-xl shadow-md hover:shadow-lg transition-all ${pairMode? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white':'bg-white text-gray-700 border-2 border-rose-300 hover:border-rose-500'}`} onClick={()=> setPairMode(m=>!m)}>
                 {pairMode? 'Selecting… click +1 then −1':'Auxiliary: Select pair'}
               </button>
-              <button className="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-900 hover:bg-rose-200" onClick={autoPairClosest}>Auxiliary: Auto closest pair</button>
-              <button className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200" onClick={()=> setAuxPair(null)}>Clear aux</button>
+              <button className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-md hover:shadow-lg transition-all" onClick={autoPairClosest}>Auxiliary: Auto closest pair</button>
+              <button className="px-3 py-1.5 rounded-xl bg-white text-gray-700 border-2 border-gray-300 hover:border-gray-500 shadow hover:shadow-md transition-all" onClick={()=> setAuxPair(null)}>Clear aux</button>
             </div>
-            <p className="text-xs text-gray-500">Auxiliary margins are perpendicular to the line joining the selected opposite‑class pair and pass through those two points.</p>
+            <p className="text-xs text-gray-500">Auxiliary margins are perpendicular to the line joining the selected opposite‑class pair and pass through those two points. They appear as black long-dashed lines.</p>
           </div>
 
           {/* Add / Remove */}
           <div className="space-y-3">
             <div className="font-medium">Add / Remove</div>
             <div className="flex flex-wrap gap-2">
-              <button className={`px-3 py-1.5 rounded-xl ${addMode.enabled && addMode.label===1? 'bg-blue-600 text-white':'bg-blue-100 text-blue-900 hover:bg-blue-200'}`} onClick={()=> setAddMode({enabled:true,label:1})}>➕ Add +1 (click canvas)</button>
-              <button className={`px-3 py-1.5 rounded-xl ${addMode.enabled && addMode.label===-1? 'bg-orange-600 text-white':'bg-orange-100 text-orange-900 hover:bg-orange-200'}`} onClick={()=> setAddMode({enabled:true,label:-1})}>➕ Add −1 (click canvas)</button>
-              <button className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200" onClick={()=> setAddMode(m=>({...m,enabled:false}))}>Cancel Add</button>
-              <button className="px-3 py-1.5 rounded-xl bg-slate-200" onClick={()=> setPts(ps=> ps.length>0? ps.slice(0,-1): ps)}>Remove last</button>
+              <button className={`px-3 py-1.5 rounded-xl shadow-md hover:shadow-lg transition-all ${addMode.enabled && addMode.label===1? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold':'bg-white text-gray-700 border-2 border-blue-300 hover:border-blue-500'}`} onClick={()=> setAddMode({enabled:true,label:1})}>➕ Add +1 (click canvas)</button>
+              <button className={`px-3 py-1.5 rounded-xl shadow-md hover:shadow-lg transition-all ${addMode.enabled && addMode.label===-1? 'bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold':'bg-white text-gray-700 border-2 border-orange-300 hover:border-orange-500'}`} onClick={()=> setAddMode({enabled:true,label:-1})}>➕ Add −1 (click canvas)</button>
+              <button className="px-3 py-1.5 rounded-xl bg-white text-gray-700 border-2 border-gray-300 hover:border-gray-500 shadow hover:shadow-md transition-all" onClick={()=> setAddMode(m=>({...m,enabled:false}))}>Cancel Add</button>
+              <button className="px-3 py-1.5 rounded-xl bg-white text-gray-700 border-2 border-gray-300 hover:border-gray-500 shadow hover:shadow-md transition-all" onClick={()=> setPts(ps=> ps.length>0? ps.slice(0,-1): ps)}>Remove last</button>
             </div>
             <div className="text-xs text-gray-500">In add mode, click an empty spot on the canvas to place a point. Shift+Click any point to delete it permanently. Regular click toggles active status.</div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-50 rounded-xl p-3 border">
-              <div className="text-xs text-slate-500">θ (deg)</div>
+            <div className="bg-gray-50 rounded-xl p-3 border">
+              <div className="text-xs text-gray-700">θ (deg)</div>
               <div className="text-lg font-mono">{(theta*180/Math.PI).toFixed(2)}</div>
             </div>
-            <div className="bg-slate-50 rounded-xl p-3 border">
-              <div className="text-xs text-slate-500">Half‑margin ρ</div>
+            <div className="bg-gray-50 rounded-xl p-3 border">
+              <div className="text-xs text-gray-700">Half‑margin ρ</div>
               <div className="text-lg font-mono">{half.toFixed(4)}</div>
             </div>
             <div className="bg-slate-50 rounded-xl p-3 border col-span-2">
@@ -524,10 +557,10 @@ function SanityTests() {
 
   return (
     <div className="mt-3 border-t pt-3">
-      <div className="text-xs font-semibold mb-2">Sanity Tests</div>
+      <div className="text-xs font-semibold mb-2 text-black">Sanity Tests</div>
       <div className="grid grid-cols-1 gap-2">
         {tests.map((t, i) => (
-          <div key={i} className={`rounded-md p-2 text-xs border ${t.pass ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+          <div key={i} className={`rounded-md p-2 text-xs border ${t.pass ? 'bg-white border-black text-black' : 'bg-gray-100 border-gray-400 text-black'}`}>
             <div className="font-medium">{t.pass ? '✓ PASS' : '✗ FAIL'} — {t.name}</div>
             <div className="opacity-80 font-mono">{t.details}</div>
           </div>

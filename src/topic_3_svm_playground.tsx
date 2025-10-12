@@ -154,21 +154,49 @@ function computeMarginAndSVs(points: Pt[], n: N2, b: number) {
   return { marginHalf: isFinite(marginHalf) ? marginHalf : 0, SVs, violations };
 }
 
-// ---------- Simple training (coarse grid-search auto-fit) ----------
+// ---------- Improved SVM training (max-margin approach) ----------
 function fitLinearSVM(data: Pt[], C = 1) {
-  let best = { score: -Infinity, theta: 0, bias: 0 };
-  const thetas = 64, biases = 49;
-  for (let i = 0; i < thetas; i++) {
-    const theta = (i / (thetas - 1)) * Math.PI; // [0, pi]
-    const n = { x: Math.cos(theta), y: Math.sin(theta) };
-    for (let j = 0; j < biases; j++) {
-      const b = -6 + (j / (biases - 1)) * 12; // [-6, 6]
-      const { marginHalf, violations } = computeMarginAndSVs(data, n, b);
-      const { avgHinge } = computeMetrics(data, n, b);
-      const obj = 2 * marginHalf - C * violations - 0.1 * avgHinge; // blended objective
-      if (obj > best.score) best = { score: obj, theta, bias: b };
+  const pos = data.filter(p => p.label === 1);
+  const neg = data.filter(p => p.label === -1);
+
+  if (pos.length === 0 || neg.length === 0) {
+    return { score: -Infinity, theta: 0, bias: 0 };
+  }
+
+  let best = { score: -Infinity, theta: 0, bias: 0, marginHalf: 0 };
+  const STEPS = 180; // 2° resolution for better accuracy
+
+  for (let i = 0; i < STEPS; i++) {
+    const theta = (i / STEPS) * Math.PI; // [0, π)
+    const n = { x: Math.cos(theta), y: Math.sin(theta) }; // unit normal
+
+    // Project all points onto the normal direction
+    const posProj = pos.map(p => n.x * p.x + n.y * p.y);
+    const negProj = neg.map(p => n.x * p.x + n.y * p.y);
+    const minPos = Math.min(...posProj);
+    const maxNeg = Math.max(...negProj);
+
+    // Half-margin for this orientation
+    const marginHalf = (minPos - maxNeg) / 2;
+
+    if (marginHalf <= 1e-9) continue; // not separable for this orientation
+
+    // Optimal bias that centers H0 between the extremes
+    const b = - (minPos + maxNeg) / 2;
+
+    // Compute violations and hinge loss
+    const { violations } = computeMarginAndSVs(data, n, b);
+    const { avgHinge } = computeMetrics(data, n, b);
+
+    // Objective: maximize margin, minimize violations
+    const obj = 2 * marginHalf - C * violations - 0.1 * avgHinge;
+
+    if (obj > best.score) {
+      best = { score: obj, theta, bias: b, marginHalf };
     }
   }
+
+  console.log(`✅ SVM Auto-Fit: Found solution with margin=${(2*best.marginHalf).toFixed(3)}, θ=${(best.theta*180/Math.PI).toFixed(1)}°`);
   return best;
 }
 
@@ -729,11 +757,16 @@ export default function SVMPlayground() {
 
   // Touch handler for canvas (using touchend to avoid conflicts with point selection)
   const handleCanvasTouch = (e: React.TouchEvent<SVGElement>) => {
-    // Only handle if touching empty canvas (not a point)
-    if (e.target === e.currentTarget && e.changedTouches.length === 1) {
+    // Only handle if touching empty canvas (not a point) AND not dragging
+    if (e.target === e.currentTarget && e.changedTouches.length === 1 && !draggingId) {
       e.preventDefault();
       const touch = e.changedTouches[0];
-      handleCanvasInteraction(touch.clientX, touch.clientY, e.currentTarget, addPointMode);
+      // Small delay to ensure drag operations have properly ended
+      setTimeout(() => {
+        if (!draggingId) {
+          handleCanvasInteraction(touch.clientX, touch.clientY, e.currentTarget, addPointMode);
+        }
+      }, 50);
     }
   }
 
@@ -743,18 +776,21 @@ export default function SVMPlayground() {
   // Select-then-click interaction mode
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
 
+  // Show x1 and x2 coordinates
+  const [showCoordinates, setShowCoordinates] = useState(false);
+
 
 
 
 
   // ---------- JSX ----------
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 md:p-6 text-slate-900">
+    <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-3 md:p-6 text-gray-900">
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight">ML Classification Playground</h1>
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">ML Classification Playground</h1>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
-            <div className="text-xs md:text-sm lg:text-base text-slate-600">
+            <div className="text-xs md:text-sm lg:text-base text-gray-700">
               <span className="hidden md:inline">Interactive ML algorithms • Drag points • Train models • Compare approaches</span>
               <span className="md:hidden">Tap point to select → tap canvas to move • Use Add Point button for new points</span>
             </div>
@@ -764,7 +800,7 @@ export default function SVMPlayground() {
                   setShowKNN(false);
                   setShowPerceptron(false);
                 }} 
-                className={`px-4 py-2 rounded-xl text-sm md:text-base touch-none ${!showKNN && !showPerceptron ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+                className={`px-4 py-2 rounded-xl text-sm md:text-base touch-none shadow-md hover:shadow-lg transition-all ${!showKNN && !showPerceptron ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold' : 'bg-white text-gray-700 border-2 border-gray-300'}`}
               >
                 SVM Mode
               </button>
@@ -779,7 +815,7 @@ export default function SVMPlayground() {
                   // Ensure test point is in visible area
                   setTestPoint({ x: 0, y: 0 })
                 }} 
-                className={`px-4 py-2 rounded-xl text-sm md:text-base touch-none ${showKNN && !showPerceptron ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+                className={`px-4 py-2 rounded-xl text-sm md:text-base touch-none shadow-md hover:shadow-lg transition-all ${showKNN && !showPerceptron ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold' : 'bg-white text-gray-700 border-2 border-gray-300'}`}
               >
                 k-NN Mode
               </button>
@@ -795,7 +831,7 @@ export default function SVMPlayground() {
                   setPerceptronWeights({ w0: 0, w1: 0, w2: 0 });
                   setTrainingHistory([]);
                 }} 
-                className={`px-4 py-2 rounded-xl text-sm md:text-base touch-none ${showPerceptron ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+                className={`px-4 py-2 rounded-xl text-sm md:text-base touch-none shadow-md hover:shadow-lg transition-all ${showPerceptron ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold' : 'bg-white text-gray-700 border-2 border-gray-300'}`}
               >
                 Perceptron Mode
               </button>
@@ -803,7 +839,7 @@ export default function SVMPlayground() {
             <div className="flex items-center gap-2 md:hidden">
               <button
                 onClick={() => setAddPointMode(!addPointMode)}
-                className={`px-4 py-2 rounded-xl text-sm touch-none ${addPointMode ? 'bg-orange-600 text-white' : 'bg-slate-200 text-slate-900'}`}
+                className={`px-4 py-2 rounded-xl text-sm touch-none shadow-md hover:shadow-lg transition-all ${addPointMode ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold' : 'bg-white text-gray-700 border-2 border-gray-300'}`}
               >
                 {addPointMode ? 'Cancel Add' : 'Add Point'}
               </button>
@@ -814,16 +850,16 @@ export default function SVMPlayground() {
         {/* Linear SVM intuition - Full width */}
         <div className="bg-white rounded-2xl shadow p-4 md:p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">
-              {showPerceptron ? '1) Perceptron Learning Algorithm' : 
-               showKNN ? '1) k-Nearest Neighbors Classification' : 
-               '1) Max‑Margin & Soft‑Margin Intuition'}
+            <h2 className="text-xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              {showPerceptron ? '1) Perceptron Learning Algorithm' :
+               showKNN ? '1) k-Nearest Neighbors Classification' :
+               '1) Max-Margin & Soft-Margin Intuition'}
             </h2>
             <div className="flex gap-2 flex-wrap">
-              <button onClick={() => setPoints(randomPoints())} className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-sm shadow">Randomize</button>
-              <button onClick={() => setPoints(presetLayout("clusters"))} className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-900 text-sm">Clusters</button>
-              <button onClick={() => setPoints(presetLayout("parallel"))} className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-900 text-sm">Parallel</button>
-              <button onClick={() => setPoints(presetLayout("overlap"))} className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-900 text-sm">Overlap</button>
+              <button onClick={() => setPoints(randomPoints())} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-sm shadow hover:shadow-lg transition-all">Randomize</button>
+              <button onClick={() => setPoints(presetLayout("clusters"))} className="px-3 py-1.5 rounded-xl bg-white text-gray-700 text-sm border-2 border-indigo-300 hover:border-indigo-500 transition-all">Clusters</button>
+              <button onClick={() => setPoints(presetLayout("parallel"))} className="px-3 py-1.5 rounded-xl bg-white text-gray-700 text-sm border-2 border-indigo-300 hover:border-indigo-500 transition-all">Parallel</button>
+              <button onClick={() => setPoints(presetLayout("overlap"))} className="px-3 py-1.5 rounded-xl bg-white text-gray-700 text-sm border-2 border-indigo-300 hover:border-indigo-500 transition-all">Overlap</button>
               <button onClick={() => {
                 // Reset to default cluster data and default parameters
                 setPoints(presetLayout("clusters"))
@@ -834,7 +870,7 @@ export default function SVMPlayground() {
                 setKNN(3)
                 setDistanceMethod('euclidean')
                 setSelectedClass(1)
-              }} className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-sm shadow">Reset</button>
+              }} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-gray-600 to-gray-700 text-white text-sm shadow hover:shadow-lg transition-all">Reset</button>
               <button onClick={() => {
                 // Specific example: points (1,2) class +1 and (3,4) class -1
                 setPoints([
@@ -847,8 +883,8 @@ export default function SVMPlayground() {
                 setBias(2.5);
                 console.log("📚 Set example: (1,2) class +1, (3,4) class -1");
                 console.log("Expected: W=(-0.5,-0.5), b=2.5, margin=2√2≈2.828");
-              }} className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-sm shadow"> Example</button>
-              <button onClick={() => { const fit = fitLinearSVM(points, C); setTheta(fit.theta); setBias(fit.bias); }} className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-sm shadow">Auto‑Fit</button>
+              }} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 text-white text-sm shadow hover:shadow-lg transition-all"> Example</button>
+              <button onClick={() => { const fit = fitLinearSVM(points, C); setTheta(fit.theta); setBias(fit.bias); }} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white text-sm shadow hover:shadow-lg transition-all">Auto‑Fit</button>
             </div>
           </div>
 
@@ -865,8 +901,8 @@ export default function SVMPlayground() {
                 style={{ touchAction: "none" }}
               >
                 {/* Axes */}
-                <line x1={toScreen(world.xMin,0).x} y1={toScreen(world.xMin,0).y} x2={toScreen(world.xMax,0).x} y2={toScreen(world.xMax,0).y} stroke="#e5e7eb" />
-                <line x1={toScreen(0,world.yMin).x} y1={toScreen(0,world.yMin).y} x2={toScreen(0,world.yMax).x} y2={toScreen(0,world.yMax).y} stroke="#e5e7eb" />
+                <line x1={toScreen(world.xMin,0).x} y1={toScreen(world.xMin,0).y} x2={toScreen(world.xMax,0).x} y2={toScreen(world.xMax,0).y} stroke="#000000" strokeWidth="1" strokeDasharray="2 2" />
+                <line x1={toScreen(0,world.yMin).x} y1={toScreen(0,world.yMin).y} x2={toScreen(0,world.yMax).x} y2={toScreen(0,world.yMax).y} stroke="#000000" strokeWidth="1" strokeDasharray="2 2" />
 
                 {/* Perceptron-specific elements */}
                 {showPerceptron && (() => {
@@ -879,8 +915,8 @@ export default function SVMPlayground() {
                     const B = toScreen(world.xMax, y2);
                     return (
                       <>
-                        <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#8b5cf6" strokeWidth={3} />
-                        <text x={(A.x + B.x) / 2} y={(A.y + B.y) / 2 - 10} className="text-sm font-semibold fill-purple-600" textAnchor="middle">
+                        <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#000000" strokeWidth={4} strokeDasharray="8 4" />
+                        <text x={(A.x + B.x) / 2} y={(A.y + B.y) / 2 - 10} className="text-lg font-bold fill-black" textAnchor="middle">
                           Perceptron Boundary
                         </text>
                       </>
@@ -891,8 +927,8 @@ export default function SVMPlayground() {
                     const B = toScreen(x, world.yMax);
                     return (
                       <>
-                        <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#8b5cf6" strokeWidth={3} />
-                        <text x={A.x + 10} y={(A.y + B.y) / 2} className="text-sm font-semibold fill-purple-600">
+                        <line x1={A.x} y1={A.y} x2={B.x} y2={B.y} stroke="#000000" strokeWidth={4} strokeDasharray="8 4" />
+                        <text x={A.x + 10} y={(A.y + B.y) / 2} className="text-lg font-bold fill-black">
                           Perceptron Boundary
                         </text>
                       </>
@@ -905,18 +941,18 @@ export default function SVMPlayground() {
                 {!showKNN && !showPerceptron && (
                   <>
                     {/* Margin lines */}
-                    <line x1={toScreen(marginLines.upA.x, marginLines.upA.y).x} y1={toScreen(marginLines.upA.x, marginLines.upA.y).y} x2={toScreen(marginLines.upB.x, marginLines.upB.y).x} y2={toScreen(marginLines.upB.x, marginLines.upB.y).y} stroke="#34d399" strokeDasharray="6 6" strokeWidth={2} />
-                    <line x1={toScreen(marginLines.dnA.x, marginLines.dnA.y).x} y1={toScreen(marginLines.dnA.x, marginLines.dnA.y).y} x2={toScreen(marginLines.dnB.x, marginLines.dnB.y).x} y2={toScreen(marginLines.dnB.x, marginLines.dnB.y).y} stroke="#34d399" strokeDasharray="6 6" strokeWidth={2} />
+                    <line x1={toScreen(marginLines.upA.x, marginLines.upA.y).x} y1={toScreen(marginLines.upA.x, marginLines.upA.y).y} x2={toScreen(marginLines.upB.x, marginLines.upB.y).x} y2={toScreen(marginLines.upB.x, marginLines.upB.y).y} stroke="#3B82F6" strokeDasharray="4 8" strokeWidth={3} />
+                    <line x1={toScreen(marginLines.dnA.x, marginLines.dnA.y).x} y1={toScreen(marginLines.dnA.x, marginLines.dnA.y).y} x2={toScreen(marginLines.dnB.x, marginLines.dnB.y).x} y2={toScreen(marginLines.dnB.x, marginLines.dnB.y).y} stroke="#EF4444" strokeDasharray="4 8" strokeWidth={3} />
 
                     {/* H1 and H2 Labels */}
-                    <text x={toScreen((linePoints as any).x0.x + (marginHalf) * n.x - 1, (linePoints as any).x0.y + (marginHalf) * n.y).x} y={toScreen((linePoints as any).x0.x + (marginHalf) * n.x - 1, (linePoints as any).x0.y + (marginHalf) * n.y).y - 8} className="text-sm font-semibold fill-emerald-600" textAnchor="middle">H₁</text>
-                    <text x={toScreen((linePoints as any).x0.x - (marginHalf) * n.x - 1, (linePoints as any).x0.y - (marginHalf) * n.y).x} y={toScreen((linePoints as any).x0.x - (marginHalf) * n.x - 1, (linePoints as any).x0.y - (marginHalf) * n.y).y - 8} className="text-sm font-semibold fill-emerald-600" textAnchor="middle">H₂</text>
+                    <text x={toScreen((linePoints as any).x0.x + (marginHalf) * n.x - 1, (linePoints as any).x0.y + (marginHalf) * n.y).x} y={toScreen((linePoints as any).x0.x + (marginHalf) * n.x - 1, (linePoints as any).x0.y + (marginHalf) * n.y).y - 8} className="text-lg font-bold fill-blue-600" textAnchor="middle">H₁</text>
+                    <text x={toScreen((linePoints as any).x0.x - (marginHalf) * n.x - 1, (linePoints as any).x0.y - (marginHalf) * n.y).x} y={toScreen((linePoints as any).x0.x - (marginHalf) * n.x - 1, (linePoints as any).x0.y - (marginHalf) * n.y).y - 8} className="text-lg font-bold fill-red-600" textAnchor="middle">H₂</text>
 
                     {/* Decision boundary */}
-                    <line x1={toScreen((linePoints as any).A.x, (linePoints as any).A.y).x} y1={toScreen((linePoints as any).A.x, (linePoints as any).A.y).y} x2={toScreen((linePoints as any).B.x, (linePoints as any).B.y).x} y2={toScreen((linePoints as any).B.x, (linePoints as any).B.y).y} stroke="#111827" strokeWidth={3} />
+                    <line x1={toScreen((linePoints as any).A.x, (linePoints as any).A.y).x} y1={toScreen((linePoints as any).A.x, (linePoints as any).A.y).y} x2={toScreen((linePoints as any).B.x, (linePoints as any).B.y).x} y2={toScreen((linePoints as any).B.x, (linePoints as any).B.y).y} stroke="#8B5CF6" strokeWidth={4} />
 
                     {/* H0 Label */}
-                    <text x={toScreen((linePoints as any).x0.x - 1, (linePoints as any).x0.y).x} y={toScreen((linePoints as any).x0.x - 1, (linePoints as any).x0.y).y - 8} className="text-sm font-semibold fill-gray-800" textAnchor="middle">H₀</text>
+                    <text x={toScreen((linePoints as any).x0.x - 1, (linePoints as any).x0.y).x} y={toScreen((linePoints as any).x0.x - 1, (linePoints as any).x0.y).y - 8} className="text-lg font-bold fill-purple-600" textAnchor="middle">H₀</text>
 
                     {/* Normal vector arrow */}
                     {(() => {
@@ -927,8 +963,8 @@ export default function SVMPlayground() {
                       const transformAttr = `rotate(${angDeg}, ${end.x}, ${end.y})`;
                       return (
                         <g>
-                          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="#111827" strokeWidth={2} />
-                          <polygon points={pointsAttr} fill="#111827" transform={transformAttr} />
+                          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="#000000" strokeWidth={3} />
+                          <polygon points={pointsAttr} fill="#000000" transform={transformAttr} />
                         </g>
                       );
                     })()}
@@ -943,10 +979,9 @@ export default function SVMPlayground() {
                     cy={toScreen(testPoint.x, testPoint.y).y}
                     r={distanceMethod === 'cosine' ? distance * 50 : Math.min(distance * 30, 200)}
                     fill="none"
-                    stroke={point.label === 1 ? "#2563eb" : "#f97316"}
-                    strokeWidth="1"
-                    strokeOpacity="0.3"
-                    strokeDasharray="5,5"
+                    stroke="#000000"
+                    strokeWidth="2"
+                    strokeDasharray={point.label === 1 ? "10 5" : "3 3"}
                   />
                 ))}
                 
@@ -956,16 +991,16 @@ export default function SVMPlayground() {
                     <circle
                       cx={toScreen(testPoint.x, testPoint.y).x}
                       cy={toScreen(testPoint.x, testPoint.y).y}
-                      r="10"
-                      fill={knnPrediction === 1 ? "#2563eb" : knnPrediction === -1 ? "#f97316" : "#6b7280"}
-                      stroke="#000"
-                      strokeWidth="3"
+                      r="12"
+                      fill={knnPrediction === 1 ? "#ffffff" : knnPrediction === -1 ? "#000000" : "#808080"}
+                      stroke="#000000"
+                      strokeWidth="4"
                     />
                     <text
                       x={toScreen(testPoint.x, testPoint.y).x}
                       y={toScreen(testPoint.x, testPoint.y).y - 15}
                       textAnchor="middle"
-                      className="text-sm font-bold fill-gray-800"
+                      className="text-lg font-bold fill-black"
                     >
                       Test Point
                     </text>
@@ -994,26 +1029,27 @@ export default function SVMPlayground() {
                     selectedPointId,
                     setSelectedPointId,
                     setPoints,
+                    showCoordinates,
                   });
                 })}
               </svg>
 
               {/* Legend */}
-              <div className="absolute top-2 left-2 bg-white/80 backdrop-blur rounded-xl px-3 py-2 text-xs shadow flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full" style={{ background: "#2563eb" }}></span> Class +1</div>
-                <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full" style={{ background: "#f97316" }}></span> Class −1</div>
+              <div className="absolute top-2 left-2 bg-white/90 backdrop-blur rounded-xl px-4 py-3 text-base shadow flex items-center gap-4 flex-wrap border-2 border-black">
+                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-full bg-blue-500 border-2 border-blue-700"></span> <span className="font-bold text-blue-600">Class +1</span></div>
+                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-full bg-red-500 border-2 border-red-700"></span> <span className="font-bold text-red-600">Class −1</span></div>
                 {!showKNN && !showPerceptron && (
                   <>
-                    <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#10b981" }}></span> Support Vectors</div>
-                    <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#f59e0b" }}></span> Inside Margin</div>
-                    <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#ef4444" }}></span> Misclassified</div>
+                    <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-full border-4 border-black" style={{ borderStyle: "solid" }}></span> <span className="font-bold">Support Vectors</span></div>
+                    <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-full border-4 border-black" style={{ borderStyle: "dashed" }}></span> <span className="font-bold">Inside Margin</span></div>
+                    <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-full border-4 border-black" style={{ borderStyle: "dotted" }}></span> <span className="font-bold">Misclassified</span></div>
                   </>
                 )}
                 {showKNN && (
-                  <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{ borderColor: "#10b981" }}></span> k-Nearest</div>
+                  <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-full border-4 border-black" style={{ borderStyle: "double" }}></span> <span className="font-bold">k-Nearest</span></div>
                 )}
                 {showPerceptron && (
-                  <div className="flex items-center gap-1"><span className="inline-block w-4 h-1" style={{ background: "#8b5cf6" }}></span> Decision Boundary</div>
+                  <div className="flex items-center gap-2"><span className="inline-block w-6 h-1" style={{ borderTop: "4px solid #8B5CF6" }}></span> <span className="font-bold text-purple-600">H₀ Decision Boundary</span></div>
                 )}
               </div>
             {/* MetricsCard positioned directly under plot */}
@@ -1022,27 +1058,39 @@ export default function SVMPlayground() {
             </div>
 
             {/* Data Editing - moved closer to canvas */}
-            <div className="bg-slate-50 rounded-2xl p-4 border mt-4">
-              <h3 className="font-semibold mb-2">Data Editing</h3>
+            <div className="bg-gray-50 rounded-2xl p-4 border mt-4">
+              <h3 className="font-semibold mb-2 text-gray-800">Data Editing</h3>
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setPoints(ps => ps.concat({ id: Math.random().toString(36).slice(2), x: 0, y: 0, label: 1 }))}
-                  className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm md:text-base shadow touch-none"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm md:text-base shadow-md hover:shadow-lg touch-none transition-all"
                 >
-                  Add +1 at (0,0)
+                  ➕ Add +1 point
                 </button>
                 <button
                   onClick={() => setPoints(ps => ps.concat({ id: Math.random().toString(36).slice(2), x: 0, y: 0, label: -1 }))}
-                  className="px-4 py-2 rounded-xl bg-orange-500 text-white text-sm md:text-base shadow touch-none"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm md:text-base shadow-md hover:shadow-lg touch-none transition-all"
                 >
-                  Add −1 at (0,0)
+                  ➕ Add −1 point
                 </button>
                 <button
                   onClick={() => setPoints([])}
-                  className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm md:text-base shadow touch-none"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white text-sm md:text-base shadow-md hover:shadow-lg touch-none transition-all"
                 >
-                  Clear All
+                  🗑️ Clear All
                 </button>
+              </div>
+              <div className="flex items-center gap-2 mt-3">
+                <input
+                  type="checkbox"
+                  id="showCoordinates"
+                  checked={showCoordinates}
+                  onChange={(e) => setShowCoordinates(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer"
+                />
+                <label htmlFor="showCoordinates" className="text-sm font-medium cursor-pointer">
+                  Show x₁ and x₂ coordinates on points
+                </label>
               </div>
               <div className="text-xs md:text-sm text-slate-600 mt-2 space-y-1">
                 <p><strong>Desktop:</strong> Drag points OR click to select then click canvas • Double-click to switch class • Ctrl+Click to add points</p>
@@ -1056,7 +1104,7 @@ export default function SVMPlayground() {
               {/* Perceptron Controls */}
               {showPerceptron && (
                 <>
-                  <div className="bg-slate-50 rounded-2xl p-4 border">
+                  <div className="bg-gray-50 rounded-2xl p-4 border">
                     <h3 className="font-semibold mb-2">Perceptron Controls</h3>
                     
                     <div className="space-y-3">
@@ -1161,7 +1209,7 @@ export default function SVMPlayground() {
                               console.log(`✅ Perceptron Auto-Fit completed after ${result.history.length} iterations`);
                               console.log(`Final weights: w0=${result.weights.w0.toFixed(3)}, w1=${result.weights.w1.toFixed(3)}, w2=${result.weights.w2.toFixed(3)}`);
                             }}
-                            className="flex-1 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-sm shadow hover:bg-emerald-700 active:bg-emerald-800 transition-colors duration-150"
+                            className="flex-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white text-sm shadow-md hover:shadow-lg transition-all duration-150"
                             title="Automatically train the perceptron with optimal settings"
                             disabled={isTraining || points.length === 0}
                           >
@@ -1199,7 +1247,7 @@ export default function SVMPlayground() {
                             }
                           }}
                           disabled={isTraining || points.length === 0}
-                          className="w-full px-3 py-2 rounded-xl bg-purple-600 text-white text-sm shadow hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                          className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white text-sm shadow-md hover:shadow-lg disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all"
                         >
                           {isTraining ? 'Training...' : stepByStepMode ? 'Start Step-by-Step' : 'Train Perceptron'}
                         </button>
@@ -1225,7 +1273,7 @@ export default function SVMPlayground() {
                                 setIsTraining(!isTraining);
                               }}
                               disabled={currentStep >= trainingSteps.length}
-                              className="flex-1 px-2 py-1 rounded text-sm bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-400"
+                              className="flex-1 px-2 py-1 rounded text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow hover:shadow-md disabled:from-gray-400 disabled:to-gray-400 transition-all"
                             >
                               {isTraining ? 'Pause' : 'Play'}
                             </button>
@@ -1252,7 +1300,7 @@ export default function SVMPlayground() {
                           setPerceptronWeights({ w0: Math.random() * 0.2 - 0.1, w1: Math.random() * 0.2 - 0.1, w2: Math.random() * 0.2 - 0.1 });
                           setTrainingHistory([]);
                         }}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-500 text-white text-sm shadow hover:bg-slate-600"
+                        className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-gray-500 to-gray-600 text-white text-sm shadow-md hover:shadow-lg transition-all"
                       >
                         Reset Weights
                       </button>
@@ -1363,7 +1411,7 @@ export default function SVMPlayground() {
               {/* k-NN Controls */}
               {showKNN && (
                 <>
-                  <div className="bg-slate-50 rounded-2xl p-4 border">
+                  <div className="bg-gray-50 rounded-2xl p-4 border">
                     <h3 className="font-semibold mb-2">k-NN Controls</h3>
                     
                     <div className="space-y-2 mb-3">
@@ -1467,7 +1515,7 @@ export default function SVMPlayground() {
                           setDistanceMethod(bestMethod);
                           console.log(`✅ k-NN Auto-Fit completed: k=${bestK}, method=${bestMethod}, accuracy=${(bestAccuracy * 100).toFixed(1)}%`);
                         }}
-                        className="flex-1 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-sm shadow hover:bg-emerald-700 active:bg-emerald-800 transition-colors duration-150"
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white text-sm shadow-md hover:shadow-lg transition-all duration-150"
                         title="Automatically optimize k value and distance method using cross-validation"
                       >
                         🎯 Auto‑Fit
@@ -1529,7 +1577,7 @@ export default function SVMPlayground() {
               {/* SVM-specific controls - only show in SVM mode */}
               {!showKNN && !showPerceptron && (
                 <>
-                  <div className="bg-slate-50 rounded-2xl p-4 border">
+                  <div className="bg-gray-50 rounded-2xl p-4 border">
                     <h3 className="font-semibold mb-2">Decision Boundary</h3>
                     <label className="block text-sm mb-1">Rotate (θ)</label>
                     <input type="range" min={0} max={Math.PI} step={0.01} value={theta} onChange={e => setTheta(parseFloat(e.target.value))} className="w-full" />
@@ -1540,7 +1588,7 @@ export default function SVMPlayground() {
                     <div className="text-xs text-slate-600">b = {bias.toFixed(2)} (moves line along its normal)</div>
                   </div>
 
-                  <div className="bg-slate-50 rounded-2xl p-4 border">
+                  <div className="bg-gray-50 rounded-2xl p-4 border">
                     <h3 className="font-semibold mb-2">Soft‑Margin Feel</h3>
                     <label className="block text-sm mb-1">Penalty (C)</label>
                     <input type="range" min={0} max={4} step={0.1} value={C} onChange={e => setC(parseFloat(e.target.value))} className="w-full" />
@@ -1557,7 +1605,7 @@ export default function SVMPlayground() {
 
               {/* k-NN Point Controls */}
               {showKNN && (
-                <div className="bg-slate-50 rounded-2xl p-4 border">
+                <div className="bg-gray-50 rounded-2xl p-4 border">
                   <h3 className="font-semibold mb-2">Point Controls</h3>
                   
                   <div className="space-y-2 mb-3">
@@ -1583,7 +1631,7 @@ export default function SVMPlayground() {
 
               {/* Perceptron Controls - add selectedClass */}
               {showPerceptron && (
-                <div className="bg-slate-50 rounded-2xl p-4 border">
+                <div className="bg-gray-50 rounded-2xl p-4 border">
                   <h3 className="font-semibold mb-2">Point Controls</h3>
                   
                   <div className="space-y-2 mb-3">
@@ -1608,7 +1656,7 @@ export default function SVMPlayground() {
 
               {/* SVM Point Controls */}
               {!showKNN && !showPerceptron && (
-                <div className="bg-slate-50 rounded-2xl p-4 border">
+                <div className="bg-gray-50 rounded-2xl p-4 border">
                   <h3 className="font-semibold mb-2">Point Controls</h3>
                   
                   <div className="space-y-2 mb-3">
@@ -1636,7 +1684,7 @@ export default function SVMPlayground() {
           </div>
 
           {/* Train/Test & Cross-Validation - Moved here to reduce white space */}
-          <div className="bg-slate-50 rounded-2xl p-4 border mt-6">
+          <div className="bg-gray-50 rounded-2xl p-4 border mt-6">
             <h3 className="text-xl font-semibold mb-3">Train/Test Split & Cross-Validation</h3>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -1684,7 +1732,7 @@ export default function SVMPlayground() {
                           console.error('❌ Error in Auto-Fit:', error);
                         }
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-sm shadow hover:bg-emerald-700 active:bg-emerald-800 transition-colors duration-150 cursor-pointer select-none"
+                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white text-sm shadow-md hover:shadow-lg transition-all duration-150 cursor-pointer select-none"
                       title="Train SVM on training subset and update the decision boundary"
                     >
                       🎯 Auto‑Fit on Train → Set Line
@@ -1714,7 +1762,7 @@ export default function SVMPlayground() {
                           console.error('❌ Error in Reshuffle:', error);
                         }
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-900 text-sm hover:bg-slate-300 active:bg-slate-400 transition-colors duration-150 cursor-pointer select-none"
+                      className="px-3 py-1.5 rounded-xl bg-white text-gray-700 text-sm border-2 border-indigo-300 hover:border-indigo-500 shadow hover:shadow-md transition-all duration-150 cursor-pointer select-none"
                       title="Randomly reorder the same set of points for different train/test splits"
                     >
                       🔀 Reshuffle (same set)
@@ -1762,7 +1810,7 @@ export default function SVMPlayground() {
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
             {/* H0, H1, H2 Planes Analysis - Only show for SVM */}
             {!showKNN && !showPerceptron && (
-              <div className="bg-slate-50 rounded-2xl p-4 border lg:col-span-2">
+              <div className="bg-gray-50 rounded-2xl p-4 border lg:col-span-2">
                 <h3 className="font-semibold mb-2">H0, H1, H2 Plane Analysis</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
@@ -1806,7 +1854,7 @@ export default function SVMPlayground() {
             )}
 
             {/* Algorithm Comparison Card */}
-            <div className="bg-slate-50 rounded-2xl p-4 border">
+            <div className="bg-gray-50 rounded-2xl p-4 border">
               <h3 className="font-semibold mb-2">Algorithm Summary</h3>
               <div className="space-y-3 text-sm">
                 {showPerceptron && (
@@ -1855,7 +1903,7 @@ export default function SVMPlayground() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">2) Kernel Hopscotch — Feature lift z = r^2</h2>
             <div className="flex gap-2">
-              <button onClick={() => setRingData(makeRingData())} className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-900 text-sm">Remix Data</button>
+              <button onClick={() => setRingData(makeRingData())} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-sm shadow-md hover:shadow-lg transition-all">Remix Data</button>
             </div>
           </div>
 
@@ -1883,7 +1931,7 @@ export default function SVMPlayground() {
             </div>
           </div>
 
-          <div className="bg-slate-50 rounded-2xl p-4 border">
+          <div className="bg-gray-50 rounded-2xl p-4 border">
             <h3 className="font-semibold mb-2">What's happening?</h3>
             <p className="text-sm text-slate-700 mb-2">
               In the original (x, y) plane, a ring vs. non‑ring is not linearly separable. Define z = r^2 = x^2 + y^2. The ring points cluster by z,
@@ -1904,7 +1952,7 @@ export default function SVMPlayground() {
             <div className="space-y-4 text-sm">
               <div>
                 <div className="font-medium mb-2">Hard‑margin (primal):</div>
-                <div className="bg-slate-50 p-4 rounded-xl border">
+                <div className="bg-gray-50 p-4 rounded-xl border">
                   <div className="text-center font-mono text-base">
                     min<sub>w,b</sub> ½‖w‖²
                   </div>
@@ -1916,7 +1964,7 @@ export default function SVMPlayground() {
 
               <div>
                 <div className="font-medium mb-2">Soft‑margin (primal):</div>
-                <div className="bg-slate-50 p-4 rounded-xl border">
+                <div className="bg-gray-50 p-4 rounded-xl border">
                   <div className="text-center font-mono text-base">
                     min<sub>w,b,ξ</sub> ½‖w‖² + C∑<sub>i</sub>ξ<sub>i</sub>
                   </div>
@@ -1928,7 +1976,7 @@ export default function SVMPlayground() {
 
               <div>
                 <div className="font-medium mb-2">Dual (with kernel K):</div>
-                <div className="bg-slate-50 p-4 rounded-xl border">
+                <div className="bg-gray-50 p-4 rounded-xl border">
                   <div className="text-center font-mono text-base">
                     max<sub>α</sub> ∑<sub>i</sub>α<sub>i</sub> − ½∑<sub>i,j</sub>α<sub>i</sub>α<sub>j</sub>y<sub>i</sub>y<sub>j</sub>K(x<sub>i</sub>, x<sub>j</sub>)
                   </div>
@@ -1941,13 +1989,13 @@ export default function SVMPlayground() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <div className="font-medium mb-2">Decision rule:</div>
-                  <div className="bg-slate-50 p-3 rounded-xl border text-center font-mono">
+                  <div className="bg-gray-50 p-3 rounded-xl border text-center font-mono">
                     f(x) = sign(∑<sub>i</sub>α<sub>i</sub>y<sub>i</sub>K(x<sub>i</sub>, x) + b)
                   </div>
                 </div>
                 <div>
                   <div className="font-medium mb-2">Margin width:</div>
-                  <div className="bg-slate-50 p-3 rounded-xl border text-center font-mono">
+                  <div className="bg-gray-50 p-3 rounded-xl border text-center font-mono">
                     d = 2/‖w‖
                   </div>
                 </div>
@@ -1955,7 +2003,7 @@ export default function SVMPlayground() {
 
               <div>
                 <div className="font-medium mb-2">Hinge loss (training surrogate):</div>
-                <div className="bg-slate-50 p-4 rounded-xl border text-center font-mono">
+                <div className="bg-gray-50 p-4 rounded-xl border text-center font-mono">
                   L = ∑<sub>i</sub>max(0, 1 − y<sub>i</sub>(w<sup>T</sup>x<sub>i</sub> + b))
                 </div>
               </div>
@@ -1986,11 +2034,15 @@ export default function SVMPlayground() {
               <PromptCard title="Quick Check #2" text="Increase C. What happens to violations and to the margin width?" />
               <PromptCard title="Quick Check #3" text="In the ring example, where do most ring points land in z = r^2 space? How does the threshold separate classes?" />
             </div>
+
+            {/* SVM MCQ Questions */}
+            <MCQSection mode="svm" />
           </>
         )}
 
         {/* Perceptron Algorithm Explanations */}
         {showPerceptron && (
+          <>
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl p-5 shadow border">
               <h2 className="text-xl font-semibold mb-3">Perceptron Learning Algorithm</h2>
@@ -2065,23 +2117,28 @@ export default function SVMPlayground() {
               </div>
             </div>
           </div>
+
+          {/* Perceptron MCQ Questions */}
+          <MCQSection mode="perceptron" />
+          </>
         )}
 
         {/* k-NN Algorithm Explanations */}
         {showKNN && (
+          <>
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl p-5 shadow border">
               <h2 className="text-xl font-semibold mb-3">k-Nearest Neighbors (k-NN)</h2>
-              
+
               <div className="space-y-4">
                 <div>
                   <h4 className="font-medium mb-2">Algorithm Overview</h4>
                   <p className="text-sm text-gray-600">
-                    A lazy learning algorithm that classifies data points based on the class of their k nearest neighbors. 
+                    A lazy learning algorithm that classifies data points based on the class of their k nearest neighbors.
                     It makes no assumptions about the data distribution and can capture complex decision boundaries.
                   </p>
                 </div>
-                
+
                 <div>
                   <h4 className="font-medium mb-2">Distance Metrics</h4>
                   <div className="text-sm text-gray-600 space-y-1">
@@ -2090,12 +2147,12 @@ export default function SVMPlayground() {
                     <p><strong>Cosine:</strong> Measures angle between vectors. Good for high-dimensional sparse data.</p>
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="font-medium mb-2">Choosing k</h4>
                   <p className="text-sm text-gray-600">
-                    Small k: More sensitive to noise, complex boundaries. 
-                    Large k: Smoother boundaries, may miss local patterns. 
+                    Small k: More sensitive to noise, complex boundaries.
+                    Large k: Smoother boundaries, may miss local patterns.
                     Odd k helps avoid ties in binary classification.
                   </p>
                 </div>
@@ -2104,7 +2161,7 @@ export default function SVMPlayground() {
 
             <div className="bg-white rounded-2xl p-5 shadow border">
               <h2 className="text-xl font-semibold mb-3">k-NN vs SVM Comparison</h2>
-              
+
               <div className="space-y-4">
                 <div>
                   <h4 className="font-medium mb-2">Learning Type</h4>
@@ -2113,7 +2170,7 @@ export default function SVMPlayground() {
                     <strong>SVM:</strong> Eager (model-based) - Learns decision boundary
                   </p>
                 </div>
-                
+
                 <div>
                   <h4 className="font-medium mb-2">Decision Boundary</h4>
                   <p className="text-sm text-gray-600">
@@ -2121,7 +2178,7 @@ export default function SVMPlayground() {
                     <strong>SVM:</strong> Global optimum with maximum margin
                   </p>
                 </div>
-                
+
                 <div>
                   <h4 className="font-medium mb-2">Computational Complexity</h4>
                   <p className="text-sm text-gray-600">
@@ -2129,7 +2186,7 @@ export default function SVMPlayground() {
                     <strong>SVM:</strong> O(n²) training, O(k) prediction (k = support vectors)
                   </p>
                 </div>
-                
+
                 <div>
                   <h4 className="font-medium mb-2">Noise Sensitivity</h4>
                   <p className="text-sm text-gray-600">
@@ -2140,6 +2197,10 @@ export default function SVMPlayground() {
               </div>
             </div>
           </div>
+
+          {/* k-NN MCQ Questions */}
+          <MCQSection mode="knn" />
+          </>
         )}
       </div>
     </div>
@@ -2162,7 +2223,7 @@ function MetricsCard({ metrics }: { metrics: ReturnType<typeof computeMetrics> }
     <div className="bg-white rounded-2xl p-4 border shadow-sm">
       <h3 className="font-semibold mb-3">Effectiveness — Confusion Matrix & Scores</h3>
       <div className="grid grid-cols-2 gap-3 text-center mb-3">
-        <div className="bg-slate-50 rounded-xl p-3 border">
+        <div className="bg-gray-50 rounded-xl p-3 border">
           <div className="text-xs text-slate-500 mb-2">Confusion Matrix (positive = +1)</div>
           <div className="grid grid-cols-2 gap-1 text-sm">
             <div className="bg-white rounded p-2">TP<br /><span className="text-lg font-semibold">{TP}</span></div>
@@ -2203,13 +2264,13 @@ function RingPlot({ data, width = 480, height = 320 }: { data: Pt[]; width?: num
   return (
     <svg width={width} height={height} className="rounded-2xl border border-slate-200 bg-white">
       {/* axes */}
-      <line x1={toScreen(-rMax, 0).x} y1={toScreen(-rMax, 0).y} x2={toScreen(rMax, 0).x} y2={toScreen(rMax, 0).y} stroke="#e5e7eb" />
-      <line x1={toScreen(0, -rMax).x} y1={toScreen(0, -rMax).y} x2={toScreen(0, rMax).x} y2={toScreen(0, rMax).y} stroke="#e5e7eb" />
+      <line x1={toScreen(-rMax, 0).x} y1={toScreen(-rMax, 0).y} x2={toScreen(rMax, 0).x} y2={toScreen(rMax, 0).y} stroke="#000000" strokeWidth="1" strokeDasharray="2 2" />
+      <line x1={toScreen(0, -rMax).x} y1={toScreen(0, -rMax).y} x2={toScreen(0, rMax).x} y2={toScreen(0, rMax).y} stroke="#000000" strokeWidth="1" strokeDasharray="2 2" />
 
       {data.map(p => {
         const s = toScreen(p.x, p.y);
-        const fill = p.label === -1 ? "#8b5cf6" : "#0ea5e9"; // purple ring vs cyan outside
-        return <circle key={p.id} cx={s.x} cy={s.y} r={3.2} fill={fill} opacity={0.9} />;
+        const fill = p.label === -1 ? "#000000" : "#ffffff"; // black ring vs white outside
+        return <circle key={p.id} cx={s.x} cy={s.y} r={4} fill={fill} stroke="#000000" strokeWidth={2} />;
       })}
     </svg>
   );
@@ -2232,14 +2293,14 @@ function LiftedPlot({ data, zThresh, onChange, width = 480, height = 320 }: { da
           return (
             <g key={String(t)}>
               <line x1={40} x2={width - 10} y1={y} y2={y} stroke="#f1f5f9" />
-              <text x={6} y={y + 4} className="text-xs fill-slate-500">{z.toFixed(1)}</text>
+              <text x={6} y={y + 4} className="text-base font-bold fill-black">{z.toFixed(1)}</text>
             </g>
           );
         })}
 
         {/* Threshold line */}
-        <line x1={40} x2={width - 10} y1={toScreenY(zThresh)} y2={toScreenY(zThresh)} stroke="#111827" strokeWidth={2} />
-        <text x={50} y={toScreenY(zThresh) - 8} className="text-xs fill-slate-700 font-medium">threshold: z = r² = {zThresh.toFixed(1)}</text>
+        <line x1={40} x2={width - 10} y1={toScreenY(zThresh)} y2={toScreenY(zThresh)} stroke="#000000" strokeWidth={3} />
+        <text x={50} y={toScreenY(zThresh) - 8} className="text-base font-bold fill-black">threshold: z = r² = {zThresh.toFixed(1)}</text>
 
         {/* Points (sorted by z to reduce overdraw) */}
         {data.slice().sort((a, b) => (a.r2 || 0) - (b.r2 || 0)).map((p, i) => {
@@ -2247,15 +2308,323 @@ function LiftedPlot({ data, zThresh, onChange, width = 480, height = 320 }: { da
           const y = toScreenY(p.r2 || 0);
           const predicted = (p.r2 || 0) >= zThresh ? 1 : -1;
           const correct = predicted === p.label;
-          const fill = p.label === -1 ? "#8b5cf6" : "#0ea5e9";
-          const stroke = correct ? "#22c55e" : "#ef4444";
-          return <circle key={p.id} cx={x} cy={y} r={3.2} fill={fill} stroke={stroke} strokeWidth={1.5} />;
+          const fill = p.label === -1 ? "#000000" : "#ffffff";
+          const strokeStyle = correct ? "" : "3 3"; // solid for correct, dashed for incorrect
+          return <circle key={p.id} cx={x} cy={y} r={4} fill={fill} stroke="#000000" strokeWidth={2} strokeDasharray={strokeStyle} />;
         })}
       </svg>
 
       <div className="mt-2">
         <input type="range" min={zMin} max={zMax || 1} step={0.1} value={zThresh} onChange={e => onChange(parseFloat(e.target.value))} className="w-full" />
         <div className="text-xs text-slate-600">Slide to move the straight decision boundary in z‑space (equivalent to a curved boundary in x–y).</div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- MCQ Section Component ----------
+function MCQSection({ mode }: { mode: 'knn' | 'perceptron' | 'svm' }) {
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [showResults, setShowResults] = useState(false);
+
+  const questions = {
+    knn: [
+      {
+        id: 1,
+        question: "In k-NN classification, what is the fundamental principle for classifying a test point at coordinates (x₁, x₂)?",
+        options: [
+          "A) Find the average position of all training points and assign the closest class",
+          "B) Find the k nearest training points using a distance metric and use majority voting",
+          "C) Draw a linear decision boundary between the two classes",
+          "D) Calculate the centroid of each class and assign to the nearest centroid",
+          "E) Use gradient descent to find optimal weights for classification"
+        ],
+        correct: "B"
+      },
+      {
+        id: 2,
+        question: "Given two points P₁=(2,3) and P₂=(5,7), what is the Manhattan distance between them?",
+        options: [
+          "A) 5 units",
+          "B) 7 units",
+          "C) 25 units",
+          "D) √25 = 5 units",
+          "E) 10 units"
+        ],
+        correct: "B"
+      },
+      {
+        id: 3,
+        question: "In the visualization, if you set k=1 for 1-NN classification, what characteristic will the decision boundary exhibit?",
+        options: [
+          "A) A smooth, linear boundary separating the classes",
+          "B) A highly irregular boundary with Voronoi cells around each training point",
+          "C) No boundary is formed since k=1 is invalid",
+          "D) A circular boundary centered at the origin",
+          "E) The same boundary as k=3 or k=5"
+        ],
+        correct: "B"
+      },
+      {
+        id: 4,
+        question: "What is the main disadvantage of using Euclidean distance in high-dimensional feature spaces (the curse of dimensionality)?",
+        options: [
+          "A) Computational complexity becomes O(n²)",
+          "B) All points become approximately equidistant, making k-NN less effective",
+          "C) Manhattan distance becomes more accurate than Euclidean",
+          "D) The algorithm requires storing fewer training examples",
+          "E) Decision boundaries become too smooth"
+        ],
+        correct: "B"
+      },
+      {
+        id: 5,
+        question: "If you move the test point in the visualization and observe that its predicted class changes, what does this tell you about k-NN?",
+        options: [
+          "A) The algorithm needs to be retrained with the new test point",
+          "B) k-NN makes local predictions that adapt to the test point's position without retraining",
+          "C) The training data has been corrupted",
+          "D) The value of k is too small",
+          "E) The distance metric is incorrectly configured"
+        ],
+        correct: "B"
+      }
+    ],
+    perceptron: [
+      {
+        id: 1,
+        question: "In the Perceptron algorithm, given weights w₀=1, w₁=0.5, w₂=-0.3 and a point at (x₁=2, x₂=4), what is the activation value before applying the sign function?",
+        options: [
+          "A) 0.8",
+          "B) -0.2",
+          "C) 2.0",
+          "D) 1.5",
+          "E) -1.2"
+        ],
+        correct: "B"
+      },
+      {
+        id: 2,
+        question: "The Perceptron update rule is: wⱼ ← wⱼ + α(y - ŷ)xⱼ. If a point (2,3) with true label y=+1 is misclassified as ŷ=-1, and α=0.1, how much does w₁ change?",
+        options: [
+          "A) Increases by 0.2",
+          "B) Decreases by 0.2",
+          "C) Increases by 0.4",
+          "D) Decreases by 0.4",
+          "E) No change"
+        ],
+        correct: "C"
+      },
+      {
+        id: 3,
+        question: "What is the key difference between Perceptron and SVM in terms of which linear separator they find?",
+        options: [
+          "A) Perceptron finds any separating hyperplane; SVM finds the maximum-margin hyperplane",
+          "B) Perceptron always finds the optimal solution; SVM finds an approximate solution",
+          "C) Perceptron uses kernels; SVM does not",
+          "D) They always find the same hyperplane",
+          "E) Perceptron requires more iterations than SVM"
+        ],
+        correct: "A"
+      },
+      {
+        id: 4,
+        question: "If the perceptron converges after T iterations on linearly separable data, what does the Perceptron Convergence Theorem guarantee?",
+        options: [
+          "A) T is proportional to the number of training examples",
+          "B) T is bounded by (R/γ)² where R is the radius of data and γ is the margin",
+          "C) T is always less than 100 iterations",
+          "D) T depends only on the learning rate α",
+          "E) T is unbounded and depends on random initialization"
+        ],
+        correct: "B"
+      },
+      {
+        id: 5,
+        question: "Looking at the step-by-step visualization, if a correctly classified point is encountered, what happens to the weights?",
+        options: [
+          "A) Weights are updated with a smaller learning rate",
+          "B) Weights remain unchanged since no error occurred",
+          "C) Weights are updated in the opposite direction",
+          "D) Only the bias w₀ is updated",
+          "E) All weights are reset to zero"
+        ],
+        correct: "B"
+      }
+    ],
+    svm: [
+      {
+        id: 1,
+        question: "In the hard-margin SVM formulation, the objective is to maximize the margin 2/||w||. What is the equivalent minimization problem?",
+        options: [
+          "A) Minimize ||w||",
+          "B) Minimize ½||w||²",
+          "C) Minimize 1/||w||",
+          "D) Minimize ||w||² + b²",
+          "E) Minimize the number of support vectors"
+        ],
+        correct: "B"
+      },
+      {
+        id: 2,
+        question: "Given the constraint yᵢ(w·xᵢ + b) ≥ 1 for all training points, what does it mean geometrically when yᵢ(w·xᵢ + b) = 1?",
+        options: [
+          "A) The point is misclassified",
+          "B) The point lies exactly on the margin boundary (H₁ or H₂)",
+          "C) The point is at the decision boundary H₀",
+          "D) The point is an outlier",
+          "E) The point has negative margin"
+        ],
+        correct: "B"
+      },
+      {
+        id: 3,
+        question: "In soft-margin SVM with slack variables ξᵢ, what does ξᵢ > 1 indicate about training point i?",
+        options: [
+          "A) The point is correctly classified with large margin",
+          "B) The point lies within the margin but is correctly classified",
+          "C) The point is misclassified (on the wrong side of H₀)",
+          "D) The point is exactly on the margin boundary",
+          "E) The slack variable is invalid"
+        ],
+        correct: "C"
+      },
+      {
+        id: 4,
+        question: "Looking at the visualization, if you have two support vectors at (2,1) with y=+1 and (-1,0) with y=-1, and the margin width is 2 units, what is ||w||?",
+        options: [
+          "A) 2",
+          "B) 0.5",
+          "C) 1",
+          "D) 4",
+          "E) Cannot be determined from margin width alone"
+        ],
+        correct: "C"
+      },
+      {
+        id: 5,
+        question: "In the kernel trick visualization (ring example), lifting points via z = r² = x₁² + x₂² transforms the problem. What type of boundary in (x₁, x₂) space corresponds to a linear threshold in z-space?",
+        options: [
+          "A) A straight line",
+          "B) A parabola",
+          "C) A circle (or annular region)",
+          "D) A hyperbola",
+          "E) An ellipse"
+        ],
+        correct: "C"
+      }
+    ]
+  };
+
+  const currentQuestions = questions[mode];
+
+  const handleAnswerChange = (questionId: number, answer: string) => {
+    setAnswers({ ...answers, [questionId]: answer });
+  };
+
+  const handleSubmit = () => {
+    setShowResults(true);
+  };
+
+  const handleReset = () => {
+    setAnswers({});
+    setShowResults(false);
+  };
+
+  const score = showResults
+    ? currentQuestions.reduce((acc, q) => {
+        return acc + (answers[q.id] === q.correct ? 1 : 0);
+      }, 0)
+    : 0;
+
+  return (
+    <div className="mt-6 bg-white rounded-2xl p-6 shadow border">
+      <h2 className="text-2xl font-bold mb-4">
+        📝 Multiple Choice Questions - {mode === 'knn' ? 'k-NN' : mode === 'perceptron' ? 'Perceptron' : 'SVM'} Mode
+      </h2>
+      <p className="text-sm text-gray-600 mb-6">
+        Test your understanding of the visualization above. Each question has 5 choices.
+      </p>
+
+      <div className="space-y-6">
+        {currentQuestions.map((q, idx) => (
+          <div key={q.id} className="border rounded-xl p-4 bg-gray-50">
+            <h3 className="font-semibold mb-3">
+              Question {idx + 1}: {q.question}
+            </h3>
+            <div className="space-y-2">
+              {q.options.map((option, optIdx) => {
+                const optionLetter = option.charAt(0);
+                const isSelected = answers[q.id] === optionLetter;
+                const isCorrect = q.correct === optionLetter;
+                const showFeedback = showResults && isSelected;
+
+                return (
+                  <label
+                    key={optIdx}
+                    className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                      isSelected ? 'bg-blue-100 border-2 border-blue-500' : 'bg-white border-2 border-gray-200 hover:bg-gray-50'
+                    } ${showFeedback && isCorrect ? 'bg-green-100 border-green-500' : ''} ${
+                      showFeedback && !isCorrect ? 'bg-red-100 border-red-500' : ''
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`question-${q.id}`}
+                      value={optionLetter}
+                      checked={isSelected}
+                      onChange={() => handleAnswerChange(q.id, optionLetter)}
+                      disabled={showResults}
+                      className="mt-1"
+                    />
+                    <span className="text-sm flex-1">
+                      {option}
+                      {showResults && isCorrect && (
+                        <span className="ml-2 text-green-600 font-bold">✓ Correct Answer</span>
+                      )}
+                      {showFeedback && !isCorrect && (
+                        <span className="ml-2 text-red-600 font-bold">✗ Incorrect</span>
+                      )}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 flex items-center justify-between">
+        <div>
+          {showResults && (
+            <p className="text-lg font-semibold">
+              Your Score: {score} / {currentQuestions.length} (
+              {((score / currentQuestions.length) * 100).toFixed(0)}%)
+            </p>
+          )}
+        </div>
+        <div className="flex gap-3">
+          {!showResults ? (
+            <button
+              onClick={handleSubmit}
+              disabled={Object.keys(answers).length !== currentQuestions.length}
+              className={`px-6 py-2 rounded-xl font-semibold ${
+                Object.keys(answers).length !== currentQuestions.length
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Submit Answers
+            </button>
+          ) : (
+            <button
+              onClick={handleReset}
+              className="px-6 py-2 rounded-xl font-semibold bg-green-600 text-white hover:bg-green-700"
+            >
+              Try Again
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -2280,6 +2649,7 @@ function renderPoint(
     selectedPointId?: string | null;
     setSelectedPointId?: (id: string | null) => void;
     setPoints?: (fn: (pts: Pt[]) => Pt[]) => void;
+    showCoordinates?: boolean;
   }
 ) {
   const {
@@ -2298,6 +2668,7 @@ function renderPoint(
     selectedPointId,
     setSelectedPointId,
     setPoints,
+    showCoordinates,
   } = ctx;
   const pos = toScreen(p.x, p.y);
   const isSV = SVs.includes(p.id);
@@ -2306,22 +2677,30 @@ function renderPoint(
   const insideMargin = Math.abs(d) < marginHalf - 1e-6;
   const mis = !correct;
 
-  const fill = p.label === 1 ? "#2563eb" : "#f97316"; // blue / orange
-  let ring = "#111827"; // default gray
-  
+  const fill = p.label === 1 ? "#3B82F6" : "#EF4444"; // blue for +1, red for -1
+  let ring = "#000000"; // default black
+  let strokeDasharray = "";
+
   if (isCurrentPerceptronStep) {
     // Special highlighting for current step in Perceptron mode
-    ring = "#8b5cf6"; // purple for current step
+    ring = "#000000";
+    strokeDasharray = "2 2";
   } else if (showKNN && nearestNeighbors) {
     const isNearest = nearestNeighbors.some(({ point: np }) => np.id === p.id)
-    ring = isNearest ? "#10b981" : "#111827" // green for nearest neighbors, gray otherwise
+    ring = "#000000";
+    strokeDasharray = isNearest ? "4 4" : ""; // dashed for nearest neighbors
   } else {
-    ring = mis ? "#ef4444" : insideMargin ? "#f59e0b" : isSV ? "#10b981" : "#111827"; // red, amber, green, gray
+    ring = "#000000";
+    if (mis) strokeDasharray = "1 1"; // dotted for misclassified
+    else if (insideMargin) strokeDasharray = "3 3"; // dashed for inside margin
+    else if (isSV) strokeDasharray = "6 2"; // long dash for support vectors
+    else strokeDasharray = ""; // solid for normal points
   }
 
-  // Override ring color if point is selected
+  // Override styling if point is selected
   if (selectedPointId === p.id) {
-    ring = "#8b5cf6"; // Purple for selected
+    ring = "#000000";
+    strokeDasharray = "2 2";
   }
 
   return (
@@ -2331,19 +2710,8 @@ function renderPoint(
         transform={draggingId === p.id ? "scale(1.2)" : undefined}
         transformOrigin={`${pos.x} ${pos.y}`}
         fill={fill}
-        stroke={ring} strokeWidth={selectedPointId === p.id ? 4 : isCurrentPerceptronStep ? 4 : isSV ? 3 : 2}
-        onClick={() => {
-          if (selectedPointId === p.id && setPoints && setSelectedPointId) {
-            // Double-click to deselect or switch class
-            setPoints(pts => pts.map(pt =>
-              pt.id === p.id ? { ...pt, label: (pt.label === 1 ? -1 : 1) as 1 | -1 } : pt
-            ));
-            setSelectedPointId(null);
-          } else if (setSelectedPointId) {
-            // Select this point
-            setSelectedPointId(p.id);
-          }
-        }}
+        stroke={ring} strokeWidth={selectedPointId === p.id ? 5 : isCurrentPerceptronStep ? 5 : isSV ? 4 : 3}
+        strokeDasharray={strokeDasharray}
         // Desktop: start drag on mouse
         onMouseDown={(e) => {
           e.preventDefault();
@@ -2379,8 +2747,8 @@ function renderPoint(
         <circle
           cx={pos.x} cy={pos.y} r={16}
           fill="none"
-          stroke="#8b5cf6"
-          strokeWidth={2}
+          stroke="#000000"
+          strokeWidth={3}
           strokeDasharray="4 4"
           opacity={0.8}
         >
@@ -2393,8 +2761,8 @@ function renderPoint(
         <circle
           cx={pos.x} cy={pos.y} r={15}
           fill="none" 
-          stroke="#8b5cf6" 
-          strokeWidth={2}
+          stroke="#000000"
+          strokeWidth={3}
           strokeDasharray="3 3"
           opacity={0.6}
         >
@@ -2403,7 +2771,13 @@ function renderPoint(
         </circle>
       )}
       {hoverId === p.id && (
-        <text x={pos.x + 10} y={pos.y - 10} className="text-xs fill-gray-800 select-none">
+        <text x={pos.x + 10} y={pos.y - 10} className="text-base font-bold fill-black select-none">
+          ({p.x.toFixed(1)}, {p.y.toFixed(1)})
+        </text>
+      )}
+      {/* Show coordinates when checkbox is enabled */}
+      {showCoordinates && (
+        <text x={pos.x + 12} y={pos.y + 5} className="text-sm font-mono fill-black select-none">
           ({p.x.toFixed(1)}, {p.y.toFixed(1)})
         </text>
       )}
