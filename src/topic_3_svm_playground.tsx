@@ -1034,8 +1034,8 @@ export default function SVMPlayground() {
                 })}
               </svg>
 
-              {/* Legend */}
-              <div className="absolute top-2 left-2 bg-white/90 backdrop-blur rounded-xl px-2 py-2 md:px-4 md:py-3 text-xs md:text-base shadow flex items-center gap-2 md:gap-4 flex-wrap border-2 border-black max-w-[calc(100%-1rem)]">
+              {/* Legend - positioned below on mobile, overlaid on desktop */}
+              <div className="mt-2 md:mt-0 md:absolute md:top-2 md:left-2 bg-white/90 backdrop-blur rounded-xl px-2 py-2 md:px-4 md:py-3 text-xs md:text-base shadow flex items-center gap-2 md:gap-4 flex-wrap border-2 border-black">
                 <div className="flex items-center gap-1 md:gap-2"><span className="inline-block w-3 h-3 md:w-4 md:h-4 rounded-full bg-blue-500 border-2 border-blue-700"></span> <span className="font-bold text-blue-600">Class +1</span></div>
                 <div className="flex items-center gap-1 md:gap-2"><span className="inline-block w-3 h-3 md:w-4 md:h-4 rounded-full bg-red-500 border-2 border-red-700"></span> <span className="font-bold text-red-600">Class −1</span></div>
                 {!showKNN && !showPerceptron && (
