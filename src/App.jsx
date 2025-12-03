@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Topic1Studio from './topic_1_interactive_studio_coe_292.jsx'
 import Topic2Studio from './topic_2_interactive_studio_coe_292.tsx'
 import SVMPlayground from './topic_3_svm_playground.tsx'
+import MLPArchitecture from './topic_4_mlp_architecture.tsx'
+import CNNVisualizer from './topic_5_cnn_visualizer.tsx'
 import SVMInteractiveAux from './svm_support_vector_selection.tsx'
 import CSPVisualizer from './topic_7_csp_visualizer.tsx'
 
@@ -86,6 +88,22 @@ export default function App() {
         </TabButton>
 
         <TabButton
+          id="tab-topic4"
+          isActive={active === 'topic4'}
+          onClick={() => setActive('topic4')}
+        >
+          Topic 4 — MLP Architecture
+        </TabButton>
+
+        <TabButton
+          id="tab-topic5"
+          isActive={active === 'topic5'}
+          onClick={() => setActive('topic5')}
+        >
+          Topic 5 — CNN Visualizer
+        </TabButton>
+
+        <TabButton
           id="tab-svm"
           isActive={active === 'svm'}
           onClick={() => setActive('svm')}
@@ -130,6 +148,26 @@ export default function App() {
         style={{ display: active === 'topic3' ? 'block' : 'none' }}
       >
         <SVMPlayground />
+      </section>
+
+      <section
+        id="tab-topic4-panel"
+        role="tabpanel"
+        aria-labelledby="tab-topic4"
+        hidden={active !== 'topic4'}
+        style={{ display: active === 'topic4' ? 'block' : 'none' }}
+      >
+        <MLPArchitecture />
+      </section>
+
+      <section
+        id="tab-topic5-panel"
+        role="tabpanel"
+        aria-labelledby="tab-topic5"
+        hidden={active !== 'topic5'}
+        style={{ display: active === 'topic5' ? 'block' : 'none' }}
+      >
+        <CNNVisualizer />
       </section>
 
       <section
