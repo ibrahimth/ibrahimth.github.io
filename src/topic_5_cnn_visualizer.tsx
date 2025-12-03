@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 /**
  * Topic 5 — CNN Visualizer (Configurable)
@@ -152,7 +152,7 @@ export default function CNNVisualizer() {
     Array(numFilters).fill(0).map(() =>
       Array(numInputChannels).fill(0).map(() =>
         Array(filterSize).fill(0).map(() =>
-          Array(filterSize).fill(0).map(() => Math.random() * 2 - 1)
+          Array(filterSize).fill(0).map(() => Math.random() * 2 - 0.5)
         )
       )
     )
@@ -162,20 +162,38 @@ export default function CNNVisualizer() {
     Array(numFilters).fill(0).map(() => Math.random() * 2 - 1)
   );
 
+  // Regenerate data when dimensions change
+  useEffect(() => {
+    setInputChannels(Array(numInputChannels).fill(0).map(() => generateChannel(inputSize)));
+  }, [inputSize, numInputChannels]);
+
+  useEffect(() => {
+    setFilters(Array(numFilters).fill(0).map(() =>
+      Array(numInputChannels).fill(0).map(() =>
+        Array(filterSize).fill(0).map(() =>
+          Array(filterSize).fill(0).map(() => Math.random() * 2 - 0.5)
+        )
+      )
+    ));
+  }, [filterSize, numFilters, numInputChannels]);
+
   // Regenerate data when size changes
   const regenerateData = () => {
     setInputChannels(Array(numInputChannels).fill(0).map(() => generateChannel(inputSize)));
     setFilters(Array(numFilters).fill(0).map(() =>
       Array(numInputChannels).fill(0).map(() =>
         Array(filterSize).fill(0).map(() =>
-          Array(filterSize).fill(0).map(() => Math.random() * 2 - 1)
+          Array(filterSize).fill(0).map(() => Math.random() * 2 - 0.5)
         )
       )
     ));
   };
 
   // Calculate output size after convolution
-  const convOutputSize = Math.floor((inputSize + 2 * padding - filterSize) / stride) + 1;
+  // Use actual data dimensions to prevent crash during state updates
+  const currentInputSize = inputChannels[0]?.length || inputSize;
+  const currentFilterSize = filters[0]?.[0]?.length || filterSize;
+  const convOutputSize = Math.floor((currentInputSize + 2 * padding - currentFilterSize) / stride) + 1;
 
   // Calculate output size after pooling
   const poolOutputSize = poolType !== 'none'
@@ -190,6 +208,10 @@ export default function CNNVisualizer() {
   const totalParams = useBias
     ? (filterSize * filterSize * numInputChannels * numFilters) + numFilters
     : (filterSize * filterSize * numInputChannels * numFilters);
+
+  const safeOutputSize = Math.max(1, convOutputSize);
+  const totalNeurons = safeOutputSize * safeOutputSize * numFilters;
+  const params = filterSize * filterSize * numInputChannels * numFilters;
 
   // Apply convolution for all filters
   const convOutputs = useMemo(() => {
@@ -251,7 +273,8 @@ export default function CNNVisualizer() {
     maxCellSize: number = 40
   ) => {
     const size = matrix.length;
-    const cellSize = Math.min(maxCellSize, 300 / size);
+    // Increased base width from 300 to 600 to keep cells larger
+    const cellSize = Math.min(maxCellSize, 600 / size);
 
     const flatValues = matrix.flat();
     const min = Math.min(...flatValues);
@@ -291,12 +314,13 @@ export default function CNNVisualizer() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: cellSize > 25 ? '0.6rem' : '0',
+                    // Lowered threshold from 25 to 20 for visibility
+                    fontSize: cellSize > 20 ? '0.6rem' : '0',
                     fontWeight: '600',
                     color: normalized > 0.5 ? '#000' : '#fff',
                   }}
                 >
-                  {cellSize > 25 ? val.toFixed(1) : ''}
+                  {cellSize > 20 ? val.toFixed(1) : ''}
                 </div>
               );
             })
@@ -358,7 +382,10 @@ export default function CNNVisualizer() {
               min={3}
               max={12}
               value={inputSize}
-              onChange={(e) => setInputSize(parseInt(e.target.value) || 6)}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val)) setInputSize(Math.min(Math.max(val, 3), 12));
+              }}
               style={inputStyle}
             />
           </label>
@@ -372,7 +399,10 @@ export default function CNNVisualizer() {
               min={1}
               max={5}
               value={numInputChannels}
-              onChange={(e) => setNumInputChannels(parseInt(e.target.value) || 3)}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val)) setNumInputChannels(Math.min(Math.max(val, 1), 5));
+              }}
               style={inputStyle}
             />
           </label>
@@ -386,7 +416,10 @@ export default function CNNVisualizer() {
               min={2}
               max={5}
               value={filterSize}
-              onChange={(e) => setFilterSize(parseInt(e.target.value) || 4)}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val)) setFilterSize(Math.min(Math.max(val, 2), 5));
+              }}
               style={inputStyle}
             />
           </label>
@@ -400,7 +433,10 @@ export default function CNNVisualizer() {
               min={1}
               max={4}
               value={numFilters}
-              onChange={(e) => setNumFilters(parseInt(e.target.value) || 2)}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val)) setNumFilters(Math.min(Math.max(val, 1), 4));
+              }}
               style={inputStyle}
             />
           </label>
@@ -414,7 +450,10 @@ export default function CNNVisualizer() {
               min={1}
               max={3}
               value={stride}
-              onChange={(e) => setStride(parseInt(e.target.value) || 1)}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val)) setStride(Math.min(Math.max(val, 1), 3));
+              }}
               style={inputStyle}
             />
           </label>
@@ -428,7 +467,10 @@ export default function CNNVisualizer() {
               min={0}
               max={2}
               value={padding}
-              onChange={(e) => setPadding(parseInt(e.target.value) || 0)}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val)) setPadding(Math.min(Math.max(val, 0), 2));
+              }}
               style={inputStyle}
             />
           </label>
@@ -520,35 +562,27 @@ export default function CNNVisualizer() {
           </button>
         </div>
 
-        {/* Calculations Display */}
-        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-          <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: '700', color: '#1e40af' }}>
+        {/* Calculations Panel */}
+        <div style={{
+          marginTop: '2rem',
+          padding: '1.5rem',
+          background: '#f8fafc',
+          borderRadius: '12px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             📊 Calculations (like the example in the image):
-          </h4>
-          <div style={{ color: '#1e40af', fontSize: '0.85rem', lineHeight: 1.8 }}>
-            <div>
-              <strong>The output size</strong> = ({inputSize} + 2×{padding} - {filterSize})/{stride} + 1 = <span style={{color: '#16a34a', fontWeight: '700'}}>{convOutputSize}</span>
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+            <div style={{ fontSize: '0.9rem', lineHeight: '1.6', color: '#334155' }}>
+              <p><strong>The output size</strong> = ({inputSize} + 2×{padding} - {filterSize})/{stride} + 1 = <strong>{safeOutputSize}</strong></p>
+              <p>➤ <strong>The number of needed filters is</strong> {numFilters}</p>
+              <p>➤ <strong>The number of needed filter channels is</strong> {numInputChannels}×{numFilters} = {numInputChannels * numFilters}, each of size {filterSize}×{filterSize}</p>
+              <p>➤ <strong>The number of neurons is</strong> {safeOutputSize}×{safeOutputSize}×{numFilters} = {totalNeurons}</p>
+              <p>➤ <strong>The number of inputs to each neuron is</strong> {filterSize}×{filterSize}×{numInputChannels} = {inputsPerNeuron}</p>
+              <p>➤ <strong>The number of network parameters to be trained (ignoring biases) is</strong> {filterSize}×{filterSize}×{numInputChannels}×{numFilters} = {params}</p>
+              <p>➤ <strong>After max pooling (1×1, stride=2):</strong> output size = {Math.ceil(safeOutputSize / 2)}×{Math.ceil(safeOutputSize / 2)}</p>
             </div>
-            <div>
-              ➤ The <strong>number of needed filters</strong> is <span style={{color: '#dc2626', fontWeight: '700'}}>{numFilters}</span>
-            </div>
-            <div>
-              ➤ The <strong>number of needed filter channels</strong> is <span style={{color: '#dc2626', fontWeight: '700'}}>{numFilters}</span>×<span style={{color: '#2563eb', fontWeight: '700'}}>{numInputChannels}</span> = {numFilterChannels}, each of size <span style={{color: '#ca8a04', fontWeight: '700'}}>{filterSize}×{filterSize}</span>
-            </div>
-            <div>
-              ➤ The <strong>number of neurons</strong> is <span style={{color: '#dc2626', fontWeight: '700'}}>{numNeurons}</span>
-            </div>
-            <div>
-              ➤ The <strong>number of inputs to each neuron</strong> is <span style={{color: '#ca8a04', fontWeight: '700'}}>{filterSize}×{filterSize}×{numInputChannels}</span> = {inputsPerNeuron}
-            </div>
-            <div>
-              ➤ The <strong>number of network parameters</strong> to be trained {useBias ? '(with biases)' : '(ignoring biases)'} is <span style={{color: '#ca8a04', fontWeight: '700'}}>{filterSize}×{filterSize}×{numInputChannels}×{numFilters}</span>{useBias ? ` + ${numFilters}` : ''} = <span style={{color: '#16a34a', fontWeight: '700'}}>{totalParams}</span>
-            </div>
-            {poolType !== 'none' && (
-              <div>
-                ➤ After <strong>{poolType} pooling</strong> ({poolSize}×{poolSize}, stride={poolStride}): output size = <span style={{color: '#16a34a', fontWeight: '700'}}>{poolOutputSize}×{poolOutputSize}</span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -567,6 +601,29 @@ export default function CNNVisualizer() {
               {inputChannels.map((channel, idx) => (
                 <div key={idx}>
                   {renderMatrix(channel, `Channel ${idx + 1}`, true, 35)}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Filters (Kernels) */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: '600', color: '#9333ea' }}>
+              Filters (Kernels) ({filterSize}×{filterSize}×{numInputChannels} per filter)
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {filters.map((filterSet, filterIdx) => (
+                <div key={filterIdx} style={{ padding: '1rem', background: '#f3e8ff', borderRadius: '8px' }}>
+                  <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', fontWeight: '600', color: '#7e22ce' }}>
+                    Filter {filterIdx + 1}
+                  </h5>
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    {filterSet.map((kernel, channelIdx) => (
+                      <div key={channelIdx}>
+                        {renderMatrix(kernel, `Channel ${channelIdx + 1}`, true, 35)}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -602,7 +659,7 @@ export default function CNNVisualizer() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

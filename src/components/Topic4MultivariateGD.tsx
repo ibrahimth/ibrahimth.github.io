@@ -50,7 +50,7 @@ export default function GradientDescentComplete() {
   }, [isPlaying]);
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+    <div className="w-full bg-gradient-to-br from-slate-50 to-blue-50 p-4">
       <div className="max-w-6xl mx-auto space-y-4">
         <Card>
           <CardHeader>
@@ -83,7 +83,7 @@ export default function GradientDescentComplete() {
               <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border-2 border-orange-200">
                 <div className="text-sm text-orange-700 font-semibold">Gradient Norm</div>
                 <div className="text-2xl font-bold text-orange-900">
-                  {Math.sqrt(current.grad1**2 + current.grad2**2 + current.grad3**2).toFixed(3)}
+                  {Math.sqrt(current.grad1 ** 2 + current.grad2 ** 2 + current.grad3 ** 2).toFixed(3)}
                 </div>
               </div>
             </div>

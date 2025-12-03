@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Topic4UnifiedLearning from './components/Topic4UnifiedLearning';
+import GradientDescentComplete from './components/Topic4MultivariateGD';
 
 /**
  * Topic 4: Neural Networks & Gradient Descent (Complete)
@@ -10,10 +12,11 @@ import React, { useState, useEffect, useRef } from 'react';
  * 3. Linear Regression with Dual-Panel Visualization
  * 4. MLP Architecture
  * 5. Unified Learning Journey
+ * 6. Multivariate Gradient Descent
  */
 
 type ActivationFunction = 'sigmoid' | 'tanh' | 'relu' | 'leakyRelu';
-type Section = 'activations' | 'singleWeight' | 'linearRegression' | 'mlp' | 'journey';
+type Section = 'activations' | 'singleWeight' | 'linearRegression' | 'mlp' | 'journey' | 'multivariate';
 
 // Activation functions
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
@@ -546,7 +549,13 @@ export default function NeuralNetworksComplete() {
             onClick={() => setActiveSection('journey')}
             style={activeSection === 'journey' ? activeTabStyle : buttonStyle}
           >
-            Learning Journey
+            Unified Learning Journey
+          </button>
+          <button
+            onClick={() => setActiveSection('multivariate')}
+            style={activeSection === 'multivariate' ? activeTabStyle : buttonStyle}
+          >
+            Multivariate GD
           </button>
         </div>
 
@@ -554,128 +563,96 @@ export default function NeuralNetworksComplete() {
         {activeSection === 'activations' && (
           <div>
             <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', fontWeight: '700' }}>
-              Activation Functions - The "Soft" Perceptron
+              Activation Functions Visualizer
             </h3>
             <p style={{ margin: '0 0 1rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
-              Unlike hard perceptrons (step functions), neural networks use smooth, differentiable activation functions.
-              Solid line = σ(x), Dashed line = σ'(x) (used in backpropagation)
+              Activation functions introduce non-linearity into the network. Select a function to see its shape and derivative.
             </p>
 
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-              {(Object.keys(activationFunctions) as ActivationFunction[]).map(key => (
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+              {Object.keys(activationFunctions).map((key) => (
                 <button
                   key={key}
-                  onClick={() => setSelectedActivation(key)}
+                  onClick={() => setSelectedActivation(key as ActivationFunction)}
                   style={selectedActivation === key ? activeTabStyle : buttonStyle}
                 >
-                  {activationFunctions[key].name}
+                  {activationFunctions[key as ActivationFunction].name}
                 </button>
               ))}
             </div>
 
-            {renderActivationPlot()}
-
-            <div style={{ marginTop: '1rem', padding: '1rem', background: '#eff6ff', borderRadius: '8px' }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: '700' }}>
-                {activationFunctions[selectedActivation].name}
-              </h4>
-              <p style={{ margin: 0, color: '#1e40af', fontSize: '0.85rem' }}>
-                {activationFunctions[selectedActivation].formula}
-              </p>
-            </div>
-
-            <div style={{ marginTop: '1rem', padding: '1rem', background: '#f9fafb', borderRadius: '8px', fontSize: '0.85rem', lineHeight: 1.6 }}>
-              <strong>Key Properties:</strong>
-              <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                <li><strong>Sigmoid:</strong> Outputs ∈ (0,1), derivative saturates → vanishing gradients</li>
-                <li><strong>Tanh:</strong> Outputs ∈ (-1,1), zero-centered, derivative still saturates</li>
-                <li><strong>ReLU:</strong> Most popular, no saturation for x&gt;0, but "dead neurons" if x≤0</li>
-                <li><strong>Leaky ReLU:</strong> Fixes dying ReLU with small negative slope</li>
-              </ul>
+            <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+              {renderActivationPlot()}
+              <div style={{ maxWidth: '300px' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: '700' }}>
+                  {activationFunctions[selectedActivation].name}
+                </h4>
+                <code style={{ display: 'block', background: '#f3f4f6', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem' }}>
+                  {activationFunctions[selectedActivation].formula}
+                </code>
+                <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>
+                  <strong>Blue Line:</strong> The activation function output.<br />
+                  <strong>Dashed Line:</strong> The derivative (gradient).<br /><br />
+                  Notice how the derivative behaves. For Sigmoid/Tanh, it vanishes at extremes (vanishing gradient problem). ReLU has a constant gradient for positive inputs.
+                </p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Single Weight Gradient Descent Section */}
+        {/* Single Weight GD Section */}
         {activeSection === 'singleWeight' && (
           <div>
             <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', fontWeight: '700' }}>
-              Level 1: Single Weight - Understanding the Basics
+              Single Weight Gradient Descent
             </h3>
             <p style={{ margin: '0 0 1rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
-              The simplest case: One weight, one input, one output. Find the weight that makes weight × 2 = 6.
+              Minimize Cost = (prediction - target)² by adjusting a single weight w.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{ padding: '1rem', background: '#f9fafb', borderRadius: '8px' }}>
-                <div><strong>Input (x):</strong> {input}</div>
-                <div><strong>Target (y):</strong> {target}</div>
-                <div><strong>Current weight:</strong> {weight.toFixed(4)}</div>
-                <div><strong>Prediction (w×x):</strong> {prediction.toFixed(4)}</div>
-                <div><strong>Error (pred-target):</strong> {error.toFixed(4)}</div>
-                <div style={{ color: '#dc2626' }}><strong>Cost C = (ŷ-y)²:</strong> {cost.toFixed(4)}</div>
-                <div style={{ color: '#16a34a' }}><strong>Gradient (∂C/∂w):</strong> {gradient.toFixed(4)}</div>
-                <div><strong>Steps taken:</strong> {steps}</div>
+            <div style={{ display: 'flex', gap: '2rem', marginBottom: '1.5rem' }}>
+              <div style={{ background: '#f9fafb', padding: '1rem', borderRadius: '8px', width: '200px' }}>
+                <div style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>Input (x): <strong>{input}</strong></div>
+                <div style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>Target (y): <strong>{target}</strong></div>
+                <div style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>Weight (w): <strong>{weight.toFixed(3)}</strong></div>
+                <div style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>Prediction (ŷ): <strong>{prediction.toFixed(3)}</strong></div>
+                <div style={{ fontSize: '0.875rem', marginBottom: '0.5rem', color: '#ef4444' }}>Cost (C): <strong>{cost.toFixed(4)}</strong></div>
+                <div style={{ fontSize: '0.875rem', color: '#16a34a' }}>Gradient (∂C/∂w): <strong>{gradient.toFixed(3)}</strong></div>
               </div>
 
-              <div style={{ padding: '1rem', background: '#eff6ff', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: '700' }}>
-                  Gradient Descent Update Rule:
-                </h4>
-                <div style={{ fontSize: '0.85rem' }}>
-                  <div>w<sub>new</sub> = w<sub>old</sub> - η × ∂C/∂w</div>
-                  <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>(η = learning rate)</div>
-                  <div style={{ marginTop: '0.5rem', color: '#3b82f6', fontWeight: '600' }}>
-                    w<sub>new</sub> = {weight.toFixed(3)} - {learningRate} × {gradient.toFixed(3)}
-                  </div>
-                  <div style={{ color: '#16a34a', fontWeight: '700' }}>
-                    w<sub>new</sub> = {(weight - learningRate * gradient).toFixed(3)}
-                  </div>
+              <div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: '600', marginRight: '0.5rem' }}>Learning Rate (η):</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={learningRate}
+                    onChange={(e) => setLearningRate(parseFloat(e.target.value))}
+                    style={{ padding: '0.25rem', borderRadius: '4px', border: '1px solid #d1d5db' }}
+                  />
                 </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={stepSingleWeight} style={primaryButtonStyle}>
+                    Step
+                  </button>
+                  <button
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    style={buttonStyle}
+                  >
+                    {isPlaying ? 'Pause' : 'Auto Train'}
+                  </button>
+                  <button
+                    onClick={() => { setWeight(0.5); setSteps(0); setIsPlaying(false); }}
+                    style={buttonStyle}
+                  >
+                    Reset
+                  </button>
+                </div>
+                <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>Steps: {steps}</p>
               </div>
             </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600' }}>
-                Learning Rate: {learningRate.toFixed(3)}
-              </label>
-              <input
-                type="range"
-                min={0.01}
-                max={0.5}
-                step={0.01}
-                value={learningRate}
-                onChange={(e) => setLearningRate(parseFloat(e.target.value))}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <button onClick={() => setIsPlaying(!isPlaying)} style={primaryButtonStyle}>
-                {isPlaying ? 'Pause' : 'Play'}
-              </button>
-              <button onClick={stepSingleWeight} style={buttonStyle} disabled={Math.abs(gradient) < 0.01}>
-                Step
-              </button>
-              <button onClick={() => { setWeight(0.5); setSteps(0); }} style={buttonStyle}>
-                Reset
-              </button>
-            </div>
-
-            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', fontWeight: '700' }}>
-              Loss Landscape (Parabola)
-            </h4>
             {renderSingleWeightLoss()}
-
-            <div style={{ marginTop: '1rem', padding: '1rem', background: '#f0fdf4', borderRadius: '8px', fontSize: '0.85rem' }}>
-              <strong>Key Insights:</strong>
-              <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                <li><strong>Gradient = slope:</strong> Direction and steepness of loss curve</li>
-                <li><strong>Positive gradient:</strong> Moving right increases loss → go left</li>
-                <li><strong>Negative gradient:</strong> Moving left increases loss → go right</li>
-                <li><strong>Gradient → 0:</strong> We've reached the minimum! (optimal ≈ 3)</li>
-              </ul>
-            </div>
           </div>
         )}
 
@@ -683,67 +660,45 @@ export default function NeuralNetworksComplete() {
         {activeSection === 'linearRegression' && (
           <div>
             <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', fontWeight: '700' }}>
-              Interactive Gradient Descent Animator
+              Linear Regression Gradient Descent
             </h3>
             <p style={{ margin: '0 0 1rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
-              Watch gradient descent find the best-fit line by "rolling downhill" on the cost landscape.
+              Fitting a line y = mx + b. Visualizing the problem space vs the cost landscape.
             </p>
 
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600' }}>
-                Learning Rate: {lrLearningRate.toFixed(3)}
-              </label>
-              <input
-                type="range"
-                min={0.001}
-                max={0.05}
-                step={0.001}
-                value={lrLearningRate}
-                onChange={(e) => setLrLearningRate(parseFloat(e.target.value))}
-                style={{ width: '100%', maxWidth: '400px' }}
-              />
-              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
-                Too large = oscillation, too small = slow convergence
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <button onClick={() => setLrIsPlaying(!lrIsPlaying)} style={primaryButtonStyle}>
-                {lrIsPlaying ? 'Pause' : 'Play'}
-              </button>
-              <button onClick={stepLinearRegression} style={buttonStyle}>
-                Step
-              </button>
-              <button onClick={() => { setIntercept(-2); setSlope(-1); setLrSteps(0); }} style={buttonStyle}>
-                Reset
-              </button>
-            </div>
-
-            {renderLinearRegressionPanel()}
-
-            <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f9fafb', borderRadius: '8px' }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: '700' }}>Live Metrics</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem', fontSize: '0.85rem' }}>
-                <div><strong>Intercept:</strong> {intercept.toFixed(4)}</div>
-                <div><strong>Slope:</strong> {slope.toFixed(4)}</div>
-                <div style={{ color: '#dc2626' }}><strong>SSE (Cost):</strong> {sse.toFixed(4)}</div>
-                <div><strong>Steps:</strong> {lrSteps}</div>
-                <div><strong>∂SSE/∂Intercept:</strong> {dIntercept.toFixed(4)}</div>
-                <div><strong>∂SSE/∂Slope:</strong> {dSlope.toFixed(4)}</div>
+            <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <div style={{ fontSize: '0.875rem' }}>
+                Intercept (b): <strong>{intercept.toFixed(2)}</strong>
+              </div>
+              <div style={{ fontSize: '0.875rem' }}>
+                Slope (m): <strong>{slope.toFixed(2)}</strong>
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#ef4444' }}>
+                SSE Cost: <strong>{sse.toFixed(2)}</strong>
+              </div>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem' }}>LR:</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={lrLearningRate}
+                  onChange={(e) => setLrLearningRate(parseFloat(e.target.value))}
+                  style={{ width: '60px', padding: '0.25rem', borderRadius: '4px', border: '1px solid #d1d5db' }}
+                />
+                <button onClick={stepLinearRegression} style={primaryButtonStyle}>Step</button>
+                <button onClick={() => setLrIsPlaying(!lrIsPlaying)} style={buttonStyle}>
+                  {lrIsPlaying ? 'Pause' : 'Play'}
+                </button>
+                <button
+                  onClick={() => { setIntercept(-2); setSlope(-1); setLrSteps(0); setLrIsPlaying(false); }}
+                  style={buttonStyle}
+                >
+                  Reset
+                </button>
               </div>
             </div>
 
-            <div style={{ marginTop: '1rem', padding: '1rem', background: '#eff6ff', borderRadius: '8px', fontSize: '0.85rem' }}>
-              <strong>Key Concepts (3Blue1Brown & StatQuest):</strong>
-              <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                <li><strong>Gradient:</strong> Vector of partial derivatives, points uphill</li>
-                <li><strong>Descent:</strong> Move opposite to gradient (downhill)</li>
-                <li><strong>Learning rate:</strong> Step size control</li>
-                <li><strong>Residuals:</strong> Vertical distances from points to line</li>
-                <li><strong>SSE:</strong> Sum of Squared Errors = Σ(residual)²</li>
-                <li><strong>Convergence:</strong> When gradients → 0 (at minimum)</li>
-              </ul>
-            </div>
+            {renderLinearRegressionPanel()}
           </div>
         )}
 
@@ -807,91 +762,21 @@ export default function NeuralNetworksComplete() {
                     style={{ width: '60px', padding: '0.25rem', borderRadius: '4px', border: '1px solid #d1d5db' }}
                   />
                 </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem' }}>Activation: </label>
-                  <select
-                    value={mlpActivation}
-                    onChange={(e) => setMlpActivation(e.target.value as ActivationFunction)}
-                    style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #d1d5db' }}
-                  >
-                    {(Object.keys(activationFunctions) as ActivationFunction[]).map(key => (
-                      <option key={key} value={key}>{activationFunctions[key].name}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
             </div>
 
             {renderMLPArchitecture()}
-
-            <div style={{ marginTop: '1rem', padding: '1rem', background: '#f9fafb', borderRadius: '8px', fontSize: '0.85rem' }}>
-              <div><strong>Total Parameters:</strong> {mlpLayers.reduce((sum, size, idx) => {
-                if (idx === 0) return 0;
-                return sum + (mlpLayers[idx - 1] * size + size);
-              }, 0)} (weights + biases)</div>
-            </div>
-
-            <div style={{ marginTop: '1rem', padding: '1rem', background: '#eff6ff', borderRadius: '8px', fontSize: '0.85rem' }}>
-              <strong>Key Concepts:</strong>
-              <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                <li><strong>Input layer:</strong> Receives features (x₁, x₂, ...)</li>
-                <li><strong>Hidden layers:</strong> Learn intermediate representations</li>
-                <li><strong>Output layer:</strong> Produces final prediction</li>
-                <li><strong>Weights:</strong> Connection strengths (learned via training)</li>
-                <li><strong>Activation:</strong> Non-linear transformation</li>
-              </ul>
-            </div>
           </div>
         )}
 
-        {/* Learning Journey Section */}
+        {/* Unified Learning Journey Section */}
         {activeSection === 'journey' && (
-          <div>
-            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', fontWeight: '700' }}>
-              From MLP to Gradient Descent - A Unified Journey
-            </h3>
-            <p style={{ margin: '0 0 1rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
-              Build intuition step-by-step: Everything is the same gradient descent algorithm!
-            </p>
+          <Topic4UnifiedLearning />
+        )}
 
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              {[
-                { num: '1️⃣', title: 'Start: Single Weight', desc: 'Understand gradient descent with one weight, one input, one output. See gradients "roll downhill" on the loss curve.', link: 'singleWeight' },
-                { num: '2️⃣', title: 'Bridge: Backprop = Gradient Descent', desc: 'Make the connection: backpropagation IS gradient descent! Same update rule w = w - η×∇, just scaled up.', link: 'singleWeight' },
-                { num: '3️⃣', title: 'Advanced: Full MLP Training', desc: 'Explore complete MLP with architecture, XOR problem, and backpropagation. Solve problems impossible for single neurons!', link: 'mlp' },
-                { num: '4️⃣', title: 'Deep Dive: Gradient Descent Variants', desc: 'Compare activation functions and see MLPs as universal function approximators.', link: 'activations' },
-                { num: '5️⃣', title: 'Mastery: Visual Gradient Descent', desc: 'Visualize gradient descent on real problems with dual-panel cost landscapes. See the "ball" roll to the minimum!', link: 'linearRegression' },
-              ].map((step, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: '1rem',
-                    background: '#f9fafb',
-                    borderRadius: '8px',
-                    border: '2px solid #e5e7eb',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => setActiveSection(step.link as Section)}
-                >
-                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '700', color: '#3b82f6' }}>
-                    {step.num} {step.title}
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>{step.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#eff6ff', borderRadius: '8px' }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', fontWeight: '700', color: '#1e40af' }}>
-                Pedagogical Approach
-              </h4>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: '#1e40af', lineHeight: 1.6 }}>
-                This learning path follows the <strong>concrete → abstract</strong> principle. We start with the simplest case (one weight)
-                where everything is visible and intuitive, then gradually build complexity. Each level reinforces that the SAME fundamental
-                idea (gradient descent) applies at every scale—from one weight to millions of parameters.
-              </p>
-            </div>
-          </div>
+        {/* Multivariate GD Section */}
+        {activeSection === 'multivariate' && (
+          <GradientDescentComplete />
         )}
       </div>
     </div>
