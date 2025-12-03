@@ -13,7 +13,6 @@ function TabButton({ id, isActive, onClick, children }) {
     fontSize: '0.9rem',
     cursor: 'pointer',
     transition: 'all 120ms ease',
-    marginRight: '0.5rem',
     background: 'white',
   }
   const active = {
@@ -54,7 +53,7 @@ export default function App() {
           display: 'flex',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '0.25rem',
+          gap: '0.5rem',
           marginBottom: '1rem',
           background: '#f1f5f9',
           padding: '0.5rem',
