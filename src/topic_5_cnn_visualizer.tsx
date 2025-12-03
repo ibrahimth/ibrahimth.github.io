@@ -1,55 +1,54 @@
 import React, { useState, useMemo } from 'react';
 
 /**
- * Topic 5 — CNN Visualizer (No Padding, No Bias)
+ * Topic 5 — CNN Visualizer (Configurable)
  * Interactive visualization of Convolutional Neural Networks with:
- * - Convolution operations (no padding, no bias)
+ * - Multiple input channels
+ * - Configurable input size, filter size, number of filters
+ * - Convolution operations (with/without padding, with/without bias)
  * - Pooling operations (max and average)
- * - Feature map visualization
- * - Kernel/filter editing
+ * - Parameter counting and visualization
  */
 
-type PoolingType = 'max' | 'average';
+type PoolingType = 'max' | 'average' | 'none';
 
-interface ConvLayer {
-  type: 'conv';
-  kernelSize: number;
-  numFilters: number;
-  stride: number;
-}
-
-interface PoolLayer {
-  type: 'pool';
-  poolSize: number;
-  poolType: PoolingType;
-  stride: number;
-}
-
-type Layer = ConvLayer | PoolLayer;
-
-// Simple 8x8 input image (grayscale values 0-255)
-const createSampleImage = (): number[][] => {
-  return [
-    [50, 50, 50, 200, 200, 50, 50, 50],
-    [50, 50, 200, 200, 200, 200, 50, 50],
-    [50, 200, 200, 50, 50, 200, 200, 50],
-    [200, 200, 50, 50, 50, 50, 200, 200],
-    [200, 200, 50, 50, 50, 50, 200, 200],
-    [50, 200, 200, 50, 50, 200, 200, 50],
-    [50, 50, 200, 200, 200, 200, 50, 50],
-    [50, 50, 50, 200, 200, 50, 50, 50],
-  ];
+// Generate random channel data
+const generateChannel = (size: number): number[][] => {
+  const channel: number[][] = [];
+  for (let i = 0; i < size; i++) {
+    channel[i] = [];
+    for (let j = 0; j < size; j++) {
+      channel[i][j] = Math.floor(Math.random() * 9) + 1;
+    }
+  }
+  return channel;
 };
 
-// Convolution operation (no padding, no bias)
+// Convolution operation
 function convolve(
   input: number[][],
   kernel: number[][],
-  stride: number = 1
+  stride: number = 1,
+  padding: number = 0,
+  bias: number = 0
 ): number[][] {
   const inputSize = input.length;
   const kernelSize = kernel.length;
-  const outputSize = Math.floor((inputSize - kernelSize) / stride) + 1;
+
+  // Add padding if specified
+  let paddedInput = input;
+  if (padding > 0) {
+    const paddedSize = inputSize + 2 * padding;
+    paddedInput = Array(paddedSize).fill(0).map(() => Array(paddedSize).fill(0));
+    for (let i = 0; i < inputSize; i++) {
+      for (let j = 0; j < inputSize; j++) {
+        paddedInput[i + padding][j + padding] = input[i][j];
+      }
+    }
+  }
+
+  const paddedSize = paddedInput.length;
+  const outputSize = Math.floor((paddedSize - kernelSize) / stride) + 1;
   const output: number[][] = [];
 
   for (let i = 0; i < outputSize; i++) {
@@ -60,15 +59,19 @@ function convolve(
         for (let kj = 0; kj < kernelSize; kj++) {
           const inputRow = i * stride + ki;
           const inputCol = j * stride + kj;
-          sum += input[inputRow][inputCol] * kernel[ki][kj];
+          sum += paddedInput[inputRow][inputCol] * kernel[ki][kj];
         }
       }
-      // No bias added, just the convolution result
-      output[i][j] = sum;
+      output[i][j] = sum + bias;
     }
   }
 
   return output;
+}
+
+// ReLU activation
+function relu(input: number[][]): number[][] {
+  return input.map(row => row.map(val => Math.max(0, val)));
 }
 
 // Max pooling
@@ -125,102 +128,148 @@ function averagePool(input: number[][], poolSize: number, stride: number): numbe
   return output;
 }
 
-// Predefined kernels
-const KERNELS: Record<string, { kernel: number[][], name: string }> = {
-  identity: {
-    name: 'Identity',
-    kernel: [
-      [0, 0, 0],
-      [0, 1, 0],
-      [0, 0, 0],
-    ],
-  },
-  edgeHorizontal: {
-    name: 'Edge (Horizontal)',
-    kernel: [
-      [-1, -1, -1],
-      [0, 0, 0],
-      [1, 1, 1],
-    ],
-  },
-  edgeVertical: {
-    name: 'Edge (Vertical)',
-    kernel: [
-      [-1, 0, 1],
-      [-1, 0, 1],
-      [-1, 0, 1],
-    ],
-  },
-  sharpen: {
-    name: 'Sharpen',
-    kernel: [
-      [0, -1, 0],
-      [-1, 5, -1],
-      [0, -1, 0],
-    ],
-  },
-  blur: {
-    name: 'Blur',
-    kernel: [
-      [1/9, 1/9, 1/9],
-      [1/9, 1/9, 1/9],
-      [1/9, 1/9, 1/9],
-    ],
-  },
-};
-
 export default function CNNVisualizer() {
-  const [inputImage] = useState<number[][]>(createSampleImage());
-  const [selectedKernel, setSelectedKernel] = useState<string>('edgeHorizontal');
-  const [convStride, setConvStride] = useState(1);
+  // Configuration
+  const [inputSize, setInputSize] = useState(6);
+  const [numInputChannels, setNumInputChannels] = useState(3);
+  const [filterSize, setFilterSize] = useState(4);
+  const [numFilters, setNumFilters] = useState(2);
+  const [stride, setStride] = useState(1);
+  const [padding, setPadding] = useState(0);
+  const [useBias, setUseBias] = useState(false);
+  const [useReLU, setUseReLU] = useState(true);
   const [poolType, setPoolType] = useState<PoolingType>('max');
   const [poolSize, setPoolSize] = useState(2);
   const [poolStride, setPoolStride] = useState(2);
-  const [showPooling, setShowPooling] = useState(true);
 
-  const kernel = KERNELS[selectedKernel].kernel;
+  // Generate input channels
+  const [inputChannels, setInputChannels] = useState<number[][][]>(() =>
+    Array(numInputChannels).fill(0).map(() => generateChannel(inputSize))
+  );
 
-  // Apply convolution
-  const convOutput = useMemo(() => {
-    return convolve(inputImage, kernel, convStride);
-  }, [inputImage, kernel, convStride]);
+  // Generate random filters (one set per output channel)
+  const [filters, setFilters] = useState<number[][][][]>(() =>
+    Array(numFilters).fill(0).map(() =>
+      Array(numInputChannels).fill(0).map(() =>
+        Array(filterSize).fill(0).map(() =>
+          Array(filterSize).fill(0).map(() => Math.random() * 2 - 1)
+        )
+      )
+    )
+  );
+
+  const [biases] = useState<number[]>(() =>
+    Array(numFilters).fill(0).map(() => Math.random() * 2 - 1)
+  );
+
+  // Regenerate data when size changes
+  const regenerateData = () => {
+    setInputChannels(Array(numInputChannels).fill(0).map(() => generateChannel(inputSize)));
+    setFilters(Array(numFilters).fill(0).map(() =>
+      Array(numInputChannels).fill(0).map(() =>
+        Array(filterSize).fill(0).map(() =>
+          Array(filterSize).fill(0).map(() => Math.random() * 2 - 1)
+        )
+      )
+    ));
+  };
+
+  // Calculate output size after convolution
+  const convOutputSize = Math.floor((inputSize + 2 * padding - filterSize) / stride) + 1;
+
+  // Calculate output size after pooling
+  const poolOutputSize = poolType !== 'none'
+    ? Math.floor((convOutputSize - poolSize) / poolStride) + 1
+    : convOutputSize;
+
+  // Calculate parameters
+  const numFilterChannels = numInputChannels * numFilters;
+  const paramsPerFilter = filterSize * filterSize;
+  const numNeurons = numFilters;
+  const inputsPerNeuron = filterSize * filterSize * numInputChannels;
+  const totalParams = useBias
+    ? (filterSize * filterSize * numInputChannels * numFilters) + numFilters
+    : (filterSize * filterSize * numInputChannels * numFilters);
+
+  // Apply convolution for all filters
+  const convOutputs = useMemo(() => {
+    return filters.map((filterSet, filterIdx) => {
+      // For each output channel, sum convolutions across all input channels
+      const channelOutputs = filterSet.map((filter, channelIdx) => {
+        return convolve(inputChannels[channelIdx], filter, stride, padding, 0);
+      });
+
+      // Sum all channel outputs
+      const summedOutput: number[][] = Array(convOutputSize).fill(0).map(() =>
+        Array(convOutputSize).fill(0)
+      );
+
+      channelOutputs.forEach(channelOutput => {
+        for (let i = 0; i < convOutputSize; i++) {
+          for (let j = 0; j < convOutputSize; j++) {
+            summedOutput[i][j] += channelOutput[i][j];
+          }
+        }
+      });
+
+      // Add bias if enabled
+      if (useBias) {
+        const bias = biases[filterIdx];
+        for (let i = 0; i < convOutputSize; i++) {
+          for (let j = 0; j < convOutputSize; j++) {
+            summedOutput[i][j] += bias;
+          }
+        }
+      }
+
+      return summedOutput;
+    });
+  }, [inputChannels, filters, stride, padding, useBias, biases, convOutputSize, filterSize]);
+
+  // Apply ReLU
+  const reluOutputs = useMemo(() => {
+    return useReLU ? convOutputs.map(output => relu(output)) : convOutputs;
+  }, [convOutputs, useReLU]);
 
   // Apply pooling
-  const poolOutput = useMemo(() => {
-    if (!showPooling) return null;
-    if (poolType === 'max') {
-      return maxPool(convOutput, poolSize, poolStride);
-    } else {
-      return averagePool(convOutput, poolSize, poolStride);
-    }
-  }, [convOutput, poolType, poolSize, poolStride, showPooling]);
+  const poolOutputs = useMemo(() => {
+    if (poolType === 'none') return reluOutputs;
+
+    return reluOutputs.map(output => {
+      if (poolType === 'max') {
+        return maxPool(output, poolSize, poolStride);
+      } else {
+        return averagePool(output, poolSize, poolStride);
+      }
+    });
+  }, [reluOutputs, poolType, poolSize, poolStride]);
 
   const renderMatrix = (
     matrix: number[][],
     title: string,
-    colorScale: boolean = true
+    colorScale: boolean = true,
+    maxCellSize: number = 40
   ) => {
     const size = matrix.length;
-    const cellSize = Math.min(40, 320 / size);
+    const cellSize = Math.min(maxCellSize, 300 / size);
 
-    // Normalize values for color display
     const flatValues = matrix.flat();
     const min = Math.min(...flatValues);
     const max = Math.max(...flatValues);
 
     return (
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600' }}>
-          {title} ({size}×{size})
+      <div style={{ marginBottom: '1rem' }}>
+        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: '600', color: '#374151' }}>
+          {title}
         </h4>
         <div
           style={{
             display: 'inline-grid',
             gridTemplateColumns: `repeat(${size}, ${cellSize}px)`,
-            gap: '2px',
-            padding: '0.5rem',
-            background: '#f3f4f6',
-            borderRadius: '8px',
+            gap: '1px',
+            padding: '0.25rem',
+            background: '#e5e7eb',
+            borderRadius: '4px',
           }}
         >
           {matrix.map((row, i) =>
@@ -242,61 +291,15 @@ export default function CNNVisualizer() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: cellSize > 30 ? '0.65rem' : '0',
+                    fontSize: cellSize > 25 ? '0.6rem' : '0',
                     fontWeight: '600',
                     color: normalized > 0.5 ? '#000' : '#fff',
                   }}
                 >
-                  {cellSize > 30 ? Math.round(val) : ''}
+                  {cellSize > 25 ? val.toFixed(1) : ''}
                 </div>
               );
             })
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderKernel = (kernel: number[][], title: string) => {
-    const size = kernel.length;
-    const cellSize = 50;
-
-    return (
-      <div style={{ marginBottom: '1rem' }}>
-        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600' }}>
-          {title} ({size}×{size})
-        </h4>
-        <div
-          style={{
-            display: 'inline-grid',
-            gridTemplateColumns: `repeat(${size}, ${cellSize}px)`,
-            gap: '2px',
-            padding: '0.5rem',
-            background: '#fef3c7',
-            borderRadius: '8px',
-            border: '2px solid #fbbf24',
-          }}
-        >
-          {kernel.map((row, i) =>
-            row.map((val, j) => (
-              <div
-                key={`${i}-${j}`}
-                style={{
-                  width: `${cellSize}px`,
-                  height: `${cellSize}px`,
-                  background: 'white',
-                  border: '1px solid #fbbf24',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.75rem',
-                  fontWeight: '700',
-                  color: '#92400e',
-                }}
-              >
-                {val.toFixed(2)}
-              </div>
-            ))
           )}
         </div>
       </div>
@@ -316,9 +319,9 @@ export default function CNNVisualizer() {
     marginBottom: '1rem',
   };
 
-  const controlsStyle: React.CSSProperties = {
-    display: 'flex',
-    flexWrap: 'wrap',
+  const controlGroupStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: '1rem',
     marginBottom: '1.5rem',
     padding: '1rem',
@@ -326,180 +329,278 @@ export default function CNNVisualizer() {
     borderRadius: '8px',
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '0.5rem',
+    borderRadius: '6px',
+    border: '1px solid #d1d5db',
+    fontSize: '0.875rem',
+  };
+
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
         <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: '700' }}>
-          🎓 Topic 5 — CNN (No Padding, No Bias)
+          🎓 Topic 5 — CNN Visualizer
         </h2>
         <p style={{ margin: '0 0 1rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
-          Explore Convolutional Neural Networks with convolution and pooling operations.
-          <strong> No padding and no bias</strong> are used in this visualization.
+          Explore Convolutional Neural Networks with configurable parameters.
         </p>
 
-        {/* Controls */}
-        <div style={controlsStyle}>
+        {/* Architecture Configuration */}
+        <div style={controlGroupStyle}>
           <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280' }}>
-              Kernel Type:
+              Input Size (NxN):
             </span>
-            <select
-              value={selectedKernel}
-              onChange={(e) => setSelectedKernel(e.target.value)}
-              style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid #d1d5db',
-                background: 'white',
-                fontSize: '0.875rem',
-              }}
-            >
-              {Object.entries(KERNELS).map(([key, { name }]) => (
-                <option key={key} value={key}>
-                  {name}
-                </option>
-              ))}
-            </select>
+            <input
+              type="number"
+              min={3}
+              max={12}
+              value={inputSize}
+              onChange={(e) => setInputSize(parseInt(e.target.value) || 6)}
+              style={inputStyle}
+            />
           </label>
 
           <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280' }}>
-              Conv Stride:
+              Input Channels:
             </span>
             <input
               type="number"
               min={1}
-              max={2}
-              value={convStride}
-              onChange={(e) => setConvStride(parseInt(e.target.value) || 1)}
-              style={{
-                width: '80px',
-                padding: '0.5rem',
-                borderRadius: '6px',
-                border: '1px solid #d1d5db',
-                fontSize: '0.875rem',
-              }}
+              max={5}
+              value={numInputChannels}
+              onChange={(e) => setNumInputChannels(parseInt(e.target.value) || 3)}
+              style={inputStyle}
             />
+          </label>
+
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280' }}>
+              Filter Size (KxK):
+            </span>
+            <input
+              type="number"
+              min={2}
+              max={5}
+              value={filterSize}
+              onChange={(e) => setFilterSize(parseInt(e.target.value) || 4)}
+              style={inputStyle}
+            />
+          </label>
+
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280' }}>
+              Number of Filters:
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={4}
+              value={numFilters}
+              onChange={(e) => setNumFilters(parseInt(e.target.value) || 2)}
+              style={inputStyle}
+            />
+          </label>
+
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280' }}>
+              Stride:
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={3}
+              value={stride}
+              onChange={(e) => setStride(parseInt(e.target.value) || 1)}
+              style={inputStyle}
+            />
+          </label>
+
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280' }}>
+              Padding:
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={2}
+              value={padding}
+              onChange={(e) => setPadding(parseInt(e.target.value) || 0)}
+              style={inputStyle}
+            />
+          </label>
+        </div>
+
+        {/* Options */}
+        <div style={{ display: 'flex', gap: '2rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input
+              type="checkbox"
+              checked={useBias}
+              onChange={(e) => setUseBias(e.target.checked)}
+              style={{ width: '16px', height: '16px' }}
+            />
+            <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>Use Bias</span>
           </label>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <input
               type="checkbox"
-              checked={showPooling}
-              onChange={(e) => setShowPooling(e.target.checked)}
+              checked={useReLU}
+              onChange={(e) => setUseReLU(e.target.checked)}
               style={{ width: '16px', height: '16px' }}
             />
-            <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>Enable Pooling</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>Use ReLU</span>
           </label>
 
-          {showPooling && (
-            <>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280' }}>
-                  Pool Type:
-                </span>
-                <select
-                  value={poolType}
-                  onChange={(e) => setPoolType(e.target.value as PoolingType)}
-                  style={{
-                    padding: '0.5rem',
-                    borderRadius: '6px',
-                    border: '1px solid #d1d5db',
-                    background: 'white',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  <option value="max">Max Pooling</option>
-                  <option value="average">Average Pooling</option>
-                </select>
-              </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>Pooling:</span>
+            <select
+              value={poolType}
+              onChange={(e) => setPoolType(e.target.value as PoolingType)}
+              style={{
+                padding: '0.25rem 0.5rem',
+                borderRadius: '4px',
+                border: '1px solid #d1d5db',
+                background: 'white',
+                fontSize: '0.875rem',
+              }}
+            >
+              <option value="none">None</option>
+              <option value="max">Max</option>
+              <option value="average">Average</option>
+            </select>
+          </label>
 
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280' }}>
-                  Pool Size:
-                </span>
+          {poolType !== 'none' && (
+            <>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>Pool Size:</span>
                 <input
                   type="number"
                   min={2}
                   max={3}
                   value={poolSize}
                   onChange={(e) => setPoolSize(parseInt(e.target.value) || 2)}
-                  style={{
-                    width: '80px',
-                    padding: '0.5rem',
-                    borderRadius: '6px',
-                    border: '1px solid #d1d5db',
-                    fontSize: '0.875rem',
-                  }}
+                  style={{ width: '60px', padding: '0.25rem', borderRadius: '4px', border: '1px solid #d1d5db' }}
                 />
               </label>
 
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6b7280' }}>
-                  Pool Stride:
-                </span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>Pool Stride:</span>
                 <input
                   type="number"
                   min={1}
                   max={3}
                   value={poolStride}
                   onChange={(e) => setPoolStride(parseInt(e.target.value) || 2)}
-                  style={{
-                    width: '80px',
-                    padding: '0.5rem',
-                    borderRadius: '6px',
-                    border: '1px solid #d1d5db',
-                    fontSize: '0.875rem',
-                  }}
+                  style={{ width: '60px', padding: '0.25rem', borderRadius: '4px', border: '1px solid #d1d5db' }}
                 />
               </label>
             </>
           )}
+
+          <button
+            onClick={regenerateData}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              border: 'none',
+              background: '#3b82f6',
+              color: 'white',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+            }}
+          >
+            Regenerate Data
+          </button>
+        </div>
+
+        {/* Calculations Display */}
+        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+          <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: '700', color: '#1e40af' }}>
+            📊 Calculations (like the example in the image):
+          </h4>
+          <div style={{ color: '#1e40af', fontSize: '0.85rem', lineHeight: 1.8 }}>
+            <div>
+              <strong>The output size</strong> = ({inputSize} + 2×{padding} - {filterSize})/{stride} + 1 = <span style={{color: '#16a34a', fontWeight: '700'}}>{convOutputSize}</span>
+            </div>
+            <div>
+              ➤ The <strong>number of needed filters</strong> is <span style={{color: '#dc2626', fontWeight: '700'}}>{numFilters}</span>
+            </div>
+            <div>
+              ➤ The <strong>number of needed filter channels</strong> is <span style={{color: '#dc2626', fontWeight: '700'}}>{numFilters}</span>×<span style={{color: '#2563eb', fontWeight: '700'}}>{numInputChannels}</span> = {numFilterChannels}, each of size <span style={{color: '#ca8a04', fontWeight: '700'}}>{filterSize}×{filterSize}</span>
+            </div>
+            <div>
+              ➤ The <strong>number of neurons</strong> is <span style={{color: '#dc2626', fontWeight: '700'}}>{numNeurons}</span>
+            </div>
+            <div>
+              ➤ The <strong>number of inputs to each neuron</strong> is <span style={{color: '#ca8a04', fontWeight: '700'}}>{filterSize}×{filterSize}×{numInputChannels}</span> = {inputsPerNeuron}
+            </div>
+            <div>
+              ➤ The <strong>number of network parameters</strong> to be trained {useBias ? '(with biases)' : '(ignoring biases)'} is <span style={{color: '#ca8a04', fontWeight: '700'}}>{filterSize}×{filterSize}×{numInputChannels}×{numFilters}</span>{useBias ? ` + ${numFilters}` : ''} = <span style={{color: '#16a34a', fontWeight: '700'}}>{totalParams}</span>
+            </div>
+            {poolType !== 'none' && (
+              <div>
+                ➤ After <strong>{poolType} pooling</strong> ({poolSize}×{poolSize}, stride={poolStride}): output size = <span style={{color: '#16a34a', fontWeight: '700'}}>{poolOutputSize}×{poolOutputSize}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Visualization */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '2rem',
-            marginTop: '1.5rem',
-          }}
-        >
-          <div>
-            {renderMatrix(inputImage, 'Input Image', true)}
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '700' }}>
+            Layer Visualization
+          </h3>
+
+          {/* Input Channels */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: '600', color: '#2563eb' }}>
+              Input ({inputSize}×{inputSize}×{numInputChannels})
+            </h4>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              {inputChannels.map((channel, idx) => (
+                <div key={idx}>
+                  {renderMatrix(channel, `Channel ${idx + 1}`, true, 35)}
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div>
-            {renderKernel(kernel, 'Convolution Kernel')}
+          {/* Convolution Output */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: '600', color: '#16a34a' }}>
+              After Convolution {useReLU && '+ ReLU'} ({convOutputSize}×{convOutputSize}×{numFilters})
+            </h4>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              {reluOutputs.map((output, idx) => (
+                <div key={idx}>
+                  {renderMatrix(output, `Filter ${idx + 1} Output`, true, 35)}
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div>
-            {renderMatrix(convOutput, 'After Convolution', true)}
-          </div>
-
-          {showPooling && poolOutput && (
-            <div>
-              {renderMatrix(
-                poolOutput,
-                `After ${poolType === 'max' ? 'Max' : 'Average'} Pooling`,
-                true
-              )}
+          {/* Pooling Output */}
+          {poolType !== 'none' && (
+            <div style={{ marginBottom: '2rem' }}>
+              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: '600', color: '#dc2626' }}>
+                After {poolType === 'max' ? 'Max' : 'Average'} Pooling ({poolOutputSize}×{poolOutputSize}×{numFilters})
+              </h4>
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                {poolOutputs.map((output, idx) => (
+                  <div key={idx}>
+                    {renderMatrix(output, `Filter ${idx + 1} Pooled`, true, 35)}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-        </div>
-
-        {/* Info */}
-        <div style={{ marginTop: '2rem', padding: '1rem', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-          <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600', color: '#1e40af' }}>
-            ℹ️ Key Points:
-          </h4>
-          <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#1e40af', fontSize: '0.875rem', lineHeight: 1.6 }}>
-            <li><strong>No Padding:</strong> Output size = (Input size - Kernel size) / Stride + 1</li>
-            <li><strong>No Bias:</strong> Only convolution multiplication, no bias term added</li>
-            <li><strong>Max Pooling:</strong> Takes maximum value from each pooling window</li>
-            <li><strong>Average Pooling:</strong> Takes average of values in each pooling window</li>
-          </ul>
         </div>
       </div>
     </div>
