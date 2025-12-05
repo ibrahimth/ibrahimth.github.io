@@ -4,6 +4,7 @@ import Topic2Studio from './topic_2_interactive_studio_coe_292.tsx'
 import SVMPlayground from './topic_3_svm_playground.tsx'
 import NeuralNetworksComplete from './topic_4_neural_networks_complete.tsx'
 import CNNVisualizer from './topic_5_cnn_visualizer.tsx'
+import Topic6SearchVisualizer from './topic_6_search_visualizer.tsx'
 import SVMInteractiveAux from './svm_support_vector_selection.tsx'
 import CSPVisualizer from './topic_7_csp_visualizer.tsx'
 
@@ -104,6 +105,14 @@ export default function App() {
         </TabButton>
 
         <TabButton
+          id="tab-topic6"
+          isActive={active === 'topic6'}
+          onClick={() => setActive('topic6')}
+        >
+          Topic 6 — Search Visualizer
+        </TabButton>
+
+        <TabButton
           id="tab-svm"
           isActive={active === 'svm'}
           onClick={() => setActive('svm')}
@@ -120,75 +129,16 @@ export default function App() {
         </TabButton>
       </nav>
 
-      <section
-        id="tab-topic1-panel"
-        role="tabpanel"
-        aria-labelledby="tab-topic1"
-        hidden={active !== 'topic1'}
-        style={{ display: active === 'topic1' ? 'block' : 'none' }}
-      >
-        <Topic1Studio />
-      </section>
-
-      <section
-        id="tab-topic2-panel"
-        role="tabpanel"
-        aria-labelledby="tab-topic2"
-        hidden={active !== 'topic2'}
-        style={{ display: active === 'topic2' ? 'block' : 'none' }}
-      >
-        <Topic2Studio />
-      </section>
-
-      <section
-        id="tab-topic3-panel"
-        role="tabpanel"
-        aria-labelledby="tab-topic3"
-        hidden={active !== 'topic3'}
-        style={{ display: active === 'topic3' ? 'block' : 'none' }}
-      >
-        <SVMPlayground />
-      </section>
-
-      <section
-        id="tab-topic4-panel"
-        role="tabpanel"
-        aria-labelledby="tab-topic4"
-        hidden={active !== 'topic4'}
-        style={{ display: active === 'topic4' ? 'block' : 'none' }}
-      >
-        <NeuralNetworksComplete />
-      </section>
-
-      <section
-        id="tab-topic5-panel"
-        role="tabpanel"
-        aria-labelledby="tab-topic5"
-        hidden={active !== 'topic5'}
-        style={{ display: active === 'topic5' ? 'block' : 'none' }}
-      >
-        <CNNVisualizer />
-      </section>
-
-      <section
-        id="tab-svm-panel"
-        role="tabpanel"
-        aria-labelledby="tab-svm"
-        hidden={active !== 'svm'}
-        style={{ display: active === 'svm' ? 'block' : 'none' }}
-      >
-        <SVMInteractiveAux />
-      </section>
-
-      <section
-        id="tab-csp-panel"
-        role="tabpanel"
-        aria-labelledby="tab-csp"
-        hidden={active !== 'csp'}
-        style={{ display: active === 'csp' ? 'block' : 'none' }}
-      >
-        <CSPVisualizer />
-      </section>
+      <main>
+        {active === 'topic1' && <Topic1Studio />}
+        {active === 'topic2' && <Topic2Studio />}
+        {active === 'topic3' && <SVMPlayground />}
+        {active === 'topic4' && <NeuralNetworksComplete />}
+        {active === 'topic5' && <CNNVisualizer />}
+        {active === 'topic6' && <Topic6SearchVisualizer />}
+        {active === 'svm' && <SVMInteractiveAux />}
+        {active === 'csp' && <CSPVisualizer />}
+      </main>
     </div>
   )
 }
