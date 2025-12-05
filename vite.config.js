@@ -2,12 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// Build the React app into /app with relative asset URLs
+// Build the React app for GitHub Pages
 export default defineConfig({
-  base: './',            // IMPORTANT: make assets relative for subfolder hosting
+  base: '/',            // Base path for GitHub Pages user site (ibrahimth.github.io)
   plugins: [react()],
   build: {
-    outDir: '../app',    // put the built site in /app (relative to src)
+    outDir: '../dist',    // put the built site in /dist (relative to src)
     emptyOutDir: true,
   },
   root: 'src',           // use src as the project root
