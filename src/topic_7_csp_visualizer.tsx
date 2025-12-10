@@ -20,6 +20,9 @@ interface CSPEdge {
   target: string;
   constraint: string; // e.g., '<', '>', '=', '!=', '<=', '>='
   offset: number; // e.g., for X < Y + 2, offset is 2.
+  factor: number; // Multiplier for Target logic (default 1)
+  sourceMod?: number | null; // Modulo for Source logic
+  exponent?: number; // Power for Target logic (default 1)
 }
 
 interface LogStep {
@@ -44,8 +47,8 @@ const NODES_AC3: CSPNode[] = [
 ];
 
 const EDGES_AC3: CSPEdge[] = [
-  { source: 'X', target: 'Y', constraint: '<', offset: 0 }, // X < Y
-  { source: 'Z', target: 'X', constraint: '<', offset: -2 }, // Z < X - 2
+  { source: 'X', target: 'Y', constraint: '<', offset: 0, factor: 1 }, // X < Y
+  { source: 'Z', target: 'X', constraint: '<', offset: -2, factor: 1 }, // Z < X - 2
 ];
 
 // --- Default Problem 2: Saudi Map Coloring ---
@@ -65,34 +68,47 @@ const NODES_MAP: CSPNode[] = [
 
 const EDGES_MAP: CSPEdge[] = [
   // Outer Path: V1-V2-V3-V4-V5
-  { source: 'Tabuk', target: 'Hail', constraint: '!=', offset: 0 },
-  { source: 'Hail', target: 'Qassim', constraint: '!=', offset: 0 },
-  { source: 'Qassim', target: 'Riyadh', constraint: '!=', offset: 0 },
-  { source: 'Riyadh', target: 'Makkah', constraint: '!=', offset: 0 },
+  { source: 'Tabuk', target: 'Hail', constraint: '!=', offset: 0, factor: 1 },
+  { source: 'Hail', target: 'Qassim', constraint: '!=', offset: 0, factor: 1 },
+  { source: 'Qassim', target: 'Riyadh', constraint: '!=', offset: 0, factor: 1 },
+  { source: 'Riyadh', target: 'Makkah', constraint: '!=', offset: 0, factor: 1 },
 
   // Center Star: V6 connected to all
-  { source: 'Medina', target: 'Tabuk', constraint: '!=', offset: 0 },
-  { source: 'Medina', target: 'Hail', constraint: '!=', offset: 0 },
-  { source: 'Medina', target: 'Qassim', constraint: '!=', offset: 0 },
-  { source: 'Medina', target: 'Riyadh', constraint: '!=', offset: 0 },
-  { source: 'Medina', target: 'Makkah', constraint: '!=', offset: 0 },
+  { source: 'Medina', target: 'Tabuk', constraint: '!=', offset: 0, factor: 1 },
+  { source: 'Medina', target: 'Hail', constraint: '!=', offset: 0, factor: 1 },
+  { source: 'Medina', target: 'Qassim', constraint: '!=', offset: 0, factor: 1 },
+  { source: 'Medina', target: 'Riyadh', constraint: '!=', offset: 0, factor: 1 },
+  { source: 'Medina', target: 'Makkah', constraint: '!=', offset: 0, factor: 1 },
 ];
 
 // --- Helper Functions ---
 
 const parseDomain = (str: string): number[] => {
-  return str.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+  return str.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
 };
 
-const checkConstraint = (val1: number, val2: number, constraint: string, offset: number): boolean => {
-  const rhs = val2 + offset;
-  switch (constraint) {
-    case '<': return val1 < rhs;
-    case '>': return val1 > rhs;
-    case '<=': return val1 <= rhs;
-    case '>=': return val1 >= rhs;
-    case '=': return val1 === rhs;
-    case '!=': return val1 !== rhs;
+// Check: Lhs (op) Rhs
+// where Lhs = sourceVal (optionally % sourceMod)
+//       Rhs = targetVal * factor + offset
+const checkConstraint = (valSource: number, valTarget: number, edge: CSPEdge): boolean => {
+  let lhs = valSource;
+  if (edge.sourceMod !== undefined && edge.sourceMod !== null && !isNaN(edge.sourceMod) && edge.sourceMod !== 0) {
+    lhs = lhs % edge.sourceMod;
+  }
+
+  const targetValWithExp = edge.exponent !== undefined ? Math.pow(valTarget, edge.exponent) : valTarget;
+  const rhs = (targetValWithExp * (edge.factor ?? 1)) + edge.offset;
+
+  // Floating point tolerance check for equality
+  const epsilon = 1e-9;
+
+  switch (edge.constraint) {
+    case '<': return lhs < rhs - epsilon; // strict less
+    case '>': return lhs > rhs + epsilon;
+    case '<=': return lhs <= rhs + epsilon;
+    case '>=': return lhs >= rhs - epsilon;
+    case '=': return Math.abs(lhs - rhs) < epsilon;
+    case '!=': return Math.abs(lhs - rhs) >= epsilon;
     default: return true;
   }
 };
@@ -125,25 +141,11 @@ const runAC3 = (nodes: CSPNode[], edges: CSPEdge[]): { steps: LogStep[], finalNo
     const sourceNode = getNode(source);
     const targetNode = getNode(target);
 
-    // Find constraint logic
-    let edge = edges.find(e => e.source === source && e.target === target);
-    let constraint = edge ? edge.constraint : null;
-    let offset = edge ? edge.offset : 0;
-
-    if (!edge) {
-      edge = edges.find(e => e.source === target && e.target === source);
-      if (edge) {
-        offset = -edge.offset;
-        switch (edge.constraint) {
-          case '<': constraint = '>'; break;
-          case '>': constraint = '<'; break;
-          case '<=': constraint = '>='; break;
-          case '>=': constraint = '<='; break;
-          case '=': constraint = '='; break;
-          case '!=': constraint = '!='; break;
-        }
-      }
-    }
+    // Find the edge connecting these two nodes
+    const edge = edges.find(e =>
+      (e.source === source && e.target === target) ||
+      (e.source === target && e.target === source)
+    );
 
     const removed: number[] = [];
     let addedNeighbors: string[] = [];
@@ -151,27 +153,30 @@ const runAC3 = (nodes: CSPNode[], edges: CSPEdge[]): { steps: LogStep[], finalNo
     // Capture state before changes
     const queueBefore = queue.map(q => `(${q.source},${q.target})`);
 
-    if (constraint) {
+    if (edge) {
       const newDomain = sourceNode.currentDomain.filter(x => {
-        const exists = targetNode.currentDomain.some(y => checkConstraint(x, y, constraint!, offset));
+        // We need to find if there exists ANY value y in targetNode's domain that satisfies the constraint
+        const exists = targetNode.currentDomain.some(y => {
+          if (edge.source === source) {
+            // Standard direction: Check X against Y
+            return checkConstraint(x, y, edge);
+          } else {
+            // Reverse direction: Check Y against X
+            // The edge constraint is defined as checkConstraint(sourceVal, targetVal)
+            // So we pass (y, x)
+            return checkConstraint(y, x, edge);
+          }
+        });
         if (!exists) removed.push(x);
         return exists;
       });
 
       if (removed.length > 0) {
         sourceNode.currentDomain = newDomain;
-        edges.forEach(e => {
-          if (e.source === source && e.target !== target) {
-            const arc = { source: e.target, target: e.source };
-            // Check if already in queue to avoid dupes? (AC-3 usually allows dupes or set)
-            // Standard AC-3 says "if (X_k, X_i) not in queue, add it"
-            if (!queue.some(q => q.source === arc.source && q.target === arc.target)) {
-              queue.push(arc);
-              addedNeighbors.push(`(${arc.source},${arc.target})`);
-            }
-          }
-          if (e.target === source && e.source !== target) {
-            const arc = { source: e.source, target: e.target };
+        edges.forEach(e => { // Add neighbors to queue
+          const neighbor = (e.source === source) ? e.target : (e.target === source ? e.source : null);
+          if (neighbor && neighbor !== target) {
+            const arc = { source: neighbor, target: source };
             if (!queue.some(q => q.source === arc.source && q.target === arc.target)) {
               queue.push(arc);
               addedNeighbors.push(`(${arc.source},${arc.target})`);
@@ -185,14 +190,14 @@ const runAC3 = (nodes: CSPNode[], edges: CSPEdge[]): { steps: LogStep[], finalNo
       step: stepCount,
       queue: queue.map(q => `(${q.source}, ${q.target})`),
       queueDetails: {
-        active: queueBefore, // Queue just before processing this arc (but without the current arc which was shifted)
+        active: queueBefore, // Queue just before processing this arc
         removed: `(${source},${target})`, // The arc being processed/removed
         added: addedNeighbors
       },
       currentArc: `(${source}, ${target})`,
       removedValues: removed.map(v => ({ var: source, val: v })),
       explanation: removed.length > 0
-        ? `Removed {${removed.join(',')}} from ${source}. Added neighbors {${addedNeighbors.join(', ')}} to queue.`
+        ? `Removed {${removed.join(',')}} from ${source} to satisfy constraint. Added neighbors.`
         : `Consistent. No values removed from ${source}.`
     });
   }
@@ -218,27 +223,20 @@ const runBacktracking = (
 
   const isConsistent = (varId: string, val: number, currentAssignments: Record<string, number>) => {
     for (const edge of edges) {
-      let neighborId = null;
-      let constraint = edge.constraint;
-      let offset = edge.offset;
-
-      if (edge.source === varId) neighborId = edge.target;
-      else if (edge.target === varId) {
-        neighborId = edge.source;
-        offset = -edge.offset;
-        switch (edge.constraint) {
-          case '<': constraint = '>'; break;
-          case '>': constraint = '<'; break;
-          case '<=': constraint = '>='; break;
-          case '>=': constraint = '<='; break;
-          case '=': constraint = '='; break;
-          case '!=': constraint = '!='; break;
+      if (edge.source === varId) {
+        const neighborId = edge.target;
+        if (currentAssignments[neighborId] !== undefined) {
+          // Checking var (val) against neighbor (assigned)
+          // Edge: var -> neighbor
+          if (!checkConstraint(val, currentAssignments[neighborId], edge)) return false;
         }
-      }
-
-      if (neighborId && currentAssignments[neighborId] !== undefined) {
-        if (!checkConstraint(val, currentAssignments[neighborId], constraint, offset)) {
-          return false;
+      } else if (edge.target === varId) {
+        const neighborId = edge.source;
+        if (currentAssignments[neighborId] !== undefined) {
+          // Checking var (val) against neighbor (assigned)
+          // Edge: neighbor -> var
+          // Constraint is checkConstraint(source, target) -> checkConstraint(neighbor, var)
+          if (!checkConstraint(currentAssignments[neighborId], val, edge)) return false;
         }
       }
     }
@@ -251,29 +249,32 @@ const runBacktracking = (
     let failure = false;
 
     for (const edge of edges) {
-      let neighborId = null;
-      let constraint = edge.constraint;
-      let offset = edge.offset;
+      let neighborId: string | null = null;
+      let isSource = false; // Is varId the source of this edge?
 
-      // We only care about unassigned neighbors
-      if (edge.source === varId) neighborId = edge.target;
-      else if (edge.target === varId) {
+      if (edge.source === varId) {
+        neighborId = edge.target;
+        isSource = true;
+      } else if (edge.target === varId) {
         neighborId = edge.source;
-        offset = -edge.offset;
-        switch (edge.constraint) {
-          case '<': constraint = '>'; break;
-          case '>': constraint = '<'; break;
-          case '<=': constraint = '>='; break;
-          case '>=': constraint = '<='; break;
-          case '=': constraint = '='; break;
-          case '!=': constraint = '!='; break;
-        }
+        isSource = false;
       }
 
+      // We only care about unassigned neighbors
       if (neighborId && assignments[neighborId] === undefined) {
-        // Check neighbor's domain against assigned value
         const neighborDomain = currentDomains[neighborId];
-        const newDomain = neighborDomain.filter(nVal => checkConstraint(val, nVal, constraint, offset));
+
+        // Filter neighbor domain
+        // If isSource, edge is var -> neighbor. we check checkConstraint(val, nVal, edge)
+        // If !isSource, edge is neighbor -> var. we check checkConstraint(nVal, val, edge)
+
+        const newDomain = neighborDomain.filter(nVal => {
+          if (isSource) {
+            return checkConstraint(val, nVal, edge);
+          } else {
+            return checkConstraint(nVal, val, edge);
+          }
+        });
 
         // Identify removed values
         const removedVals = neighborDomain.filter(nVal => !newDomain.includes(nVal));
@@ -372,6 +373,101 @@ const runBacktracking = (
 
 
 // --- Main Component ---
+
+const parseConstraintInput = (input: string): Partial<CSPEdge> | null => {
+  const lower = input.toLowerCase().replace(/\s+/g, ''); // remove spaces
+
+  // Macros
+  if (lower.includes('even')) return { sourceMod: 2, constraint: '=', factor: 0, offset: 0 };
+  if (lower.includes('odd')) return { sourceMod: 2, constraint: '!=', factor: 0, offset: 0 };
+
+  // Parse Operator
+  const ops = ['<=', '>=', '!=', '=', '<', '>'];
+  const op = ops.find(o => lower.includes(o));
+  if (!op) return null;
+
+  const parts = lower.split(op!);
+  const lhs = parts[0];
+  let rhs = parts[1];
+
+  let sourceMod: number | undefined = undefined;
+  if (lhs.includes('%')) {
+    const modPart = lhs.split('%')[1];
+    const parsed = parseFloat(modPart);
+    if (!isNaN(parsed)) sourceMod = parsed;
+  }
+
+  let factor = 0;
+  let offset = 0;
+  let exponent = 1;
+
+  // Sqrt Macro
+  if (rhs.includes('sqrt')) {
+    exponent = 0.5;
+    rhs = rhs.replace('sqrt', '').replace(/\(/g, '').replace(/\)/g, '');
+  }
+
+  // Heuristic for RHS: Check for variable presence (any letter) implies dependency on Target
+  const hasTarget = /[a-z]/.test(rhs);
+
+  if (hasTarget) {
+    // try to split by target char
+    const splitRhs = rhs.split(/[a-z]/);
+    const before = splitRhs[0];
+    let after = splitRhs[1];
+
+    if (before === '' || before === '*') factor = 1;
+    else if (before === '-') factor = -1;
+    else {
+      const f = parseFloat(before);
+      factor = isNaN(f) ? 1 : f;
+    }
+
+    if (after) {
+      if (after.startsWith('^')) {
+        // Parse exponent
+        const expParts = after.substring(1).split(/[+\-]/); // Split by next sign to get just the exponent
+        const expVal = parseFloat(expParts[0]);
+        if (!isNaN(expVal)) exponent = expVal;
+
+        // Remove exponent part from 'after' to parse offset
+        // after was ^2+1 -> offset starts at +
+        // const powerStrLength = 1 + expParts[0].length;
+        // after = after.substring(powerStrLength);
+        // Simplified: just re-parse offset from remainder?
+        // Safer: split RHS by ^ and re-evaluate logic? 
+        // Let's stick to simple: if ^ exists, take everything after ^ as power? 
+        // No, ^2+1. 
+
+        // Re-slice check for offset
+        const signIndex = after.substring(1).search(/[+\-]/);
+        if (signIndex !== -1) {
+          // There is an offset
+          const expStr = after.substring(1, 1 + signIndex);
+          const expParsed = parseFloat(expStr);
+          if (!isNaN(expParsed)) exponent = expParsed; // Overwrite if successful
+
+          const offsetStr = after.substring(1 + signIndex);
+          const o = parseFloat(offsetStr);
+          offset = isNaN(o) ? 0 : o;
+        } else {
+          // Just power
+          const expParsed = parseFloat(after.substring(1));
+          if (!isNaN(expParsed)) exponent = expParsed;
+        }
+      } else {
+        const o = parseFloat(after);
+        offset = isNaN(o) ? 0 : o;
+      }
+    }
+  } else {
+    // Pure constant
+    const o = parseFloat(rhs);
+    offset = isNaN(o) ? 0 : o;
+  }
+
+  return { constraint: op, sourceMod, factor, offset, exponent };
+};
 
 export default function CSPVisualizer() {
   const [nodes, setNodes] = useState<CSPNode[]>([]);
@@ -515,7 +611,7 @@ export default function CSPVisualizer() {
     if (interactionMode === 'add-edge' && connectStart && connectStart !== targetId) {
       const exists = edges.some(e => (e.source === connectStart && e.target === targetId) || (e.source === targetId && e.target === connectStart));
       if (!exists) {
-        setEdges(prev => [...prev, { source: connectStart, target: targetId, constraint: '!=', offset: 0 }]);
+        setEdges(prev => [...prev, { source: connectStart, target: targetId, constraint: '!=', offset: 0, factor: 1 }]);
       }
       setConnectStart(null);
     }
@@ -782,7 +878,33 @@ export default function CSPVisualizer() {
                       fontWeight="bold"
                       fill={stroke}
                     >
-                      {`${edge.constraint} ${edge.offset !== 0 ? (edge.offset > 0 ? `+${edge.offset}` : edge.offset) : ''}`}
+                      {(() => {
+                        // Smart Label
+                        if (edge.sourceMod === 2 && edge.factor === 0 && edge.offset === 0) {
+                          if (edge.constraint === '=') return 'Even';
+                          if (edge.constraint === '!=') return 'Odd';
+                        }
+
+                        let label = '';
+                        if (edge.sourceMod) label += `%${edge.sourceMod} `;
+                        label += `${edge.constraint} `;
+
+                        if (edge.factor !== 0) {
+                          if (edge.factor !== 1) label += `${edge.factor}`;
+                          label += edge.target;
+                          if (edge.exponent !== undefined && edge.exponent !== 1) {
+                            label += `^${edge.exponent}`;
+                          }
+                        }
+
+                        if (edge.offset !== 0) {
+                          label += edge.offset > 0 ? ` + ${edge.offset}` : ` - ${Math.abs(edge.offset)}`;
+                        }
+
+                        if (edge.factor === 0 && edge.offset === 0 && !edge.sourceMod) return edge.constraint; // Just constraint char if nothing else? Unlikely case.
+
+                        return label;
+                      })()}
                     </text>
                     {/* Invisible Hit Area for Double Click */}
                     <rect
@@ -793,14 +915,24 @@ export default function CSPVisualizer() {
                       fill="transparent"
                       onDoubleClick={(e) => {
                         e.stopPropagation();
+                        // Prompt
                         const current = `${edge.constraint} ${edge.offset}`;
-                        const input = window.prompt("Enter Constraint and Offset (e.g., '< 2', '!= 0'):", current);
+                        const input = window.prompt(
+                          "Enter Constraint Equation.\nExamples:\n'X < Y'\n'X > 0.5Y + 1'\n'X = Y^2'\n'X = sqrt(Y)'\n'X even'",
+                          `${edge.constraint} ${edge.factor !== 1 ? `${edge.factor}${edge.target}` : edge.target}${edge.exponent && edge.exponent !== 1 ? `^${edge.exponent}` : ''} ${edge.offset !== 0 ? `+ ${edge.offset}` : ''}`
+                        );
+
                         if (input !== null) {
-                          const parts = input.trim().split(/\s+/);
-                          const newConst = parts[0];
-                          const newOffset = parseInt(parts[1]);
-                          if (['<', '>', '=', '!=', '<=', '>='].includes(newConst) && !isNaN(newOffset)) {
-                            setEdges(prev => prev.map((ed, idx) => idx === i ? { ...ed, constraint: newConst, offset: newOffset } : ed));
+                          const parsed = parseConstraintInput(input);
+                          if (parsed && parsed.constraint) {
+                            setEdges(prev => prev.map((ed, idx) => idx === i ? {
+                              ...ed,
+                              constraint: parsed.constraint!,
+                              offset: parsed.offset ?? 0,
+                              factor: parsed.factor ?? 0,
+                              sourceMod: parsed.sourceMod,
+                              exponent: parsed.exponent ?? 1
+                            } : ed));
                             handleReset();
                           }
                         }
@@ -946,14 +1078,47 @@ export default function CSPVisualizer() {
                     <label className="block text-gray-500 mb-1">Offset</label>
                     <input
                       type="number"
+                      step="0.1"
                       className="border rounded px-2 py-1 w-full"
                       value={editOffsetVal}
                       onChange={(e) => handleEdgeOffsetChange(e.target.value)}
                     />
                   </div>
                 </div>
-                <p className="text-gray-400 italic">
-                  {`${selectedEdge.source} ${selectedEdge.constraint} ${selectedEdge.target} ${selectedEdge.offset !== 0 ? (selectedEdge.offset > 0 ? `+ ${selectedEdge.offset}` : `${selectedEdge.offset}`) : ''}`}
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="block text-gray-500 mb-1">Factor (Mult)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      className="border rounded px-2 py-1 w-full"
+                      value={selectedEdge.factor ?? 1}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val)) {
+                          setEdges(prev => prev.map((ed, i) => i === selectedEdgeIndex ? { ...ed, factor: val } : ed));
+                          handleReset();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-gray-500 mb-1">Source Mod</label>
+                    <input
+                      type="number"
+                      placeholder="None"
+                      className="border rounded px-2 py-1 w-full"
+                      value={selectedEdge.sourceMod ?? ''}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setEdges(prev => prev.map((ed, i) => i === selectedEdgeIndex ? { ...ed, sourceMod: !isNaN(val) ? val : undefined } : ed));
+                        handleReset();
+                      }}
+                    />
+                  </div>
+                </div>
+                <p className="text-gray-400 italic text-xs mt-2">
+                  Format: {`${selectedEdge.source} ${selectedEdge.sourceMod ? `% ${selectedEdge.sourceMod}` : ''} ${selectedEdge.constraint} ${selectedEdge.factor !== 1 ? `${selectedEdge.factor} * ` : ''}${selectedEdge.target} ${selectedEdge.offset !== 0 ? (selectedEdge.offset > 0 ? `+ ${selectedEdge.offset}` : `${selectedEdge.offset}`) : ''}`}
                 </p>
               </div>
             )}

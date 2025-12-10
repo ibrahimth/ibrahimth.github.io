@@ -124,8 +124,8 @@ const GraphVisualizer = () => {
     }, [goalNode, nodes, manualHeuristics, algorithm]);
 
     const updateHeuristic = (id: string, value: string) => {
-        const num = parseInt(value) || 0;
-        setHeuristics(prev => ({ ...prev, [id]: num }));
+        const num = parseFloat(value);
+        setHeuristics(prev => ({ ...prev, [id]: !isNaN(num) ? num : 0 }));
     };
 
     const randomizeWeights = () => {
