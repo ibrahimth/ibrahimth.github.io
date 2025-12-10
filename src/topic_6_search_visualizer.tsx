@@ -380,22 +380,38 @@ const GraphVisualizer = () => {
                     const hVal = heuristics[node.id];
                     if (hVal === undefined) return;
 
+                    const dx = target.x - node.x;
+                    const dy = target.y - node.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const midX = (node.x + target.x) / 2;
+                    const midY = (node.y + target.y) / 2;
+
+                    // Offset for curve (perpendicular vector)
+                    // Keep roughly constant arc height (e.g., 40px) regardless of distance
+                    const offset = 40;
+                    const normX = -dy / dist;
+                    const normY = dx / dist;
+                    const cpX = midX + normX * offset;
+                    const cpY = midY + normY * offset;
+
                     ctx.beginPath();
                     ctx.moveTo(node.x, node.y);
-                    ctx.lineTo(target.x, target.y);
-                    ctx.strokeStyle = 'rgba(234, 179, 8, 0.8)'; // Yellow/Amber higher opacity for visibility
+                    ctx.quadraticCurveTo(cpX, cpY, target.x, target.y);
+                    ctx.strokeStyle = 'rgba(234, 179, 8, 0.6)'; // Yellow/Amber
                     ctx.setLineDash([5, 5]);
                     ctx.lineWidth = 1;
                     ctx.stroke();
                     ctx.setLineDash([]);
 
-                    // Label in the middle
-                    const midX = (node.x + target.x) / 2;
-                    const midY = (node.y + target.y) / 2;
+                    // Label position (t=0.5 on Quadratic Bezier)
+                    // P_t = (1-t)^2 * P0 + 2(1-t)t * P1 + t^2 * P2
+                    // t=0.5 => 0.25*P0 + 0.5*P1 + 0.25*P2
+                    const labelX = 0.25 * node.x + 0.5 * cpX + 0.25 * target.x;
+                    const labelY = 0.25 * node.y + 0.5 * cpY + 0.25 * target.y;
 
                     // Small background for text
                     ctx.beginPath();
-                    ctx.arc(midX, midY, 10, 0, Math.PI * 2);
+                    ctx.arc(labelX, labelY, 10, 0, Math.PI * 2);
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // White bg
                     ctx.fill();
                     ctx.strokeStyle = 'rgba(234, 179, 8, 0.8)';
@@ -406,7 +422,7 @@ const GraphVisualizer = () => {
                     ctx.font = 'italic 10px Inter, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(hVal.toString(), midX, midY);
+                    ctx.fillText(hVal.toString(), labelX, labelY);
                 });
             }
         }
@@ -648,7 +664,10 @@ const GraphVisualizer = () => {
                 setFrontierNodes(prev => new Set(prev).add(nodeId));
                 await sleep(speed);
 
-                const neighbors = edges.filter(e => e.from === nodeId).map(e => e.to);
+                const neighbors = edges
+                    .filter(e => e.from === nodeId)
+                    .sort((a, b) => a.to.localeCompare(b.to)) // Lexical Order for MiniMax Children
+                    .map(e => e.to);
 
                 // Base Case: Leaf Node
                 if (neighbors.length === 0) {
@@ -794,12 +813,19 @@ const GraphVisualizer = () => {
             const neighbors = edges.filter(e => e.from === current.id);
 
             // Sort neighbors: 
-            // BFS/UCS/A*: A-Z (so we visit/enqueue A then B)
-            // DFS: Z-A (so we push B then A, meaning A is on top of stack and popped first)
+            // Standard Rule: Weight (Low->High) then Lexical (A->Z).
+            // BFS/UCS/A*: Enqueue in Ascending Order (so Smallest/A is processed first).
+            // DFS: Push to Stack in Descending Order (so Smallest/A is on Top and popped first).
             if (algorithm === 'DFS') {
-                neighbors.sort((a, b) => b.to.localeCompare(a.to));
+                neighbors.sort((a, b) => {
+                    if (a.weight !== b.weight) return b.weight - a.weight; // High Weight first
+                    return b.to.localeCompare(a.to); // Z-A
+                });
             } else {
-                neighbors.sort((a, b) => a.to.localeCompare(b.to));
+                neighbors.sort((a, b) => {
+                    if (a.weight !== b.weight) return a.weight - b.weight; // Low Weight first
+                    return a.to.localeCompare(b.to); // A-Z
+                });
             }
 
             for (const edge of neighbors) {
