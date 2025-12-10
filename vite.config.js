@@ -9,6 +9,12 @@ export default defineConfig({
   build: {
     outDir: 'dist',    // put the built site in /dist
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        app: path.resolve(__dirname, 'app/index.html'),
+      },
+    },
   },
   // root: 'src',           // REMOVED: use project root
   resolve: {
