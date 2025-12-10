@@ -34,13 +34,13 @@ const COLORS = {
     bg: '#ffffff',
     node: '#f1f5f9', // Slate 100
     nodeBorder: '#334155', // Slate 700
-    nodeSelected: '#3b82f6',
-    nodeStart: '#10b981',
-    nodeGoal: '#ef4444',
-    edge: '#64748b', // Slate 500
-    visited: '#fed7aa', // Orange 200
-    queued: '#a5b4fc',  // Indigo 300
-    path: '#8b5cf6',
+    nodeSelected: '#2563eb', // Blue 600
+    nodeStart: '#059669',    // Emerald 600 (Darker)
+    nodeGoal: '#dc2626',     // Red 600 (Darker)
+    edge: '#64748b',         // Slate 500
+    visited: '#fb923c',      // Orange 400 (Darker for print)
+    queued: '#818cf8',       // Indigo 400 (Darker for print)
+    path: '#7c3aed',         // Violet 600 (Darker)
     text: '#0f172a',    // Slate 900
     accent: '#06b6d4',
     minimaxValue: '#db2777',
@@ -67,7 +67,7 @@ const GraphVisualizer = () => {
     const [isAnimating, setIsAnimating] = useState(false);
     const [showHeuristics, setShowHeuristics] = useState(true);
     const [showIndirect, setShowIndirect] = useState(false); // Toggle for Dashed Lines
-    const [treeSearch, setTreeSearch] = useState(true); // Default to Tree Search to match slides
+    const [treeSearch, setTreeSearch] = useState(false); // Default to Graph Search (No Duplicates)
     const [manualHeuristics, setManualHeuristics] = useState(false);
     const [rootIsMax, setRootIsMax] = useState(true); // Minimax Root Toggle
     const [showLogs, setShowLogs] = useState(true);
@@ -202,6 +202,48 @@ const GraphVisualizer = () => {
         setAlgorithm('AStar');
         resetGraph();
         showToast('Loaded Example 1', 'success');
+    };
+
+    const loadExample3 = () => {
+        // Data from "A* Search - Example 3" slide
+        // Nodes: S, A, B, C, G
+        const newNodes: NodeType[] = [
+            { id: 'S', x: 100, y: 200 },
+            { id: 'A', x: 250, y: 100 },
+            { id: 'B', x: 250, y: 300 },
+            { id: 'C', x: 400, y: 200 },
+            { id: 'G', x: 550, y: 200 },
+        ];
+
+        const newEdges: EdgeType[] = [
+            { from: 'S', to: 'A', weight: 1 },
+            { from: 'S', to: 'B', weight: 3 },
+            { from: 'A', to: 'B', weight: 2 },
+            { from: 'A', to: 'C', weight: 4 },
+            { from: 'A', to: 'G', weight: 11 },
+            { from: 'B', to: 'C', weight: 2 },
+            { from: 'C', to: 'G', weight: 3 }
+        ];
+
+        setNodes(newNodes);
+        setEdges(newEdges);
+        setStartNode('S');
+        setGoalNode('G');
+
+        setManualHeuristics(true);
+        setHeuristics({
+            'S': 7,
+            'A': 6,
+            'B': 2,
+            'C': 2,
+            'G': 0
+        });
+
+        setShowIndirect(false);
+        setTreeSearch(false); // Ensure Graph Search (No Duplicates) is ON
+        setAlgorithm('AStar');
+        resetGraph();
+        showToast('Loaded Example 3', 'success');
     };
 
     // --- Drawing ---
@@ -397,9 +439,9 @@ const GraphVisualizer = () => {
                     ctx.beginPath();
                     ctx.moveTo(node.x, node.y);
                     ctx.quadraticCurveTo(cpX, cpY, target.x, target.y);
-                    ctx.strokeStyle = 'rgba(234, 179, 8, 0.6)'; // Yellow/Amber
+                    ctx.strokeStyle = 'rgba(180, 83, 9, 0.8)'; // Dark Amber/Bronze (Printable)
                     ctx.setLineDash([5, 5]);
-                    ctx.lineWidth = 1;
+                    ctx.lineWidth = 1.5; // Slightly thicker
                     ctx.stroke();
                     ctx.setLineDash([]);
 
@@ -412,9 +454,9 @@ const GraphVisualizer = () => {
                     // Small background for text
                     ctx.beginPath();
                     ctx.arc(labelX, labelY, 10, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // White bg
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                     ctx.fill();
-                    ctx.strokeStyle = 'rgba(234, 179, 8, 0.8)';
+                    ctx.strokeStyle = 'rgba(180, 83, 9, 0.8)'; // Dark Amber border
                     ctx.lineWidth = 1;
                     ctx.stroke();
 
@@ -749,14 +791,14 @@ const GraphVisualizer = () => {
             if (algorithm === 'UCS') {
                 openSet.sort((a, b) => {
                     if (a.g !== b.g) return a.g - b.g;
-                    // Tie-breaker: Lexical order of the last node ID
-                    return a.id.localeCompare(b.id);
+                    if (a.id !== b.id) return a.id.localeCompare(b.id);
+                    return a.path.join('').localeCompare(b.path.join(''));
                 });
             } else if (algorithm === 'AStar') {
                 openSet.sort((a, b) => {
                     if (a.f !== b.f) return a.f - b.f;
-                    // Tie-breaker: Lexical order of the last node ID
-                    return a.id.localeCompare(b.id);
+                    if (a.id !== b.id) return a.id.localeCompare(b.id);
+                    return a.path.join('').localeCompare(b.path.join(''));
                 });
             }
 
@@ -795,6 +837,15 @@ const GraphVisualizer = () => {
 
             setFrontierNodes(new Set(openSet.map(n => n.id)));
             setCurrentPath(current.path);
+
+            // Lazy Removal (Graph Search for A*/UCS)
+            // If the node we just popped is ALREADY in the closed set, it means we found a path to it 
+            // earlier (with equal or lower cost) and expanded it. So we skip this one.
+            // "SBC is not extended... because C was extended"
+            if (!treeSearch && (algorithm === 'AStar' || algorithm === 'UCS') && closedSet.has(current.id)) {
+                // We still log the step (above) to show it was popped, but we don't process it.
+                continue;
+            }
 
             // 4. Goal Check
             if (current.id === goalNode) {
@@ -847,11 +898,13 @@ const GraphVisualizer = () => {
 
                 const existingNodeIndex = openSet.findIndex(n => n.id === neighborId);
 
-                if (treeSearch) {
+                if (treeSearch || algorithm === 'AStar' || algorithm === 'UCS') {
+                    // Start Search / A* / UCS (Graph Search with Duplicates allowed in Queue)
+                    // We check 'closedSet' on Neighbor Generation (above) and 'closedSet' on Pop (Lazy)
                     openSet.push({ id: neighborId, g: tentativeG, f: f, path: newPath });
                     enqueuedCount++;
                 } else {
-                    // Graph Search Logic (Update existing)
+                    // BFS / DFS Graph Search (Update existing)
                     if (existingNodeIndex !== -1) {
                         if (tentativeG < openSet[existingNodeIndex].g) {
                             openSet[existingNodeIndex].g = tentativeG;
@@ -941,7 +994,10 @@ const GraphVisualizer = () => {
                                 <Shuffle className="w-4 h-4" /> Random
                             </button>
                             <button onClick={loadExample1} className="flex-1 p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all">
-                                <Info className="w-4 h-4" /> Example 1
+                                <Info className="w-4 h-4" /> Ex 1
+                            </button>
+                            <button onClick={loadExample3} className="flex-1 p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all">
+                                <Info className="w-4 h-4" /> Ex 3
                             </button>
                         </div>
                         <div className="flex gap-2">
