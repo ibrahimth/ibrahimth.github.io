@@ -12,9 +12,10 @@
       "Bash(gh repo view:*)",
       "Bash(npm run typecheck:*)",
       "Bash(npm run:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
-    "ask": [] 
+    "ask": []
   }
 }

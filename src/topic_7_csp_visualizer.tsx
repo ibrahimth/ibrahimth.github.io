@@ -24,7 +24,8 @@ interface CSPEdge {
 
 interface LogStep {
   step: number;
-  queue?: string[]; // AC-3
+  queue?: string[]; // AC-3 (Legacy/Simple)
+  queueDetails?: { active: string[], added: string[], removed: string }; // AC-3 (Detailed)
   currentArc?: string | null; // AC-3
   removedValues?: { var: string; val: number }[]; // AC-3 & FC
 
@@ -145,6 +146,11 @@ const runAC3 = (nodes: CSPNode[], edges: CSPEdge[]): { steps: LogStep[], finalNo
     }
 
     const removed: number[] = [];
+    let addedNeighbors: string[] = [];
+
+    // Capture state before changes
+    const queueBefore = queue.map(q => `(${q.source},${q.target})`);
+
     if (constraint) {
       const newDomain = sourceNode.currentDomain.filter(x => {
         const exists = targetNode.currentDomain.some(y => checkConstraint(x, y, constraint!, offset));
@@ -155,8 +161,22 @@ const runAC3 = (nodes: CSPNode[], edges: CSPEdge[]): { steps: LogStep[], finalNo
       if (removed.length > 0) {
         sourceNode.currentDomain = newDomain;
         edges.forEach(e => {
-          if (e.source === source && e.target !== target) queue.push({ source: e.target, target: e.source });
-          if (e.target === source && e.source !== target) queue.push({ source: e.source, target: e.target });
+          if (e.source === source && e.target !== target) {
+            const arc = { source: e.target, target: e.source };
+            // Check if already in queue to avoid dupes? (AC-3 usually allows dupes or set)
+            // Standard AC-3 says "if (X_k, X_i) not in queue, add it"
+            if (!queue.some(q => q.source === arc.source && q.target === arc.target)) {
+              queue.push(arc);
+              addedNeighbors.push(`(${arc.source},${arc.target})`);
+            }
+          }
+          if (e.target === source && e.source !== target) {
+            const arc = { source: e.source, target: e.target };
+            if (!queue.some(q => q.source === arc.source && q.target === arc.target)) {
+              queue.push(arc);
+              addedNeighbors.push(`(${arc.source},${arc.target})`);
+            }
+          }
         });
       }
     }
@@ -164,10 +184,15 @@ const runAC3 = (nodes: CSPNode[], edges: CSPEdge[]): { steps: LogStep[], finalNo
     steps.push({
       step: stepCount,
       queue: queue.map(q => `(${q.source}, ${q.target})`),
+      queueDetails: {
+        active: queueBefore, // Queue just before processing this arc (but without the current arc which was shifted)
+        removed: `(${source},${target})`, // The arc being processed/removed
+        added: addedNeighbors
+      },
       currentArc: `(${source}, ${target})`,
       removedValues: removed.map(v => ({ var: source, val: v })),
       explanation: removed.length > 0
-        ? `Removed {${removed.join(',')}} from ${source}. Neighbors added to queue.`
+        ? `Removed {${removed.join(',')}} from ${source}. Added neighbors {${addedNeighbors.join(', ')}} to queue.`
         : `Consistent. No values removed from ${source}.`
     });
   }
@@ -372,6 +397,20 @@ export default function CSPVisualizer() {
   // Selection
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
+  const [editDomainVal, setEditDomainVal] = useState('');
+  const [editOffsetVal, setEditOffsetVal] = useState('');
+
+  // Sync edit value when selection changes
+  useEffect(() => {
+    if (selectedNodeId) {
+      const node = nodes.find(n => n.id === selectedNodeId);
+      if (node) setEditDomainVal(node.domain.join(', '));
+    }
+    if (selectedEdgeIndex !== null) {
+      const edge = edges[selectedEdgeIndex];
+      if (edge) setEditOffsetVal(edge.offset.toString());
+    }
+  }, [selectedNodeId, selectedEdgeIndex]);
 
   // --- Handlers ---
 
@@ -392,6 +431,8 @@ export default function CSPVisualizer() {
     setSteps([]);
     setCurrentStepIndex(0);
     setIsSolving(false);
+    setSelectedNodeId(null);
+    setSelectedEdgeIndex(null);
   };
 
   const handleSolve = () => {
@@ -494,20 +535,27 @@ export default function CSPVisualizer() {
   // --- Property Editing ---
 
   const handleNodeDomainChange = (val: string) => {
+    setEditDomainVal(val); // Update local input immediately
     if (!selectedNodeId) return;
     const newDomain = parseDomain(val);
     setNodes(prev => prev.map(n => n.id === selectedNodeId ? { ...n, domain: newDomain, currentDomain: newDomain } : n));
+    handleReset(); // Clear solution when editing
   };
 
   const handleEdgeConstraintChange = (val: string) => {
     if (selectedEdgeIndex === null) return;
     setEdges(prev => prev.map((e, i) => i === selectedEdgeIndex ? { ...e, constraint: val } : e));
+    handleReset(); // Clear solution
   };
 
   const handleEdgeOffsetChange = (val: string) => {
     if (selectedEdgeIndex === null) return;
-    const num = parseInt(val) || 0;
-    setEdges(prev => prev.map((e, i) => i === selectedEdgeIndex ? { ...e, offset: num } : e));
+    setEditOffsetVal(val); // Update local input
+    const num = parseInt(val);
+    if (!isNaN(num)) {
+      setEdges(prev => prev.map((e, i) => i === selectedEdgeIndex ? { ...e, offset: num } : e));
+      handleReset(); // Clear solution
+    }
   };
 
   const selectedNode = selectedNodeId ? nodes.find(n => n.id === selectedNodeId) : null;
@@ -633,173 +681,233 @@ export default function CSPVisualizer() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Editor & Graph */}
-        <div className="w-2/3 border-r bg-white flex flex-col relative select-none">
+        <div className="w-2/3 border-r bg-white flex flex-col select-none">
           {/* Toolbar */}
-          <div className="absolute top-4 left-4 flex flex-col bg-white shadow-md border rounded-lg z-20">
-            <button onClick={() => setInteractionMode('move')} className={`p-2 rounded-t-lg hover:bg-gray-50 ${interactionMode === 'move' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'}`}>
-              <MousePointer2 size={20} />
-            </button>
-            <button onClick={() => setInteractionMode('add-node')} className={`p-2 hover:bg-gray-50 ${interactionMode === 'add-node' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'}`}>
-              <Plus size={20} />
-            </button>
-            <button onClick={() => setInteractionMode('add-edge')} className={`p-2 hover:bg-gray-50 ${interactionMode === 'add-edge' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'}`}>
-              <LinkIcon size={20} />
-            </button>
-            <button onClick={() => setInteractionMode('delete')} className={`p-2 rounded-b-lg hover:bg-red-50 ${interactionMode === 'delete' ? 'bg-red-50 text-red-600' : 'text-gray-600'}`}>
-              <Trash2 size={20} />
-            </button>
-          </div>
-
-          {/* Backtracking Options Overlay */}
-          {algo === 'Backtracking' && !isSolving && (
-            <div className="absolute top-4 right-4 bg-white shadow-md border rounded-lg p-3 z-20 space-y-2">
-              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Heuristics</div>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={enableFC} onChange={e => setEnableFC(e.target.checked)} className="rounded text-blue-600" />
-                Forward Checking (FC)
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={enableMRV} onChange={e => setEnableMRV(e.target.checked)} className="rounded text-blue-600" />
-                Min Remaining Values (MRV)
-              </label>
+          <div className="flex-1 relative overflow-hidden">
+            <div className="absolute top-4 left-4 flex flex-col bg-white shadow-md border rounded-lg z-20">
+              <button onClick={() => setInteractionMode('move')} className={`p-2 rounded-t-lg hover:bg-gray-50 ${interactionMode === 'move' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'}`}>
+                <MousePointer2 size={20} />
+              </button>
+              <button onClick={() => setInteractionMode('add-node')} className={`p-2 hover:bg-gray-50 ${interactionMode === 'add-node' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'}`}>
+                <Plus size={20} />
+              </button>
+              <button onClick={() => setInteractionMode('add-edge')} className={`p-2 hover:bg-gray-50 ${interactionMode === 'add-edge' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'}`}>
+                <LinkIcon size={20} />
+              </button>
+              <button onClick={() => setInteractionMode('delete')} className={`p-2 rounded-b-lg hover:bg-red-50 ${interactionMode === 'delete' ? 'bg-red-50 text-red-600' : 'text-gray-600'}`}>
+                <Trash2 size={20} />
+              </button>
             </div>
-          )}
 
-          <svg
-            className="flex-1 w-full h-full"
-            onMouseMove={handleMouseMove}
-            onClick={handleCanvasClick}
-            onMouseUp={() => { setDraggedNode(null); setConnectStart(null); }}
-          >
-            <defs>
-              <marker id="arrow" markerWidth="10" markerHeight="10" refX="22" refY="3" orient="auto" markerUnits="strokeWidth">
-                <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8" />
-              </marker>
-            </defs>
-
-            {/* Connecting Line */}
-            {interactionMode === 'add-edge' && connectStart && (
-              <line x1={nodes.find(n => n.id === connectStart)?.x} y1={nodes.find(n => n.id === connectStart)?.y} x2={mousePos.x} y2={mousePos.y} stroke="#3b82f6" strokeWidth="2" strokeDasharray="5,5" pointerEvents="none" />
+            {/* Backtracking Options Overlay */}
+            {algo === 'Backtracking' && !isSolving && (
+              <div className="absolute top-4 right-4 bg-white shadow-md border rounded-lg p-3 z-20 space-y-2">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Heuristics</div>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" checked={enableFC} onChange={e => setEnableFC(e.target.checked)} className="rounded text-blue-600" />
+                  Forward Checking (FC)
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" checked={enableMRV} onChange={e => setEnableMRV(e.target.checked)} className="rounded text-blue-600" />
+                  Min Remaining Values (MRV)
+                </label>
+              </div>
             )}
 
-            {/* Edges */}
-            {edges.map((edge, i) => {
-              const s = nodes.find(n => n.id === edge.source);
-              const t = nodes.find(n => n.id === edge.target);
-              if (!s || !t) return null;
-              const isSelected = selectedEdgeIndex === i;
+            {/* Quick Instructions */}
+            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-slate-200 rounded-lg p-3 shadow-md border-l-4 border-l-blue-500 max-w-xs select-none pointer-events-none z-10">
+              <div className="font-bold text-xs text-gray-700 mb-1">Quick Guide</div>
+              <ul className="text-[10px] text-gray-600 space-y-1 list-disc list-inside">
+                <li><strong>Double-click</strong> Domain/Constraint to edit.</li>
+                <li><strong>Toolbar</strong> (top-left) to Add/Remove Nodes.</li>
+                <li><strong>Drag</strong> nodes to rearrange.</li>
+              </ul>
+            </div>
 
-              // Highlight if this edge is being checked in AC-3
-              const isCurrentArc = algo === 'AC3' && currentStep?.currentArc === `(${edge.source}, ${edge.target})`;
-              const isReverseArc = algo === 'AC3' && currentStep?.currentArc === `(${edge.target}, ${edge.source})`;
+            <svg
+              className="flex-1 w-full h-full"
+              onMouseMove={handleMouseMove}
+              onClick={handleCanvasClick}
+              onMouseUp={() => { setDraggedNode(null); setConnectStart(null); }}
+            >
+              <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="22" refY="3" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8" />
+                </marker>
+              </defs>
 
-              let stroke = '#94a3b8';
-              if (isSelected) stroke = '#3b82f6';
-              if (isCurrentArc || isReverseArc) stroke = '#f59e0b'; // Orange for active
+              {/* Connecting Line */}
+              {interactionMode === 'add-edge' && connectStart && (
+                <line x1={nodes.find(n => n.id === connectStart)?.x} y1={nodes.find(n => n.id === connectStart)?.y} x2={mousePos.x} y2={mousePos.y} stroke="#3b82f6" strokeWidth="2" strokeDasharray="5,5" pointerEvents="none" />
+              )}
 
-              return (
-                <g key={i} onClick={(e) => { e.stopPropagation(); setSelectedEdgeIndex(i); setSelectedNodeId(null); }} className="cursor-pointer">
-                  <line x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke={stroke} strokeWidth={isSelected || isCurrentArc ? 3 : 2} markerEnd="url(#arrow)" />
+              {/* Edges */}
+              {edges.map((edge, i) => {
+                const s = nodes.find(n => n.id === edge.source);
+                const t = nodes.find(n => n.id === edge.target);
+                if (!s || !t) return null;
+                const isSelected = selectedEdgeIndex === i;
 
-                  {/* Constraint Box */}
-                  <rect
-                    x={(s.x + t.x) / 2 - 25}
-                    y={(s.y + t.y) / 2 - 12}
-                    width="50"
-                    height="24"
-                    fill="white"
-                    stroke={stroke}
-                    strokeWidth="1"
-                    rx="4"
-                  />
-                  <text
-                    x={(s.x + t.x) / 2}
-                    y={(s.y + t.y) / 2 + 5}
-                    textAnchor="middle"
-                    fontSize="10"
-                    fontWeight="bold"
-                    fill={stroke}
-                  >
-                    {`${edge.constraint} ${edge.offset !== 0 ? (edge.offset > 0 ? `+${edge.offset}` : edge.offset) : ''}`}
-                  </text>
-                </g>
-              );
-            })}
+                // Highlight if this edge is being checked in AC-3
+                const isCurrentArc = algo === 'AC3' && currentStep?.currentArc === `(${edge.source}, ${edge.target})`;
+                const isReverseArc = algo === 'AC3' && currentStep?.currentArc === `(${edge.target}, ${edge.source})`;
 
-            {/* Nodes */}
-            {nodes.map(node => {
-              const isSelected = selectedNodeId === node.id;
-              const { domain, assignedValue } = getVisualStateAtStep(node.id);
+                let stroke = '#94a3b8';
+                if (isSelected) stroke = '#3b82f6';
+                if (isCurrentArc || isReverseArc) stroke = '#f59e0b'; // Orange for active
 
-              // Check if values removed in current step (AC-3 or FC)
-              const removedInStep = (currentStep?.removedValues?.filter(r => r.var === node.id).map(r => r.val) || []);
+                return (
+                  <g key={i}
+                    onClick={(e) => { e.stopPropagation(); setSelectedEdgeIndex(i); setSelectedNodeId(null); }}
+                    onDoubleClick={(e) => { e.stopPropagation(); setSelectedEdgeIndex(i); setSelectedNodeId(null); }}
+                    className="cursor-pointer">
+                    <line x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke={stroke} strokeWidth={isSelected || isCurrentArc ? 3 : 2} markerEnd="url(#arrow)" />
 
-              // Backtracking Visuals
-              let fillColor = 'white';
-              if (assignedValue) {
-                fillColor = COLOR_HEX[assignedValue] || '#dcfce7';
-              }
-
-              return (
-                <g
-                  key={node.id}
-                  onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                  onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
-                  className="cursor-pointer"
-                >
-                  <circle cx={node.x} cy={node.y} r="25" fill={fillColor} stroke={isSelected ? '#3b82f6' : '#475569'} strokeWidth={isSelected ? 3 : 2} />
-                  <text x={node.x} y={node.y + 5} textAnchor="middle" fontWeight="bold" fontSize="14" fill={assignedValue ? 'white' : '#1e293b'} className="pointer-events-none" style={{ textShadow: assignedValue ? '0px 1px 2px rgba(0,0,0,0.5)' : 'none' }}>{node.id}</text>
-
-                  {/* Domain Display (AC-3 or Backtracking with FC) */}
-                  {(algo === 'AC3' || (algo === 'Backtracking' && enableFC)) && (
-                    <foreignObject x={node.x - 60} y={node.y - 85} width="120" height="100">
-                      <div className="flex flex-wrap justify-center gap-1">
-                        {domain.map(val => (
-                          <span
-                            key={val}
-                            className={`text-[10px] flex items-center justify-center font-bold rounded shadow-sm border border-gray-200 ${problemType === 'coloring' ? 'w-5 h-5' : 'px-1 py-0.5 bg-white'}`}
-                            style={problemType === 'coloring' ? {
-                              backgroundColor: COLOR_HEX[val] ? COLOR_HEX[val] : '#f3f4f6',
-                              color: COLOR_HEX[val] ? 'white' : 'black'
-                            } : {}}
-                          >
-                            {problemType === 'coloring' && COLOR_NAMES[val] ? COLOR_NAMES[val][0] : val}
-                          </span>
-                        ))}
-                        {removedInStep.map(val => (
-                          <span
-                            key={val}
-                            className={`text-[10px] flex items-center justify-center font-bold rounded opacity-40 border border-gray-300 bg-gray-100 text-gray-400 line-through ${problemType === 'coloring' ? 'w-5 h-5' : 'px-1 py-0.5'}`}
-                          >
-                            {problemType === 'coloring' && COLOR_NAMES[val] ? COLOR_NAMES[val][0] : val}
-                          </span>
-                        ))}
-                      </div>
-                    </foreignObject>
-                  )}
-
-                  {/* Assigned Value Label (Backtracking) */}
-                  {algo === 'Backtracking' && assignedValue && (
+                    {/* Constraint Box */}
+                    <rect
+                      x={(s.x + t.x) / 2 - 25}
+                      y={(s.y + t.y) / 2 - 12}
+                      width="50"
+                      height="24"
+                      fill="white"
+                      stroke={stroke}
+                      strokeWidth="1"
+                      rx="4"
+                    />
                     <text
-                      x={node.x}
-                      y={node.y - 45}
+                      x={(s.x + t.x) / 2}
+                      y={(s.y + t.y) / 2 + 5}
                       textAnchor="middle"
-                      fontSize="14"
+                      fontSize="10"
                       fontWeight="bold"
-                      fill={problemType === 'coloring' ? (COLOR_HEX[assignedValue] || '#166534') : '#166534'}
-                      style={problemType === 'coloring' ? { textShadow: '0px 1px 2px rgba(255,255,255,0.8)' } : {}}
+                      fill={stroke}
                     >
-                      {problemType === 'coloring' && COLOR_NAMES[assignedValue] ? COLOR_NAMES[assignedValue][0] : assignedValue}
+                      {`${edge.constraint} ${edge.offset !== 0 ? (edge.offset > 0 ? `+${edge.offset}` : edge.offset) : ''}`}
                     </text>
-                  )}
-                </g>
-              );
-            })}
-          </svg>
+                    {/* Invisible Hit Area for Double Click */}
+                    <rect
+                      x={(s.x + t.x) / 2 - 25}
+                      y={(s.y + t.y) / 2 - 12}
+                      width="50"
+                      height="24"
+                      fill="transparent"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        const current = `${edge.constraint} ${edge.offset}`;
+                        const input = window.prompt("Enter Constraint and Offset (e.g., '< 2', '!= 0'):", current);
+                        if (input !== null) {
+                          const parts = input.trim().split(/\s+/);
+                          const newConst = parts[0];
+                          const newOffset = parseInt(parts[1]);
+                          if (['<', '>', '=', '!=', '<=', '>='].includes(newConst) && !isNaN(newOffset)) {
+                            setEdges(prev => prev.map((ed, idx) => idx === i ? { ...ed, constraint: newConst, offset: newOffset } : ed));
+                            handleReset();
+                          }
+                        }
+                      }}
+                    />
+                  </g>
+                );
+              })}
+
+              {/* Nodes */}
+              {nodes.map(node => {
+                const isSelected = selectedNodeId === node.id;
+                const { domain, assignedValue } = getVisualStateAtStep(node.id);
+
+                // Check if values removed in current step (AC-3 or FC)
+                const removedInStep = (currentStep?.removedValues?.filter(r => r.var === node.id).map(r => r.val) || []);
+
+                // Backtracking Visuals
+                let fillColor = 'white';
+                if (assignedValue) {
+                  if (problemType === 'coloring') {
+                    fillColor = COLOR_HEX[assignedValue] || '#dcfce7';
+                  } else {
+                    fillColor = '#dcfce7'; // Simple green for assigned numerical
+                  }
+                }
+
+                return (
+                  <g
+                    key={node.id}
+                    onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                    onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
+                    onDoubleClick={(e) => { e.stopPropagation(); setSelectedNodeId(node.id); setSelectedEdgeIndex(null); }}
+                    className="cursor-pointer"
+                  >
+                    <circle cx={node.x} cy={node.y} r="25" fill={fillColor} stroke={isSelected ? '#3b82f6' : '#475569'} strokeWidth={isSelected ? 3 : 2} />
+                    <text x={node.x} y={node.y + 5} textAnchor="middle" fontWeight="bold" fontSize="14" fill={assignedValue ? 'white' : '#1e293b'} className="pointer-events-none" style={{ textShadow: assignedValue ? '0px 1px 2px rgba(0,0,0,0.5)' : 'none' }}>{node.id}</text>
+
+                    {/* Domain Display (Always visible) */}
+                    {(algo === 'AC3' || algo === 'Backtracking') && (
+                      <foreignObject
+                        x={node.x - 60}
+                        y={node.y - 85}
+                        width="120"
+                        height="100"
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          const input = window.prompt("Edit Domain (comma separated):", node.domain.join(", "));
+                          if (input !== null) {
+                            // Re-use logic
+                            const newDomain = parseDomain(input);
+                            setNodes(prev => prev.map(n => n.id === node.id ? { ...n, domain: newDomain, currentDomain: newDomain } : n));
+                            handleReset();
+                          }
+                        }}
+                      >
+                        <div className="flex flex-wrap justify-center gap-1">
+                          {domain.map(val => (
+                            <span
+                              key={val}
+                              className={`text-[10px] flex items-center justify-center font-bold rounded shadow-sm border border-gray-200 ${problemType === 'coloring' ? 'w-5 h-5' : 'px-1 py-0.5 bg-white'}`}
+                              style={problemType === 'coloring' ? {
+                                backgroundColor: COLOR_HEX[val] ? COLOR_HEX[val] : '#f3f4f6',
+                                color: COLOR_HEX[val] ? 'white' : 'black'
+                              } : {}}
+                            >
+                              {problemType === 'coloring' && COLOR_NAMES[val] ? COLOR_NAMES[val][0] : val}
+                            </span>
+                          ))}
+                          {removedInStep.map(val => (
+                            <span
+                              key={val}
+                              className={`text-[10px] flex items-center justify-center font-bold rounded opacity-40 border border-gray-300 bg-gray-100 text-gray-400 line-through ${problemType === 'coloring' ? 'w-5 h-5' : 'px-1 py-0.5'}`}
+                            >
+                              {problemType === 'coloring' && COLOR_NAMES[val] ? COLOR_NAMES[val][0] : val}
+                            </span>
+                          ))}
+                        </div>
+                      </foreignObject>
+                    )}
+
+                    {/* Assigned Value Label (Backtracking) */}
+                    {algo === 'Backtracking' && assignedValue && (
+                      <text
+                        x={node.x}
+                        y={node.y - 45}
+                        textAnchor="middle"
+                        fontSize="14"
+                        fontWeight="bold"
+                        fill={problemType === 'coloring' ? (COLOR_HEX[assignedValue] || '#166534') : '#166534'}
+                        style={problemType === 'coloring' ? { textShadow: '0px 1px 2px rgba(255,255,255,0.8)' } : {}}
+                      >
+                        {problemType === 'coloring' && COLOR_NAMES[assignedValue] ? COLOR_NAMES[assignedValue][0] : assignedValue}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
 
           {/* Property Editor */}
-          <div className="border-t bg-gray-50 p-3 text-xs space-y-3 h-40 overflow-y-auto">
-            <div className="font-semibold text-gray-700">Properties</div>
+          <div className="border-t bg-gray-50 p-4 text-sm space-y-4 border-b-2 border-gray-100">
+            <div className="font-bold text-gray-700 flex items-center justify-between">
+              <span>Properties</span>
+              {(selectedNode || selectedEdge) && <span className="text-xs font-normal text-gray-400">Editing will reset progress</span>}
+            </div>
             {selectedNode && (
               <div className="space-y-2">
                 <div>
@@ -810,7 +918,7 @@ export default function CSPVisualizer() {
                   <label className="block text-gray-500 mb-1">Domain (comma separated)</label>
                   <input
                     className="border rounded px-2 py-1 w-full"
-                    value={selectedNode.domain.join(', ')}
+                    value={editDomainVal}
                     onChange={(e) => handleNodeDomainChange(e.target.value)}
                   />
                 </div>
@@ -839,7 +947,7 @@ export default function CSPVisualizer() {
                     <input
                       type="number"
                       className="border rounded px-2 py-1 w-full"
-                      value={selectedEdge.offset}
+                      value={editOffsetVal}
                       onChange={(e) => handleEdgeOffsetChange(e.target.value)}
                     />
                   </div>
@@ -877,7 +985,7 @@ export default function CSPVisualizer() {
                 {/* Backtracking Specifics */}
                 {algo === 'Backtracking' && step.assignedVar && (
                   <div className="text-sm font-medium text-green-700 mb-1">
-                    Assign {step.assignedVar} = {COLOR_NAMES[step.assignedVal!] || step.assignedVal}
+                    Assign {step.assignedVar} = {problemType === 'coloring' && COLOR_NAMES[step.assignedVal!] ? COLOR_NAMES[step.assignedVal!] : step.assignedVal}
                   </div>
                 )}
                 {algo === 'Backtracking' && step.backtrackFrom && (
@@ -892,6 +1000,39 @@ export default function CSPVisualizer() {
                 {step.removedValues && step.removedValues.length > 0 && (
                   <div className="mt-2 text-xs bg-red-50 text-red-700 p-1 rounded border border-red-100">
                     Removed: {step.removedValues.map(r => `${r.val} from ${r.var}`).join(', ')}
+                  </div>
+                )}
+
+                {/* Queue Table for AC-3 */}
+                {algo === 'AC3' && step.queueDetails && (
+                  <div className="mt-3">
+                    <div className="text-xs font-bold text-gray-600 mb-1">Arc_Queue</div>
+                    <div className="bg-slate-800 text-white p-2 rounded text-xs font-mono overflow-x-auto">
+                      <div className="flex gap-2 items-center flex-wrap">
+                        {/* Removed Arc (Strikethrough) */}
+                        <span className="text-red-400 line-through decoration-2 opacity-70">
+                          {step.queueDetails.removed}
+                        </span>
+
+                        {/* Active Queue Arcs */}
+                        {step.queueDetails.active.map((arc, idx) => (
+                          <span key={idx} className="text-slate-300">
+                            {arc},
+                          </span>
+                        ))}
+
+                        {/* Added Arcs (Highlight) */}
+                        {step.queueDetails.added.map((arc, idx) => (
+                          <span key={`added-${idx}`} className="text-green-400 font-bold animate-pulse">
+                            {arc}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-1 pt-1 border-t border-slate-600 text-[10px] text-slate-400 flex justify-between">
+                        <span>Processing: {step.queueDetails.removed}</span>
+                        <span>Next: {step.queueDetails.active[0] || (step.queueDetails.added[0] ? step.queueDetails.added[0] : 'Empty')}</span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

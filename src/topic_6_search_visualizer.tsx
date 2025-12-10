@@ -31,18 +31,22 @@ type StepLog = {
 // --- Constants ---
 const NODE_RADIUS = 24;
 const COLORS = {
-    bg: '#0f172a',
-    node: '#334155',
+    bg: '#ffffff',
+    node: '#f1f5f9', // Slate 100
+    nodeBorder: '#334155', // Slate 700
     nodeSelected: '#3b82f6',
     nodeStart: '#10b981',
     nodeGoal: '#ef4444',
-    edge: '#475569',
-    visited: '#f59e0b', // Extended nodes (Orange/Amber)
-    queued: '#6366f1',  // Frontier nodes (Indigo)
+    edge: '#64748b', // Slate 500
+    visited: '#fed7aa', // Orange 200
+    queued: '#a5b4fc',  // Indigo 300
     path: '#8b5cf6',
-    text: '#f8fafc',
+    text: '#0f172a',    // Slate 900
     accent: '#06b6d4',
-    minimaxValue: '#f472b6' // Pink for minimax values
+    minimaxValue: '#db2777',
+    grid: '#e2e8f0',
+    weightBadgeErr: '#ffffff',
+    weightBadgeText: '#0f172a'
 };
 
 const GraphVisualizer = () => {
@@ -219,7 +223,7 @@ const GraphVisualizer = () => {
         ctx.clearRect(0, 0, rect.width, rect.height);
 
         // Grid
-        ctx.strokeStyle = '#1e293b';
+        ctx.strokeStyle = COLORS.grid;
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let x = 0; x < rect.width; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, rect.height); }
@@ -277,7 +281,7 @@ const GraphVisualizer = () => {
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            ctx.fillStyle = '#94a3b8';
+            ctx.fillStyle = COLORS.text;
             ctx.font = '12px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -314,13 +318,35 @@ const GraphVisualizer = () => {
             ctx.fillStyle = fill;
             ctx.fill();
 
+            // Default Border for all nodes (to stand out against white bg)
+            ctx.strokeStyle = COLORS.nodeBorder;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
             if (node.id === selectedNode) {
-                ctx.strokeStyle = '#fff';
+                ctx.strokeStyle = COLORS.nodeSelected;
                 ctx.lineWidth = 3;
                 ctx.stroke();
             }
 
-            ctx.fillStyle = '#fff';
+            // Text Color Logic
+            // If node is filled with dark color (Start/Goal/Path/Visited/Queued), use White text
+            // If node is standard Light (Slate 100), use Dark text
+            const isDarkNode = [COLORS.nodeStart, COLORS.nodeGoal, COLORS.path, COLORS.queued, COLORS.visited].includes(fill);
+
+            // Special case for Extended/Frontier which are lightish colors?
+            // Visited is Orange 200 (Light), Queued is Indigo 300 (Medium).
+            // Let's safe bet: Start, Goal, Path are definitely dark/vibrant.
+            // Visited/Queued might need checks. 
+            // Actually, let's use dark text for everything except Start/Goal/Path.
+            // But Visited/Queued are filled.
+
+            if (node.id === startNode || node.id === goalNode || currentPath.includes(node.id)) {
+                ctx.fillStyle = '#ffffff';
+            } else {
+                ctx.fillStyle = COLORS.text;
+            }
+
             // Adapt font size for City names
             ctx.font = node.id.length > 2 ? 'bold 10px Inter, sans-serif' : 'bold 14px Inter, sans-serif';
             ctx.textAlign = 'center';
@@ -367,10 +393,13 @@ const GraphVisualizer = () => {
                     // Small background for text
                     ctx.beginPath();
                     ctx.arc(midX, midY, 10, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // White bg
                     ctx.fill();
+                    ctx.strokeStyle = 'rgba(234, 179, 8, 0.8)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
 
-                    ctx.fillStyle = '#facc15'; // Yellow
+                    ctx.fillStyle = '#2563eb'; // Blue 600
                     ctx.font = 'italic 10px Inter, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
@@ -763,12 +792,12 @@ const GraphVisualizer = () => {
     };
 
     return (
-        <div className="flex h-screen bg-slate-950 text-slate-100 font-sans overflow-hidden">
+        <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
 
             {/* Sidebar */}
-            <div className="w-80 flex flex-col bg-slate-900 border-r border-slate-800 z-10 shadow-xl">
-                <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            <div className="w-80 flex flex-col bg-white border-r border-slate-200 z-10 shadow-xl">
+                <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
                         PathFinder Pro
                     </h1>
                 </div>
@@ -777,7 +806,7 @@ const GraphVisualizer = () => {
 
                     {/* Algorithms */}
                     <div className="space-y-3">
-                        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Algorithm</h2>
+                        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Algorithm</h2>
                         <div className="grid grid-cols-2 gap-2">
                             {['BFS', 'DFS', 'UCS', 'AStar', 'MiniMax'].map((algo) => (
                                 <button
@@ -785,7 +814,7 @@ const GraphVisualizer = () => {
                                     onClick={() => setAlgorithm(algo as Algorithm)}
                                     className={`px-3 py-2 text-xs font-bold rounded-lg transition-all ${algorithm === algo
                                         ? 'bg-blue-600 text-white shadow-lg'
-                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                         }`}
                                 >
                                     {algo === 'AStar' ? 'A*' : algo}
@@ -797,7 +826,7 @@ const GraphVisualizer = () => {
                             onClick={runAlgorithm}
                             disabled={isAnimating}
                             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-all ${isAnimating
-                                ? 'bg-slate-700 cursor-not-allowed opacity-50'
+                                ? 'bg-slate-200 cursor-not-allowed opacity-50 text-slate-500'
                                 : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
                                 }`}
                         >
@@ -808,7 +837,7 @@ const GraphVisualizer = () => {
 
                     {/* Tools */}
                     <div className="space-y-3">
-                        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tools</h2>
+                        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tools</h2>
                         <div className="flex gap-2">
                             {[
                                 { id: 'select', icon: MousePointer2, label: 'Select' },
@@ -820,7 +849,7 @@ const GraphVisualizer = () => {
                                     onClick={() => setMode(tool.id as InteractionMode)}
                                     className={`flex-1 p-2 rounded-lg flex justify-center items-center transition-all ${mode === tool.id
                                         ? 'bg-blue-600 text-white'
-                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                         }`}
                                     title={tool.label}
                                 >
@@ -829,15 +858,15 @@ const GraphVisualizer = () => {
                             ))}
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={randomizeWeights} className="flex-1 p-2 bg-slate-800 rounded-lg text-slate-300 hover:bg-slate-700 flex items-center justify-center gap-2 text-xs font-medium">
+                            <button onClick={randomizeWeights} className="flex-1 p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 flex items-center justify-center gap-2 text-xs font-medium">
                                 <Shuffle className="w-4 h-4" /> Random
                             </button>
-                            <button onClick={loadExample1} className="flex-1 p-2 bg-indigo-900/50 text-indigo-300 border border-indigo-500/30 rounded-lg hover:bg-indigo-900 flex items-center justify-center gap-2 text-xs font-bold transition-all">
+                            <button onClick={loadExample1} className="flex-1 p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all">
                                 <Info className="w-4 h-4" /> Example 1
                             </button>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={deleteSelected} disabled={!selectedNode} className="flex-1 p-2 bg-slate-800 rounded-lg text-red-400 hover:bg-red-900/30 disabled:opacity-30 flex justify-center">
+                            <button onClick={deleteSelected} disabled={!selectedNode} className="flex-1 p-2 bg-slate-100 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50 flex justify-center">
                                 <Trash2 className="w-5 h-5" />
                             </button>
                         </div>
@@ -846,7 +875,7 @@ const GraphVisualizer = () => {
                     {/* Heuristics */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                            <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                 <Table className="w-3 h-3" /> Heuristics
                             </h2>
                             <button
@@ -858,50 +887,50 @@ const GraphVisualizer = () => {
                         </div>
 
                         {/* Indirect Cost Toggle */}
-                        <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+                        <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={showIndirect}
                                 onChange={(e) => setShowIndirect(e.target.checked)}
-                                className="rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0"
+                                className="rounded bg-slate-100 border-slate-300 text-blue-600 focus:ring-0"
                             />
                             Show Indirect Costs (Heuristics)
                         </label>
 
                         {/* Tree Search Toggle */}
-                        <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+                        <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={treeSearch}
                                 onChange={(e) => setTreeSearch(e.target.checked)}
-                                className="rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0"
+                                className="rounded bg-slate-100 border-slate-300 text-blue-600 focus:ring-0"
                             />
                             Tree Search (Allow Duplicates)
                         </label>
 
                         {startNode && goalNode ? (
-                            <div className="bg-slate-800 rounded-lg p-2 max-h-40 overflow-y-auto custom-scrollbar">
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 max-h-40 overflow-y-auto custom-scrollbar">
                                 <table className="w-full text-xs text-left">
                                     <thead>
-                                        <tr className="text-slate-500 border-b border-slate-700">
+                                        <tr className="text-slate-500 border-b border-slate-200">
                                             <th className="pb-1">Node</th>
                                             <th className="pb-1">h(n)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {nodes.map(node => (
-                                            <tr key={node.id} className="border-b border-slate-700/50 last:border-0">
-                                                <td className="py-1.5 font-medium text-slate-300">{node.id}</td>
+                                            <tr key={node.id} className="border-b border-slate-100 last:border-0">
+                                                <td className="py-1.5 font-medium text-slate-700">{node.id}</td>
                                                 <td className="py-1.5">
                                                     {manualHeuristics ? (
                                                         <input
                                                             type="number"
                                                             value={heuristics[node.id] || 0}
                                                             onChange={(e) => updateHeuristic(node.id, e.target.value)}
-                                                            className="w-12 bg-slate-900 border border-slate-700 rounded px-1 text-slate-200 focus:border-blue-500 outline-none"
+                                                            className="w-12 bg-white border border-slate-200 rounded px-1 text-slate-900 focus:border-blue-500 outline-none"
                                                         />
                                                     ) : (
-                                                        <span className="text-blue-400">{heuristics[node.id] || 0}</span>
+                                                        <span className="text-blue-600">{heuristics[node.id] || 0}</span>
                                                     )}
                                                 </td>
                                             </tr>
@@ -916,22 +945,22 @@ const GraphVisualizer = () => {
 
                     {/* Speed */}
                     <div className="space-y-2">
-                        <div className="flex justify-between text-xs text-slate-400">
+                        <div className="flex justify-between text-xs text-slate-500">
                             <span>Speed</span>
                             <span>{speed}ms</span>
                         </div>
-                        <input type="range" min="100" max="2000" step="100" value={speed} onChange={(e) => setSpeed(parseInt(e.target.value))} className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                        <input type="range" min="100" max="2000" step="100" value={speed} onChange={(e) => setSpeed(parseInt(e.target.value))} className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
                     </div>
 
                     <div className="flex gap-2 pt-4">
-                        <button onClick={resetGraph} className="flex-1 py-2 text-xs font-medium bg-slate-800 text-slate-300 rounded hover:bg-slate-700">Reset Path</button>
-                        <button onClick={clearAll} className="flex-1 py-2 text-xs font-medium bg-slate-800 text-red-400 rounded hover:bg-slate-700">Clear All</button>
+                        <button onClick={resetGraph} className="flex-1 py-2 text-xs font-medium bg-slate-100 text-slate-600 rounded hover:bg-slate-200">Reset Path</button>
+                        <button onClick={clearAll} className="flex-1 py-2 text-xs font-medium bg-slate-100 text-red-500 rounded hover:bg-slate-200">Clear All</button>
                     </div>
                 </div>
             </div>
 
             {/* Main Area */}
-            <div className="flex-1 relative bg-slate-950">
+            <div className="flex-1 relative bg-slate-50">
                 <canvas
                     ref={canvasRef}
                     onMouseDown={handleMouseDown}
@@ -944,35 +973,35 @@ const GraphVisualizer = () => {
 
                 {/* Logs Panel - Table Style */}
                 {showLogs && stepLogs.length > 0 && (
-                    <div className="absolute top-4 right-4 w-[500px] max-h-[calc(100vh-2rem)] flex flex-col bg-slate-900/95 backdrop-blur shadow-2xl border border-slate-700 rounded-xl overflow-hidden animate-in slide-in-from-right-10 duration-300">
-                        <div className="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
-                            <h3 className="font-bold text-sm text-slate-200 flex items-center gap-2">
-                                <List className="w-4 h-4 text-blue-400" /> Trace
+                    <div className="absolute top-4 right-4 w-[500px] max-h-[calc(100vh-2rem)] flex flex-col bg-white/95 backdrop-blur shadow-2xl border border-slate-200 rounded-xl overflow-hidden animate-in slide-in-from-right-10 duration-300">
+                        <div className="p-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
+                            <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                                <List className="w-4 h-4 text-blue-600" /> Trace
                             </h3>
-                            <button onClick={() => setStepLogs([])} className="text-xs text-slate-400 hover:text-white">Clear</button>
+                            <button onClick={() => setStepLogs([])} className="text-xs text-slate-500 hover:text-slate-800">Clear</button>
                         </div>
 
                         <div className="overflow-y-auto p-0 custom-scrollbar">
                             <table className="w-full text-xs text-left border-collapse">
-                                <thead className="bg-slate-800/50 text-slate-400 sticky top-0">
+                                <thead className="bg-slate-50 text-slate-500 sticky top-0">
                                     <tr>
-                                        <th className="p-2 border-b border-slate-700 w-12">Step</th>
-                                        <th className="p-2 border-b border-slate-700">Enqueued Paths</th>
-                                        <th className="p-2 border-b border-slate-700 w-16 text-center">Extended</th>
-                                        <th className="p-2 border-b border-slate-700 w-16 text-center">Enqueued</th>
+                                        <th className="p-2 border-b border-slate-200 w-12">Step</th>
+                                        <th className="p-2 border-b border-slate-200">Enqueued Paths</th>
+                                        <th className="p-2 border-b border-slate-200 w-16 text-center">Extended</th>
+                                        <th className="p-2 border-b border-slate-200 w-16 text-center">Enqueued</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-800">
+                                <tbody className="divide-y divide-slate-100">
                                     {stepLogs.map((log) => (
-                                        <tr key={log.step} className="hover:bg-slate-800/30 transition-colors">
+                                        <tr key={log.step} className="hover:bg-slate-50 transition-colors">
                                             <td className="p-2 font-mono text-slate-500 align-top">{log.step}.</td>
                                             <td className="p-2 align-top">
                                                 <div className="flex flex-col gap-1">
-                                                    {log.queue.length === 0 ? <span className="text-slate-600 italic">Empty</span> : (
+                                                    {log.queue.length === 0 ? <span className="text-slate-400 italic">Empty</span> : (
                                                         <div className="flex flex-wrap gap-1">
                                                             {log.queue.map((item, i) => (
-                                                                <span key={i} className="inline-flex items-center gap-1 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700/50">
-                                                                    <span className="font-bold text-indigo-300">{`{${item.path.join('')}}`}</span>
+                                                                <span key={i} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-sm">
+                                                                    <span className="font-bold text-indigo-600">{`{${item.path.join('')}}`}</span>
                                                                     {algorithm === 'UCS' && <span className="text-slate-500">[{item.cost}]</span>}
                                                                     {algorithm === 'AStar' && <span className="text-slate-500">[{item.total}]</span>}
                                                                 </span>
@@ -981,8 +1010,8 @@ const GraphVisualizer = () => {
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="p-2 text-center font-mono text-slate-400 align-top">{log.extendedCount}</td>
-                                            <td className="p-2 text-center font-mono text-slate-400 align-top">{log.enqueuedCount}</td>
+                                            <td className="p-2 text-center font-mono text-slate-500 align-top">{log.extendedCount}</td>
+                                            <td className="p-2 text-center font-mono text-slate-500 align-top">{log.enqueuedCount}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -990,7 +1019,7 @@ const GraphVisualizer = () => {
                         </div>
                         {/* Summary Footer */}
                         {stepLogs.length > 0 && (
-                            <div className="p-2 bg-slate-800/50 border-t border-slate-700 text-[10px] text-slate-400 flex justify-between">
+                            <div className="p-2 bg-slate-50 border-t border-slate-200 text-[10px] text-slate-500 flex justify-between">
                                 <span>Extended: {stepLogs[stepLogs.length - 1].extendedCount}</span>
                                 <span>Enqueued: {stepLogs[stepLogs.length - 1].enqueuedCount}</span>
                             </div>
@@ -998,23 +1027,33 @@ const GraphVisualizer = () => {
                     </div>
                 )}
 
+                {/* Instructions Overlay */}
+                <div className="absolute bottom-16 left-4 bg-white/90 backdrop-blur border border-slate-200 rounded-xl p-3 shadow-lg pointer-events-none select-none max-w-xs z-10">
+                    <div className="text-[11px] text-slate-600 space-y-1">
+                        <p><span className="font-bold text-slate-800">Double-click node</span> to rename.</p>
+                        <p><span className="font-bold text-slate-800">Right-click</span> to set Start/Goal.</p>
+                        <p><span className="font-bold text-slate-800">Drag</span> nodes to move.</p>
+                        <p><span className="font-bold text-slate-800">Click edge</span> to edit weight.</p>
+                    </div>
+                </div>
+
                 {/* Legend */}
-                <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-3 pointer-events-none select-none">
-                    <div className="flex gap-4 text-[10px] text-slate-300 font-medium">
+                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-slate-200 rounded-xl p-3 pointer-events-none select-none shadow-lg">
+                    <div className="flex gap-4 text-[10px] text-slate-600 font-medium">
                         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Start</div>
                         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500" /> Goal</div>
-                        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-yellow-500" /> Extended (Closed)</div>
-                        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-indigo-500" /> Frontier (Queue)</div>
-                        {algorithm === 'MiniMax' && <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-pink-500" /> Value</div>}
+                        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-orange-200" /> Extended (Closed)</div>
+                        <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-indigo-300" /> Frontier (Queue)</div>
+                        {algorithm === 'MiniMax' && <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-pink-600" /> Value</div>}
                     </div>
                 </div>
 
                 {/* Toasts */}
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col gap-2 z-50 pointer-events-none">
                     {toasts.map(toast => (
-                        <div key={toast.id} className="animate-in slide-in-from-bottom-5 fade-in duration-300 flex items-center gap-2 bg-slate-800 text-white px-3 py-2 rounded-lg shadow-xl border border-slate-700 text-sm">
-                            {toast.type === 'success' && <CheckCircle className="w-4 h-4 text-green-400" />}
-                            {toast.type === 'error' && <AlertCircle className="w-4 h-4 text-red-400" />}
+                        <div key={toast.id} className="animate-in slide-in-from-bottom-5 fade-in duration-300 flex items-center gap-2 bg-white text-slate-900 px-3 py-2 rounded-lg shadow-xl border border-slate-200 text-sm">
+                            {toast.type === 'success' && <CheckCircle className="w-4 h-4 text-green-500" />}
+                            {toast.type === 'error' && <AlertCircle className="w-4 h-4 text-red-500" />}
                             <span>{toast.message}</span>
                         </div>
                     ))}

@@ -7,10 +7,10 @@ export default defineConfig({
   base: '/',            // Base path for GitHub Pages user site (ibrahimth.github.io)
   plugins: [react()],
   build: {
-    outDir: '../dist',    // put the built site in /dist (relative to src)
+    outDir: 'dist',    // put the built site in /dist
     emptyOutDir: true,
   },
-  root: 'src',           // use src as the project root
+  // root: 'src',           // REMOVED: use project root
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
