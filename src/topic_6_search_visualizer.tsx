@@ -69,6 +69,7 @@ const GraphVisualizer = () => {
     const [showIndirect, setShowIndirect] = useState(false); // Toggle for Dashed Lines
     const [treeSearch, setTreeSearch] = useState(true); // Default to Tree Search to match slides
     const [manualHeuristics, setManualHeuristics] = useState(false);
+    const [rootIsMax, setRootIsMax] = useState(true); // Minimax Root Toggle
     const [showLogs, setShowLogs] = useState(true);
     const [toasts, setToasts] = useState<ToastType[]>([]);
 
@@ -270,22 +271,24 @@ const GraphVisualizer = () => {
             ctx.fill();
 
             // Weight Badge
-            const midX = (n1.x + n2.x) / 2;
-            const midY = (n1.y + n2.y) / 2;
+            if (algorithm !== 'MiniMax') {
+                const midX = (n1.x + n2.x) / 2;
+                const midY = (n1.y + n2.y) / 2;
 
-            ctx.beginPath();
-            ctx.arc(midX, midY, 14, 0, Math.PI * 2);
-            ctx.fillStyle = COLORS.bg;
-            ctx.fill();
-            ctx.strokeStyle = isPathEdge ? COLORS.path : COLORS.edge;
-            ctx.lineWidth = 1;
-            ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(midX, midY, 14, 0, Math.PI * 2);
+                ctx.fillStyle = COLORS.bg;
+                ctx.fill();
+                ctx.strokeStyle = isPathEdge ? COLORS.path : COLORS.edge;
+                ctx.lineWidth = 1;
+                ctx.stroke();
 
-            ctx.fillStyle = COLORS.text;
-            ctx.font = '12px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(edge.weight.toString(), midX, midY);
+                ctx.fillStyle = COLORS.text;
+                ctx.font = '12px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(edge.weight.toString(), midX, midY);
+            }
         });
 
         // Drag Line
@@ -517,6 +520,17 @@ const GraphVisualizer = () => {
         const clickedNode = nodes.find(n => getDistance(n, { id: 'temp', x, y }) < NODE_RADIUS);
 
         if (clickedNode) {
+            // Minimax Value Editing Shortcut
+            if (algorithm === 'MiniMax') {
+                const currentVal = heuristics[clickedNode.id] || 0;
+                const newVal = prompt(`Enter Value for Node ${clickedNode.id}:`, currentVal.toString());
+                if (newVal !== null && !isNaN(parseFloat(newVal))) {
+                    setHeuristics(prev => ({ ...prev, [clickedNode.id]: parseFloat(newVal) }));
+                    showToast(`Set Node ${clickedNode.id} value to ${newVal}`, 'success');
+                }
+                return; // Skip renaming if we just set value
+            }
+
             const newId = prompt('Enter new name for node:', clickedNode.id);
             if (newId && newId !== clickedNode.id) {
                 // Check uniqueness
@@ -601,6 +615,12 @@ const GraphVisualizer = () => {
 
         // --- MiniMax Implementation ---
         if (algorithm === 'MiniMax') {
+            // zero-value check
+            const allZero = nodes.every(n => (heuristics[n.id] || 0) === 0);
+            if (allZero) {
+                showToast('Warning: All node values are 0. Set Heuristics (Values) for leaf nodes!', 'error');
+            }
+
             let stepCount = 0;
             const logStep = (nodeId: string, action: string, value?: number) => {
                 stepCount++;
@@ -614,45 +634,78 @@ const GraphVisualizer = () => {
                 }]);
             };
 
-            const minimax = async (nodeId: string, depth: number, isMax: boolean, path: string[]): Promise<number> => {
+            // Dictionary to store the best move for each node to reconstruct path later if needed, 
+            // but simpler is to return the path from the recursive function.
+
+            type MinimaxResult = {
+                val: number;
+                bestPath: string[]; // Full path from Root to Leaf for this best outcome
+            };
+
+            const minimax = async (nodeId: string, depth: number, isMax: boolean, path: string[]): Promise<MinimaxResult> => {
+                // Update specific path for visualization during traversal
                 setCurrentPath(path);
                 setFrontierNodes(prev => new Set(prev).add(nodeId));
                 await sleep(speed);
 
                 const neighbors = edges.filter(e => e.from === nodeId).map(e => e.to);
 
+                // Base Case: Leaf Node
                 if (neighbors.length === 0) {
                     const val = heuristics[nodeId] || 0;
                     logStep(nodeId, `Leaf: ${val}`, val);
                     setVisitedNodes(prev => new Set(prev).add(nodeId));
                     setComputedValues(prev => ({ ...prev, [nodeId]: val }));
-                    return val;
+                    return { val, bestPath: path };
                 }
 
                 let bestVal = isMax ? -Infinity : Infinity;
+                let bestPath: string[] = [...path]; // Default to current path if no valid children
+
+                // If all children are cycles (shouldn't happen in strict tree, but good safety),
+                // we treat this as a leaf with its own heuristic.
+                let hasValidChild = false;
 
                 for (const neighborId of neighbors) {
-                    if (path.includes(neighborId)) continue;
-                    const val = await minimax(neighborId, depth + 1, !isMax, [...path, neighborId]);
-                    if (isMax) bestVal = Math.max(bestVal, val);
-                    else bestVal = Math.min(bestVal, val);
+                    if (path.includes(neighborId)) continue; // Avoid cycles
+
+                    hasValidChild = true;
+
+                    const result = await minimax(neighborId, depth + 1, !isMax, [...path, neighborId]);
+
+                    if (isMax) {
+                        if (result.val > bestVal) {
+                            bestVal = result.val;
+                            bestPath = result.bestPath;
+                        }
+                    } else {
+                        if (result.val < bestVal) {
+                            bestVal = result.val;
+                            bestPath = result.bestPath;
+                        }
+                    }
                 }
 
-                if (bestVal === -Infinity || bestVal === Infinity) {
+                if (!hasValidChild || bestVal === -Infinity || bestVal === Infinity) {
                     const val = heuristics[nodeId] || 0;
-                    logStep(nodeId, `Leaf (Cycle): ${val}`, val);
+                    logStep(nodeId, `Leaf (Cycle/Dead End): ${val}`, val);
                     setComputedValues(prev => ({ ...prev, [nodeId]: val }));
-                    return val;
+                    return { val, bestPath: path };
                 }
 
                 logStep(nodeId, `${isMax ? 'MAX' : 'MIN'} updated: ${bestVal}`, bestVal);
                 setVisitedNodes(prev => new Set(prev).add(nodeId));
                 setComputedValues(prev => ({ ...prev, [nodeId]: bestVal }));
-                return bestVal;
+
+                return { val: bestVal, bestPath };
             };
 
-            const result = await minimax(startNode, 0, true, [startNode]);
-            showToast(`MiniMax Result: ${result}`, 'success');
+            const result = await minimax(startNode, 0, rootIsMax, [startNode]);
+
+            // Final Visualization Update
+            setCurrentPath(result.bestPath); // Highlight the OFFICIAL best path
+            setComputedValues(prev => ({ ...prev, [startNode]: result.val })); // Ensure root value is set
+            showToast(`MiniMax Result: ${result.val}`, 'success');
             setIsAnimating(false);
             return;
         }
@@ -872,11 +925,11 @@ const GraphVisualizer = () => {
                         </div>
                     </div>
 
-                    {/* Heuristics */}
+                    {/* Heuristics / Values */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                <Table className="w-3 h-3" /> Heuristics
+                                <Table className="w-3 h-3" /> {algorithm === 'MiniMax' ? 'Node Values' : 'Heuristics'}
                             </h2>
                             <button
                                 onClick={() => setManualHeuristics(!manualHeuristics)}
@@ -889,7 +942,7 @@ const GraphVisualizer = () => {
                         {/* Indirect Cost Toggle */}
                         <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
                             <input
-                                type="checkbox"
+                                type="checkbox" // Input type checkbox
                                 checked={showIndirect}
                                 onChange={(e) => setShowIndirect(e.target.checked)}
                                 className="rounded bg-slate-100 border-slate-300 text-blue-600 focus:ring-0"
@@ -908,13 +961,40 @@ const GraphVisualizer = () => {
                             Tree Search (Allow Duplicates)
                         </label>
 
-                        {startNode && goalNode ? (
+                        {/* Minimax specific settings */}
+                        {algorithm === 'MiniMax' && (
+                            <div className="pt-2 border-t border-slate-200 mt-2">
+                                <h3 className="text-[10px] font-bold text-slate-500 uppercase mb-2">Minimax Settings</h3>
+                                <div className="flex items-center gap-4">
+                                    <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            checked={rootIsMax}
+                                            onChange={() => setRootIsMax(true)}
+                                            className="text-blue-600 focus:ring-0"
+                                        />
+                                        Root is MAX
+                                    </label>
+                                    <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            checked={!rootIsMax}
+                                            onChange={() => setRootIsMax(false)}
+                                            className="text-pink-600 focus:ring-0"
+                                        />
+                                        Root is MIN
+                                    </label>
+                                </div>
+                            </div>
+                        )}
+
+                        {startNode && (goalNode || algorithm === 'MiniMax') ? (
                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 max-h-40 overflow-y-auto custom-scrollbar">
                                 <table className="w-full text-xs text-left">
                                     <thead>
                                         <tr className="text-slate-500 border-b border-slate-200">
                                             <th className="pb-1">Node</th>
-                                            <th className="pb-1">h(n)</th>
+                                            <th className="pb-1">{algorithm === 'MiniMax' ? 'Value' : 'h(n)'}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -922,7 +1002,7 @@ const GraphVisualizer = () => {
                                             <tr key={node.id} className="border-b border-slate-100 last:border-0">
                                                 <td className="py-1.5 font-medium text-slate-700">{node.id}</td>
                                                 <td className="py-1.5">
-                                                    {manualHeuristics ? (
+                                                    {manualHeuristics || algorithm === 'MiniMax' ? (
                                                         <input
                                                             type="number"
                                                             value={heuristics[node.id] || 0}
@@ -939,7 +1019,9 @@ const GraphVisualizer = () => {
                                 </table>
                             </div>
                         ) : (
-                            <div className="text-xs text-slate-500 italic p-2">Set Start & Goal to see heuristics</div>
+                            <div className="text-xs text-slate-500 italic p-2">
+                                {algorithm === 'MiniMax' ? 'Set Start node to see values' : 'Set Start & Goal to see heuristics'}
+                            </div>
                         )}
                     </div>
 
@@ -1030,7 +1112,7 @@ const GraphVisualizer = () => {
                 {/* Instructions Overlay */}
                 <div className="absolute bottom-16 left-4 bg-white/90 backdrop-blur border border-slate-200 rounded-xl p-3 shadow-lg pointer-events-none select-none max-w-xs z-10">
                     <div className="text-[11px] text-slate-600 space-y-1">
-                        <p><span className="font-bold text-slate-800">Double-click node</span> to rename.</p>
+                        <p><span className="font-bold text-slate-800">Double-click node</span> to rename (or set Value in Minimax).</p>
                         <p><span className="font-bold text-slate-800">Right-click</span> to set Start/Goal.</p>
                         <p><span className="font-bold text-slate-800">Drag</span> nodes to move.</p>
                         <p><span className="font-bold text-slate-800">Click edge</span> to edit weight.</p>
