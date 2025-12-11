@@ -773,7 +773,7 @@ const GraphVisualizer = () => {
 
         // Data Structures
         const openSet: { id: string; g: number; f: number; path: string[] }[] = [];
-        const closedSet = new Set<string>();
+        const closedSet = new Map<string, number>(); // ID -> Min Cost (g)
 
         // Initialize
         const startH = heuristics[startNode] || 0;
@@ -823,55 +823,65 @@ const GraphVisualizer = () => {
             if (algorithm === 'DFS') current = openSet.pop()!;
             else current = openSet.shift()!; // BFS, UCS, AStar
 
-            // Increment extended count
+            // Lazy Removal (Check if previously extended with lower or equal cost)
+            if (!treeSearch && (algorithm === 'AStar' || algorithm === 'UCS')) {
+                const previousCost = closedSet.get(current.id);
+                // If we found a path that is strictly WORSE or EQUAL to a previous one, skip.
+                if (previousCost !== undefined && previousCost <= current.g) {
+                    // We still log the step (above) to show it was popped? 
+                    // Actually, if we skip it, we shouldn't increment extendedCount or log it as "Extended".
+                    // But the flowchart says "Delete Head" and loops back.
+                    // The trace usually doesn't show skipped nodes as "Extended Steps".
+                    // So we should probably continue immediately without logging this as a full step?
+                    // BUT, the existing code logs "Snapshot before pop".
+                    // Let's stick to existing pattern: Log it, but don't count it as "Extended Node" or "Expanded".
+                    // Wait, the previous code logged it.
+                    // Let's CONTINUE here.
+                    continue;
+                }
+            }
+
+            // Increment extended count (Only if we actually process it)
             extendedCount++;
 
             setStepLogs(prev => [...prev, {
                 step: stepCount,
                 queue: currentQueueState,
                 extendedNode: current.id,
-                extendedList: Array.from(closedSet),
-                extendedCount: extendedCount - 1,
+                extendedList: Array.from(closedSet.keys()),
+                extendedCount: extendedCount,
                 enqueuedCount: enqueuedCount
             }]);
 
             setFrontierNodes(new Set(openSet.map(n => n.id)));
             setCurrentPath(current.path);
 
-            // Lazy Removal (Graph Search for A*/UCS)
-            // If the node we just popped is ALREADY in the closed set, it means we found a path to it 
-            // earlier (with equal or lower cost) and expanded it. So we skip this one.
-            // "SBC is not extended... because C was extended"
-            if (!treeSearch && (algorithm === 'AStar' || algorithm === 'UCS') && closedSet.has(current.id)) {
-                // We still log the step (above) to show it was popped, but we don't process it.
-                continue;
-            }
 
             // 4. Goal Check
             if (current.id === goalNode) {
-                setVisitedNodes(new Set([...closedSet, current.id]));
+                // Update visual state one last time
+                setVisitedNodes(new Set([...Array.from(closedSet.keys()), current.id]));
                 showToast(`Goal Reached! Cost: ${current.g}`, 'success');
                 setIsAnimating(false);
                 return;
             }
 
-            // 5. Expand
-            closedSet.add(current.id);
-            setVisitedNodes(new Set(closedSet));
+            // 5. Expand (Update Closed Set)
+            closedSet.set(current.id, current.g);
+            setVisitedNodes(new Set(closedSet.keys()));
             await sleep(speed);
 
             // 6. Neighbors
             const neighbors = edges.filter(e => e.from === current.id);
 
             // Sort neighbors: 
-            // Standard Rule: Weight (Low->High) then Lexical (A->Z).
-            // BFS/UCS/A*: Enqueue in Ascending Order (so Smallest/A is processed first).
-            // DFS: Push to Stack in Descending Order (so Smallest/A is on Top and popped first).
+            // DFS: Push to Stack in Descending Order (so Smallest/A is on Top and popped first). Ignore weights.
+            // BFS: Enqueue in Ascending Order. Ignore weights.
+            // UCS/A*: Enqueue by Weight then Ascending Order.
             if (algorithm === 'DFS') {
-                neighbors.sort((a, b) => {
-                    if (a.weight !== b.weight) return b.weight - a.weight; // High Weight first
-                    return b.to.localeCompare(a.to); // Z-A
-                });
+                neighbors.sort((a, b) => b.to.localeCompare(a.to)); // Z-A
+            } else if (algorithm === 'BFS') {
+                neighbors.sort((a, b) => a.to.localeCompare(b.to)); // A-Z
             } else {
                 neighbors.sort((a, b) => {
                     if (a.weight !== b.weight) return a.weight - b.weight; // Low Weight first
@@ -881,30 +891,32 @@ const GraphVisualizer = () => {
 
             for (const edge of neighbors) {
                 const neighborId = edge.to;
-
-                // Tree Search vs Graph Search Logic
-                if (treeSearch) {
-                    // Tree Search: Only check for cycles in current path
-                    if (current.path.includes(neighborId)) continue;
-                } else {
-                    // Graph Search: Check closed set
-                    if (closedSet.has(neighborId)) continue;
-                }
-
                 const tentativeG = current.g + edge.weight;
                 const h = heuristics[neighborId] || 0;
                 const f = tentativeG + h;
                 const newPath = [...current.path, neighborId];
 
-                const existingNodeIndex = openSet.findIndex(n => n.id === neighborId);
+                // Tree Search vs Graph Search Check
+                if (treeSearch) {
+                    // Check Cycle
+                    if (current.path.includes(neighborId)) continue;
+                } else {
+                    // Graph Search: Check Closed Set (Extended List)
+                    // Flowchart: "Child previously extended with lower or equal cost? -> Yes: Delete child"
+                    const prevCost = closedSet.get(neighborId);
+                    if (prevCost !== undefined && prevCost <= tentativeG) {
+                        continue;
+                    }
+                }
 
+                // Enqueue
                 if (treeSearch || algorithm === 'AStar' || algorithm === 'UCS') {
-                    // Start Search / A* / UCS (Graph Search with Duplicates allowed in Queue)
-                    // We check 'closedSet' on Neighbor Generation (above) and 'closedSet' on Pop (Lazy)
+                    // Always Push (Duplicates Allowed in Queue)
                     openSet.push({ id: neighborId, g: tentativeG, f: f, path: newPath });
                     enqueuedCount++;
                 } else {
-                    // BFS / DFS Graph Search (Update existing)
+                    // BFS / DFS Graph Search (Update existing - Standard)
+                    const existingNodeIndex = openSet.findIndex(n => n.id === neighborId);
                     if (existingNodeIndex !== -1) {
                         if (tentativeG < openSet[existingNodeIndex].g) {
                             openSet[existingNodeIndex].g = tentativeG;
