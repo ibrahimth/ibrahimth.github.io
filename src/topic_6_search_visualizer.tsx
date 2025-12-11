@@ -69,6 +69,7 @@ const GraphVisualizer = () => {
     const [showIndirect, setShowIndirect] = useState(false); // Toggle for Dashed Lines
     const [treeSearch, setTreeSearch] = useState(false); // Default to Graph Search (No Duplicates)
     const [manualHeuristics, setManualHeuristics] = useState(false);
+    const [isDirected, setIsDirected] = useState(true); // Toggle for Directed/Undirected
     const [rootIsMax, setRootIsMax] = useState(true); // Minimax Root Toggle
     const [showLogs, setShowLogs] = useState(true);
     const [toasts, setToasts] = useState<ToastType[]>([]);
@@ -199,6 +200,7 @@ const GraphVisualizer = () => {
 
         setShowIndirect(true); // Auto-enable indirect view
         setTreeSearch(true); // Ensure Tree Search (duplicates) is ON
+        setIsDirected(false); // Example 1 is Undirected
         setAlgorithm('AStar');
         resetGraph();
         showToast('Loaded Example 1', 'success');
@@ -241,6 +243,7 @@ const GraphVisualizer = () => {
 
         setShowIndirect(false);
         setTreeSearch(false); // Ensure Graph Search (No Duplicates) is ON
+        setIsDirected(true); // Example 3 is Directed
         setAlgorithm('AStar');
         resetGraph();
         showToast('Loaded Example 3', 'success');
@@ -291,26 +294,29 @@ const GraphVisualizer = () => {
             ctx.lineTo(n2.x, n2.y);
             ctx.strokeStyle = isPathEdge ? COLORS.path : COLORS.edge;
             ctx.lineWidth = isPathEdge ? 4 : 2;
+            ctx.lineWidth = isPathEdge ? 4 : 2;
             ctx.stroke();
 
-            // Arrow
-            const angle = Math.atan2(n2.y - n1.y, n2.x - n1.x);
-            const arrowLength = 12;
-            const targetX = n2.x - NODE_RADIUS * Math.cos(angle);
-            const targetY = n2.y - NODE_RADIUS * Math.sin(angle);
+            // Arrow (Only if Directed)
+            if (isDirected) {
+                const angle = Math.atan2(n2.y - n1.y, n2.x - n1.x);
+                const arrowLength = 12;
+                const targetX = n2.x - NODE_RADIUS * Math.cos(angle);
+                const targetY = n2.y - NODE_RADIUS * Math.sin(angle);
 
-            ctx.beginPath();
-            ctx.moveTo(targetX, targetY);
-            ctx.lineTo(
-                targetX - arrowLength * Math.cos(angle - Math.PI / 6),
-                targetY - arrowLength * Math.sin(angle - Math.PI / 6)
-            );
-            ctx.lineTo(
-                targetX - arrowLength * Math.cos(angle + Math.PI / 6),
-                targetY - arrowLength * Math.sin(angle + Math.PI / 6)
-            );
-            ctx.fillStyle = isPathEdge ? COLORS.path : COLORS.edge;
-            ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(targetX, targetY);
+                ctx.lineTo(
+                    targetX - arrowLength * Math.cos(angle - Math.PI / 6),
+                    targetY - arrowLength * Math.sin(angle - Math.PI / 6)
+                );
+                ctx.lineTo(
+                    targetX - arrowLength * Math.cos(angle + Math.PI / 6),
+                    targetY - arrowLength * Math.sin(angle + Math.PI / 6)
+                );
+                ctx.fillStyle = isPathEdge ? COLORS.path : COLORS.edge;
+                ctx.fill();
+            }
 
             // Weight Badge
             if (algorithm !== 'MiniMax') {
@@ -872,7 +878,10 @@ const GraphVisualizer = () => {
             await sleep(speed);
 
             // 6. Neighbors
-            const neighbors = edges.filter(e => e.from === current.id);
+            const neighbors = isDirected
+                ? edges.filter(e => e.from === current.id)
+                : edges.filter(e => e.from === current.id || e.to === current.id).map(e => e.to === current.id ? { ...e, from: e.to, to: e.from } : e);
+
 
             // Sort neighbors: 
             // DFS: Push to Stack in Descending Order (so Smallest/A is on Top and popped first). Ignore weights.
@@ -1053,6 +1062,17 @@ const GraphVisualizer = () => {
                                 className="rounded bg-slate-100 border-slate-300 text-blue-600 focus:ring-0"
                             />
                             Tree Search (Allow Duplicates)
+                        </label>
+
+                        {/* Directed/Undirected Toggle */}
+                        <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={isDirected}
+                                onChange={(e) => setIsDirected(e.target.checked)}
+                                className="rounded bg-slate-100 border-slate-300 text-blue-600 focus:ring-0"
+                            />
+                            Directed Graph
                         </label>
 
                         {/* Minimax specific settings */}
