@@ -3,7 +3,7 @@ import {
     Play, RotateCcw, Plus, Trash2, Settings,
     MousePointer2, ChevronRight, FastForward,
     Info, CheckCircle, AlertCircle, List, Table, Shuffle,
-    Menu, X
+    Menu, X, GripVertical
 } from 'lucide-react';
 
 // --- Types ---
@@ -783,8 +783,9 @@ const GraphVisualizer: React.FC = () => {
         }
     };
 
-    // Panel dragging handlers
+    // Panel dragging handlers - Mouse
     const handlePanelMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
         setIsDraggingPanel(true);
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         setDragOffset({
@@ -793,18 +794,51 @@ const GraphVisualizer: React.FC = () => {
         });
     }, []);
 
+    // Panel dragging handlers - Touch
+    const handlePanelTouchStart = useCallback((e: React.TouchEvent) => {
+        e.preventDefault();
+        setIsDraggingPanel(true);
+        const touch = e.touches[0];
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setDragOffset({
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top
+        });
+    }, []);
+
     const handlePanelMouseMove = useCallback((e: MouseEvent) => {
         if (!isDraggingPanel) return;
         const canvasRect = canvasRef.current?.getBoundingClientRect();
         if (!canvasRect) return;
 
-        setTracePanelPos({
-            x: e.clientX - canvasRect.left - dragOffset.x,
-            y: e.clientY - canvasRect.top - dragOffset.y
-        });
+        // Constrain position to stay within canvas bounds
+        const maxWidth = window.innerWidth < 640 ? window.innerWidth - 20 : 500;
+        const newX = Math.max(0, Math.min(e.clientX - canvasRect.left - dragOffset.x, canvasRect.width - maxWidth));
+        const newY = Math.max(0, Math.min(e.clientY - canvasRect.top - dragOffset.y, canvasRect.height - 200));
+
+        setTracePanelPos({ x: newX, y: newY });
+    }, [isDraggingPanel, dragOffset]);
+
+    const handlePanelTouchMove = useCallback((e: TouchEvent) => {
+        if (!isDraggingPanel) return;
+        e.preventDefault();
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        if (!canvasRect) return;
+
+        const touch = e.touches[0];
+        // Constrain position to stay within canvas bounds
+        const maxWidth = window.innerWidth < 640 ? window.innerWidth - 20 : 500;
+        const newX = Math.max(0, Math.min(touch.clientX - canvasRect.left - dragOffset.x, canvasRect.width - maxWidth));
+        const newY = Math.max(0, Math.min(touch.clientY - canvasRect.top - dragOffset.y, canvasRect.height - 200));
+
+        setTracePanelPos({ x: newX, y: newY });
     }, [isDraggingPanel, dragOffset]);
 
     const handlePanelMouseUp = useCallback(() => {
+        setIsDraggingPanel(false);
+    }, []);
+
+    const handlePanelTouchEnd = useCallback(() => {
         setIsDraggingPanel(false);
     }, []);
 
@@ -813,12 +847,16 @@ const GraphVisualizer: React.FC = () => {
         if (isDraggingPanel) {
             window.addEventListener('mousemove', handlePanelMouseMove);
             window.addEventListener('mouseup', handlePanelMouseUp);
+            window.addEventListener('touchmove', handlePanelTouchMove, { passive: false });
+            window.addEventListener('touchend', handlePanelTouchEnd);
             return () => {
                 window.removeEventListener('mousemove', handlePanelMouseMove);
                 window.removeEventListener('mouseup', handlePanelMouseUp);
+                window.removeEventListener('touchmove', handlePanelTouchMove);
+                window.removeEventListener('touchend', handlePanelTouchEnd);
             };
         }
-    }, [isDraggingPanel, handlePanelMouseMove, handlePanelMouseUp]);
+    }, [isDraggingPanel, handlePanelMouseMove, handlePanelMouseUp, handlePanelTouchMove, handlePanelTouchEnd]);
 
     // --- Algorithms ---
 
@@ -1802,20 +1840,28 @@ const GraphVisualizer: React.FC = () => {
                 {/* Logs */}
                 {showLogs && stepLogs.length > 0 && (
                     <div
-                        className="absolute w-full max-w-[500px] lg:w-[500px] max-h-[50vh] lg:max-h-[calc(100vh-2rem)] mx-4 lg:mx-0 flex flex-col bg-white/95 backdrop-blur shadow-2xl border border-slate-200 rounded-xl overflow-hidden"
+                        className={`absolute w-full max-w-[95vw] sm:max-w-[500px] lg:w-[500px] max-h-[50vh] lg:max-h-[calc(100vh-2rem)] flex flex-col bg-white/95 backdrop-blur shadow-2xl rounded-xl overflow-hidden transition-shadow ${
+                            isDraggingPanel ? 'border-4 border-blue-400 shadow-blue-500/50' : 'border-2 border-slate-300'
+                        }`}
                         style={{
-                            left: tracePanelPos.x === 0 ? 'auto' : `${tracePanelPos.x}px`,
+                            left: tracePanelPos.x === 0 ? (window.innerWidth < 640 ? '0.5rem' : 'auto') : `${tracePanelPos.x}px`,
                             top: tracePanelPos.x === 0 ? '1rem' : `${tracePanelPos.y}px`,
-                            right: tracePanelPos.x === 0 ? '1rem' : 'auto',
-                            cursor: isDraggingPanel ? 'grabbing' : 'default'
+                            right: tracePanelPos.x === 0 ? (window.innerWidth < 640 ? '0.5rem' : '1rem') : 'auto',
+                            cursor: isDraggingPanel ? 'grabbing' : 'default',
+                            zIndex: 50
                         }}
                     >
                         <div
-                            className="p-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center cursor-grab active:cursor-grabbing"
+                            className="p-3 sm:p-3 py-4 sm:py-3 bg-gradient-to-r from-slate-100 to-slate-50 border-b-2 border-slate-300 flex justify-between items-center cursor-grab active:cursor-grabbing select-none"
                             onMouseDown={handlePanelMouseDown}
+                            onTouchStart={handlePanelTouchStart}
+                            style={{ touchAction: 'none' }}
                         >
                             <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                                <List className="w-4 h-4 text-blue-600" /> Trace (Drag to Move)
+                                <GripVertical className="w-5 h-5 text-slate-400 sm:hidden" />
+                                <List className="w-4 h-4 text-blue-600" />
+                                <span className="hidden sm:inline">Trace (Drag to Move)</span>
+                                <span className="sm:hidden">Trace</span>
                             </h3>
                             <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                                 {tracePanelPos.x !== 0 && (
