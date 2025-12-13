@@ -115,6 +115,12 @@ const checkConstraint = (valSource: number, valTarget: number, edge: CSPEdge): b
 
 // --- Algorithms ---
 
+// Helper: Check if constraint is unary (doesn't depend on target value)
+const isUnaryConstraint = (edge: CSPEdge): boolean => {
+  // Unary if factor is 0 (target doesn't affect the result)
+  return edge.factor === 0;
+};
+
 // 1. AC-3
 const runAC3 = (nodes: CSPNode[], edges: CSPEdge[]): { steps: LogStep[], finalNodes: CSPNode[] } => {
   let queue: { source: string; target: string }[] = [];
@@ -123,16 +129,46 @@ const runAC3 = (nodes: CSPNode[], edges: CSPEdge[]): { steps: LogStep[], finalNo
   const currentNodes = nodes.map(n => ({ ...n, currentDomain: [...n.domain] }));
   const getNode = (id: string) => currentNodes.find(n => n.id === id)!;
 
+  // Apply unary constraints first (like "Even")
   edges.forEach(e => {
-    queue.push({ source: e.source, target: e.target });
-    queue.push({ source: e.target, target: e.source });
+    if (isUnaryConstraint(e)) {
+      const sourceNode = getNode(e.source);
+      sourceNode.currentDomain = sourceNode.currentDomain.filter(x => {
+        // For unary constraints, we just check against a dummy value (doesn't matter)
+        return checkConstraint(x, 0, e);
+      });
+    }
+  });
+
+  // Only add binary constraints to the queue
+  edges.forEach(e => {
+    if (!isUnaryConstraint(e)) {
+      queue.push({ source: e.source, target: e.target });
+      queue.push({ source: e.target, target: e.source });
+    }
   });
 
   let stepCount = 0;
+
+  // Log unary constraint application
+  const unaryEdges = edges.filter(e => isUnaryConstraint(e));
+  if (unaryEdges.length > 0) {
+    const unaryDesc = unaryEdges.map(e => {
+      const node = getNode(e.source);
+      return `${e.source} (unary constraint applied)`;
+    }).join(', ');
+    steps.push({
+      step: 0,
+      queue: [],
+      explanation: `Applied unary constraints: ${unaryDesc}. Binary arcs added to queue.`,
+    });
+    stepCount++;
+  }
+
   steps.push({
-    step: 0,
+    step: stepCount,
     queue: queue.map(q => `(${q.source}, ${q.target})`),
-    explanation: 'Initial Queue populated with all arcs.',
+    explanation: 'Initial Queue populated with binary constraint arcs.',
   });
 
   while (queue.length > 0) {
@@ -152,6 +188,11 @@ const runAC3 = (nodes: CSPNode[], edges: CSPEdge[]): { steps: LogStep[], finalNo
 
     // Capture state before changes
     const queueBefore = queue.map(q => `(${q.source},${q.target})`);
+
+    // Skip unary constraints (they should not be in queue, but safety check)
+    if (edge && isUnaryConstraint(edge)) {
+      continue;
+    }
 
     if (edge) {
       const newDomain = sourceNode.currentDomain.filter(x => {
@@ -174,6 +215,9 @@ const runAC3 = (nodes: CSPNode[], edges: CSPEdge[]): { steps: LogStep[], finalNo
       if (removed.length > 0) {
         sourceNode.currentDomain = newDomain;
         edges.forEach(e => { // Add neighbors to queue
+          // Skip unary constraints when adding neighbors
+          if (isUnaryConstraint(e)) return;
+
           const neighbor = (e.source === source) ? e.target : (e.target === source ? e.source : null);
           if (neighbor && neighbor !== target) {
             const arc = { source: neighbor, target: source };
@@ -221,8 +265,24 @@ const runBacktracking = (
   const domains: Record<string, number[]> = {};
   nodes.forEach(n => domains[n.id] = [...n.domain]);
 
+  // Apply unary constraints to initial domains
+  edges.forEach(e => {
+    if (isUnaryConstraint(e)) {
+      domains[e.source] = domains[e.source].filter(x => checkConstraint(x, 0, e));
+    }
+  });
+
   const isConsistent = (varId: string, val: number, currentAssignments: Record<string, number>) => {
     for (const edge of edges) {
+      // Check unary constraints
+      if (isUnaryConstraint(edge) && edge.source === varId) {
+        if (!checkConstraint(val, 0, edge)) return false;
+        continue;
+      }
+
+      // Skip unary constraints for binary checking
+      if (isUnaryConstraint(edge)) continue;
+
       if (edge.source === varId) {
         const neighborId = edge.target;
         if (currentAssignments[neighborId] !== undefined) {
@@ -249,6 +309,9 @@ const runBacktracking = (
     let failure = false;
 
     for (const edge of edges) {
+      // Skip unary constraints - they don't affect neighbors
+      if (isUnaryConstraint(edge)) continue;
+
       let neighborId: string | null = null;
       let isSource = false; // Is varId the source of this edge?
 
