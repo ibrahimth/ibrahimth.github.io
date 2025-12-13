@@ -92,6 +92,9 @@ const GraphVisualizer: React.FC = () => {
     const [showLogs, setShowLogs] = useState(true);
     const [toasts, setToasts] = useState<ToastType[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [tracePanelPos, setTracePanelPos] = useState({ x: 0, y: 0 });
+    const [isDraggingPanel, setIsDraggingPanel] = useState(false);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
     // Visualization state
     const [visitedNodes, setVisitedNodes] = useState<Set<string>>(new Set());
@@ -779,6 +782,43 @@ const GraphVisualizer: React.FC = () => {
             setSelectedEdge(null);
         }
     };
+
+    // Panel dragging handlers
+    const handlePanelMouseDown = useCallback((e: React.MouseEvent) => {
+        setIsDraggingPanel(true);
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setDragOffset({
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        });
+    }, []);
+
+    const handlePanelMouseMove = useCallback((e: MouseEvent) => {
+        if (!isDraggingPanel) return;
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        if (!canvasRect) return;
+
+        setTracePanelPos({
+            x: e.clientX - canvasRect.left - dragOffset.x,
+            y: e.clientY - canvasRect.top - dragOffset.y
+        });
+    }, [isDraggingPanel, dragOffset]);
+
+    const handlePanelMouseUp = useCallback(() => {
+        setIsDraggingPanel(false);
+    }, []);
+
+    // Add global listeners for panel dragging
+    useEffect(() => {
+        if (isDraggingPanel) {
+            window.addEventListener('mousemove', handlePanelMouseMove);
+            window.addEventListener('mouseup', handlePanelMouseUp);
+            return () => {
+                window.removeEventListener('mousemove', handlePanelMouseMove);
+                window.removeEventListener('mouseup', handlePanelMouseUp);
+            };
+        }
+    }, [isDraggingPanel, handlePanelMouseMove, handlePanelMouseUp]);
 
     // --- Algorithms ---
 
@@ -1749,14 +1789,44 @@ const GraphVisualizer: React.FC = () => {
                         }`}
                 />
 
+                {/* Show Logs Button (when hidden) */}
+                {!showLogs && stepLogs.length > 0 && (
+                    <button
+                        onClick={() => setShowLogs(true)}
+                        className="absolute top-4 right-4 bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium"
+                    >
+                        <List className="w-4 h-4" /> Show Trace
+                    </button>
+                )}
+
                 {/* Logs */}
                 {showLogs && stepLogs.length > 0 && (
-                    <div className="absolute top-4 right-4 w-full max-w-[500px] lg:w-[500px] max-h-[50vh] lg:max-h-[calc(100vh-2rem)] mx-4 lg:mx-0 flex flex-col bg-white/95 backdrop-blur shadow-2xl border border-slate-200 rounded-xl overflow-hidden">
-                        <div className="p-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
+                    <div
+                        className="absolute w-full max-w-[500px] lg:w-[500px] max-h-[50vh] lg:max-h-[calc(100vh-2rem)] mx-4 lg:mx-0 flex flex-col bg-white/95 backdrop-blur shadow-2xl border border-slate-200 rounded-xl overflow-hidden"
+                        style={{
+                            left: tracePanelPos.x === 0 ? 'auto' : `${tracePanelPos.x}px`,
+                            top: tracePanelPos.x === 0 ? '1rem' : `${tracePanelPos.y}px`,
+                            right: tracePanelPos.x === 0 ? '1rem' : 'auto',
+                            cursor: isDraggingPanel ? 'grabbing' : 'default'
+                        }}
+                    >
+                        <div
+                            className="p-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center cursor-grab active:cursor-grabbing"
+                            onMouseDown={handlePanelMouseDown}
+                        >
                             <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                                <List className="w-4 h-4 text-blue-600" /> Trace
+                                <List className="w-4 h-4 text-blue-600" /> Trace (Drag to Move)
                             </h3>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                {tracePanelPos.x !== 0 && (
+                                    <button
+                                        onClick={() => setTracePanelPos({ x: 0, y: 0 })}
+                                        className="text-xs text-blue-600 hover:text-blue-800"
+                                        title="Reset position"
+                                    >
+                                        Reset
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setShowLogs(false)}
                                     className="text-xs text-slate-500 hover:text-slate-800 lg:hidden"
