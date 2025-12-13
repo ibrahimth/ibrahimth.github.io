@@ -24,6 +24,7 @@ type StepLog = {
     queue: QueueItem[];
     extendedNode: string | null;
     extendedList: string[];
+    extendedListWithCosts: Record<string, number>;  // For A*/UCS: node -> cost mapping
     extendedCount: number;
     enqueuedCount: number;
     events: string[];
@@ -226,12 +227,53 @@ const GraphVisualizer: React.FC = () => {
         });
 
         setShowIndirect(true);
-        setTreeSearch(true);     // Tree search to match slide
+        setTreeSearch(false);    // Graph search (with extended list) as shown in slides
         setIsDirected(false);
         setAlgorithm('AStar');
         resetGraph();
         showToast('Loaded Example 1', 'success');
     };
+
+    // Example 2 (A* slide, Part 2 Example 2)
+    const loadExample2 = () => {
+        const newNodes: NodeType[] = [
+            { id: 'S', x: 100, y: 250 },
+            { id: 'A', x: 250, y: 150 },
+            { id: 'B', x: 250, y: 350 },
+            { id: 'C', x: 400, y: 250 },
+            { id: 'G', x: 550, y: 250 },
+        ];
+        const newEdges: EdgeType[] = [
+            { from: 'S', to: 'A', weight: 1 },
+            { from: 'S', to: 'B', weight: 4 },
+            { from: 'A', to: 'B', weight: 2 },
+            { from: 'A', to: 'C', weight: 5 },
+            { from: 'A', to: 'G', weight: 11 },
+            { from: 'B', to: 'C', weight: 2 },
+            { from: 'C', to: 'G', weight: 3 },
+        ];
+        setNodes(newNodes);
+        setEdges(newEdges);
+        setStartNode('S');
+        setGoalNode('G');
+
+        setManualHeuristics(true);
+        setHeuristics({
+            S: 7,
+            A: 6,
+            B: 2,
+            C: 1,
+            G: 0,
+        });
+
+        setShowIndirect(false);
+        setTreeSearch(false);   // Graph search (with extended list) as shown in slides
+        setIsDirected(true);
+        setAlgorithm('AStar');
+        resetGraph();
+        showToast('Loaded Example 2', 'success');
+    };
+
 
     // Example 3 (A* slide, Part 2 Example 3)
     const loadExample3 = () => {
@@ -266,7 +308,7 @@ const GraphVisualizer: React.FC = () => {
         });
 
         setShowIndirect(false);
-        setTreeSearch(false);    // Graph search with extended list
+        setTreeSearch(false);   // Graph search (with extended list) as shown in slides
         setIsDirected(true);
         setAlgorithm('AStar');
         resetGraph();
@@ -759,6 +801,7 @@ const GraphVisualizer: React.FC = () => {
             queue: [{ path: [start], cost: 0, heuristic: 0, total: 0 }],
             extendedNode: null,
             extendedList: [],
+            extendedListWithCosts: {},
             extendedCount: 0,
             enqueuedCount: 1,
             events: ['Initial state']
@@ -796,6 +839,7 @@ const GraphVisualizer: React.FC = () => {
                         }))],
                         extendedNode: current,
                         extendedList: Array.from(extended),
+                        extendedListWithCosts: {},
                         extendedCount,
                         enqueuedCount,
                         events
@@ -843,6 +887,7 @@ const GraphVisualizer: React.FC = () => {
                     queue: currentQueueSnapshot,
                     extendedNode: current,
                     extendedList: Array.from(extended),
+                    extendedListWithCosts: {},
                     extendedCount,
                     enqueuedCount,
                     events
@@ -874,6 +919,7 @@ const GraphVisualizer: React.FC = () => {
             queue: [{ path: [start], cost: 0, heuristic: 0, total: 0 }],
             extendedNode: null,
             extendedList: [],
+            extendedListWithCosts: {},
             extendedCount: 0,
             enqueuedCount: 1,
             events: ['Initial state']
@@ -910,6 +956,7 @@ const GraphVisualizer: React.FC = () => {
                         }))],
                         extendedNode: current,
                         extendedList: Array.from(extended),
+                        extendedListWithCosts: {},
                         extendedCount,
                         enqueuedCount,
                         events
@@ -1015,6 +1062,7 @@ const GraphVisualizer: React.FC = () => {
             queue: snapshotQueue(),
             extendedNode: null,
             extendedList: [],
+            extendedListWithCosts: {},
             extendedCount: 0,
             enqueuedCount: 1,
             events: ['Initial state']
@@ -1024,40 +1072,8 @@ const GraphVisualizer: React.FC = () => {
             open.sort(compare);
             const current = open.shift()!;
 
-            // A*: extended-list pruning BEFORE expansion :contentReference[oaicite:6]{index=6}
-            if (useHeuristic && !treeSearch) {
-                const prevCost = closed.get(current.id);
-                if (prevCost !== undefined && prevCost <= current.g) {
-                    const events = [
-                        `Node ${current.id} NOT extended (already extended with cost ${prevCost} ≤ ${current.g})`
-                    ];
-                    setStepLogs(prev => [
-                        ...prev,
-                        {
-                            step: prev.length + 1,
-                            queue: snapshotQueue(),
-                            extendedNode: null,
-                            extendedList: Array.from(closed.keys()),
-                            extendedCount,
-                            enqueuedCount,
-                            events
-                        }
-                    ]);
-                    await delay(speed);
-                    continue;
-                }
-            }
-
-            closed.set(current.id, current.g);
-            extendedCount++;
-            setVisitedNodes(new Set(closed.keys()));
-            setCurrentPath(current.path);
-            setFrontierNodes(new Set(open.map(n => n.id)));
-
-            const events: string[] = [];
-
             if (current.id === goal) {
-                events.push(`Goal ${goal} reached; path cost = ${current.g}`);
+                const events = [`Goal ${goal} reached; path cost = ${current.g}`];
                 // Put current back in queue for display
                 const finalQueue = snapshotQueue();
                 finalQueue.unshift({
@@ -1074,6 +1090,7 @@ const GraphVisualizer: React.FC = () => {
                         queue: finalQueue,
                         extendedNode: current.id,
                         extendedList: Array.from(closed.keys()),
+                        extendedListWithCosts: Object.fromEntries(closed),
                         extendedCount,
                         enqueuedCount,
                         events
@@ -1086,7 +1103,58 @@ const GraphVisualizer: React.FC = () => {
                 return;
             }
 
-            await delay(speed);
+            // A*: extended-list pruning BEFORE expansion
+            if (useHeuristic) {
+                const prevCost = closed.get(current.id);
+                if (prevCost !== undefined && prevCost <= current.g) {
+                    const h = heuristics[current.id] ?? 0;
+                    const prevF = prevCost + h;
+                    const currentF = current.g + h;
+                    const events = [
+                        `Node ${current.id} NOT extended (already extended with f=${prevF} ≤ f=${currentF})`
+                    ];
+                    setStepLogs(prev => [
+                        ...prev,
+                        {
+                            step: prev.length + 1,
+                            queue: snapshotQueue(),
+                            extendedNode: null,
+                            extendedList: Array.from(closed.keys()),
+                            extendedListWithCosts: Object.fromEntries(closed),
+                            extendedCount,
+                            enqueuedCount,
+                            events
+                        }
+                    ]);
+                    await delay(speed);
+                    continue;
+                }
+            }
+
+            // Check if we're updating an existing entry in the closed list
+            const prevClosedCost = closed.get(current.id);
+            const isUpdatingClosedList = prevClosedCost !== undefined && prevClosedCost > current.g;
+
+            closed.set(current.id, current.g);
+            extendedCount++;
+            setVisitedNodes(new Set(closed.keys()));
+            setCurrentPath(current.path);
+            setFrontierNodes(new Set(open.map(n => n.id)));
+
+            const events: string[] = [];
+
+            if (isUpdatingClosedList) {
+                if (useHeuristic) {
+                    // A*: show f-cost update
+                    const h = heuristics[current.id] ?? 0;
+                    const prevF = prevClosedCost + h;
+                    const currentF = current.g + h;
+                    events.push(`Extended List updated: ${current.id} (f=${prevF} → f=${currentF})`);
+                } else {
+                    // UCS: show g-cost update
+                    events.push(`Extended List updated: ${current.id} (g=${prevClosedCost} → g=${current.g})`);
+                }
+            }
 
             const neighbors = getNeighbors(current.id)
                 .slice()
@@ -1110,7 +1178,7 @@ const GraphVisualizer: React.FC = () => {
                         continue; // UCS: Pruned by extended list
                     }
 
-                    // A* Extended List Check: 
+                    // A* Extended List Check:
                     // Technically we shouldn't prune if we want to allow re-opening (handled by Closed Set check on POP).
                     // But if we want to match "Not Extended" on POP, we allow them to go into queue now.
 
@@ -1119,37 +1187,52 @@ const GraphVisualizer: React.FC = () => {
                         const existing = open[idx];
 
                         if (newG < existing.g) {
-                            // Better path found: Update existing
-                            open[idx] = { id: nb.id, g: newG, f: newF, path: newPath };
-                            events.push(`Entry for ${nb.id} updated (${existing.g} → ${newG})`);
-                            continue;
+                            // Better path found
+                            if (useHeuristic) {
+                                // A*: Add as new entry (slides show this behavior)
+                                open.push({ id: nb.id, g: newG, f: newF, path: newPath });
+                                enqueuedCount++;
+                                events.push(`Child ${nb.id} enqueued (better path: f=${newF} < f=${existing.f})`);
+                                continue;
+                            } else {
+                                // UCS: Update existing entry
+                                open[idx] = { id: nb.id, g: newG, f: newF, path: newPath };
+                                events.push(`Entry for ${nb.id} updated (g=${existing.g} → g=${newG})`);
+                                continue;
+                            }
                         } else if (newG === existing.g) {
                             // Equal path found
                             if (useHeuristic) {
-                                // A*: Treat equal as additional path (duplicates allowed)
+                                // A*: Add duplicate (slides show multiple entries with same cost)
                                 open.push({ id: nb.id, g: newG, f: newF, path: newPath });
                                 enqueuedCount++;
-                                events.push(`Child ${nb.id} enqueued (Equal cost duplicate)`);
+                                events.push(`Child ${nb.id} enqueued (equal cost path)`);
                                 continue;
                             } else {
                                 // UCS: Ignore equal
                                 continue;
                             }
                         } else {
-                            // Worse path found
-                            if (useHeuristic) {
-                                events.push(`Child ${nb.id} NOT enqueued (queue has better cost ${existing.g} < ${newG})`);
-                            }
+                            // Worse path found - skip for both A* and UCS
                             continue;
                         }
                     }
 
                     // A*: If in closed set but not in open set?
-                    // User said: "Generation-time closed-set pruning must be removed (or disabled for A*)"
-                    // So we just push it.
-                    if (useHeuristic && closedCost !== undefined && closedCost <= newG) {
-                        // It will be added, then "Not Extended" when popped
-                        // We can log that it's added despite being visited
+                    // According to slides: Do NOT enqueue if already extended with lower or equal cost
+                    if (useHeuristic && closedCost !== undefined) {
+                        if (closedCost <= newG) {
+                            const prevF = closedCost + h;
+                            events.push(`Child ${nb.id} NOT enqueued (already extended with f=${prevF} ≤ f=${newF})`);
+                            continue;
+                        } else {
+                            // Better path found to an already extended node - reopen it
+                            open.push({ id: nb.id, g: newG, f: newF, path: newPath });
+                            enqueuedCount++;
+                            const prevF = closedCost + h;
+                            events.push(`Child ${nb.id} enqueued (better path, reopened: f=${prevF} → f=${newF})`);
+                            continue;
+                        }
                     }
                 }
 
@@ -1169,11 +1252,14 @@ const GraphVisualizer: React.FC = () => {
                     queue: currentQueueSnapshot,
                     extendedNode: current.id,
                     extendedList: Array.from(closed.keys()),
+                    extendedListWithCosts: Object.fromEntries(closed),
                     extendedCount,
                     enqueuedCount,
                     events
                 }
             ]);
+
+            await delay(speed);
         }
 
         showToast(`No path found (${useHeuristic ? 'A*' : 'UCS'})`, 'error');
@@ -1214,6 +1300,7 @@ const GraphVisualizer: React.FC = () => {
                             : [],
                     extendedNode: nodeId,
                     extendedList: [details],
+                    extendedListWithCosts: {},
                     extendedCount: stepCount,
                     enqueuedCount: stepCount,
                     events: [details]
@@ -1407,6 +1494,12 @@ const GraphVisualizer: React.FC = () => {
                                 className="flex-1 p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all"
                             >
                                 <Info className="w-4 h-4" /> Ex 1
+                            </button>
+                            <button
+                                onClick={loadExample2}
+                                className="flex-1 p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all"
+                            >
+                                <Info className="w-4 h-4" /> Ex 2
                             </button>
                             <button
                                 onClick={loadExample3}
@@ -1649,17 +1742,22 @@ const GraphVisualizer: React.FC = () => {
                                         <th className="p-2 border-b border-slate-200 w-12">
                                             Step
                                         </th>
-                                        <th className="p-2 border-b border-slate-200 w-1/3">
+                                        <th className="p-2 border-b border-slate-200 w-1/4">
                                             Enqueued Paths
                                         </th>
                                         <th className="p-2 border-b border-slate-200">
                                             Events
                                         </th>
-                                        <th className="p-2 border-b border-slate-200 w-20 text-center">
-                                            Extended
+                                        {(algorithm === 'AStar' || algorithm === 'UCS') && (
+                                            <th className="p-2 border-b border-slate-200 w-1/5">
+                                                Extended List
+                                            </th>
+                                        )}
+                                        <th className="p-2 border-b border-slate-200 w-16 text-center">
+                                            Ext
                                         </th>
-                                        <th className="p-2 border-b border-slate-200 w-20 text-center">
-                                            Enqueued
+                                        <th className="p-2 border-b border-slate-200 w-16 text-center">
+                                            Enq
                                         </th>
                                     </tr>
                                 </thead>
@@ -1730,17 +1828,15 @@ const GraphVisualizer: React.FC = () => {
                                                                 <li
                                                                     key={i}
                                                                     className={
-                                                                        e.includes(
-                                                                            'updated'
-                                                                        )
-                                                                            ? 'text-blue-600 font-bold'
-                                                                            : e.includes(
-                                                                                'NOT extended'
-                                                                            ) ||
-                                                                                e.includes(
-                                                                                    'pruned'
-                                                                                )
-                                                                                ? 'text-slate-400'
+                                                                        e.includes('better path') ||
+                                                                        e.includes('updated') ||
+                                                                        e.includes('Extended List updated') ||
+                                                                        e.includes('reopened')
+                                                                            ? 'text-green-600 font-bold'
+                                                                            : e.includes('NOT enqueued') ||
+                                                                                e.includes('NOT extended') ||
+                                                                                e.includes('pruned')
+                                                                                ? 'text-red-600 font-bold'
                                                                                 : ''
                                                                     }
                                                                 >
@@ -1755,6 +1851,33 @@ const GraphVisualizer: React.FC = () => {
                                                     </span>
                                                 )}
                                             </td>
+                                            {(algorithm === 'AStar' || algorithm === 'UCS') && (
+                                                <td className="p-2 align-top">
+                                                    {Object.keys(log.extendedListWithCosts).length === 0 ? (
+                                                        <span className="text-slate-300 italic">-</span>
+                                                    ) : (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {Object.entries(log.extendedListWithCosts)
+                                                                .sort(([a], [b]) => a.localeCompare(b))
+                                                                .map(([node, gCost]) => {
+                                                                    // For A*, display f-cost (g+h). For UCS, display g-cost.
+                                                                    const h = algorithm === 'AStar' ? (heuristics[node] ?? 0) : 0;
+                                                                    const displayCost = algorithm === 'AStar' ? gCost + h : gCost;
+                                                                    return (
+                                                                        <span
+                                                                            key={node}
+                                                                            className="inline-flex items-center gap-0.5 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200 text-orange-700"
+                                                                        >
+                                                                            <span className="font-bold">{node}</span>
+                                                                            <span className="text-slate-400">:</span>
+                                                                            <span>{displayCost}</span>
+                                                                        </span>
+                                                                    );
+                                                                })}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            )}
                                             <td className="p-2 text-center font-mono text-slate-500 align-top">
                                                 {log.extendedCount}
                                             </td>
