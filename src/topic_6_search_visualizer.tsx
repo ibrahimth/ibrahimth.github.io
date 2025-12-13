@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Play, RotateCcw, Plus, Trash2, Settings,
     MousePointer2, ChevronRight, FastForward,
-    Info, CheckCircle, AlertCircle, List, Table, Shuffle
+    Info, CheckCircle, AlertCircle, List, Table, Shuffle,
+    Menu, X
 } from 'lucide-react';
 
 // --- Types ---
@@ -90,6 +91,7 @@ const GraphVisualizer: React.FC = () => {
     const [rootIsMax, setRootIsMax] = useState(true);
     const [showLogs, setShowLogs] = useState(true);
     const [toasts, setToasts] = useState<ToastType[]>([]);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Visualization state
     const [visitedNodes, setVisitedNodes] = useState<Set<string>>(new Set());
@@ -1410,12 +1412,39 @@ const GraphVisualizer: React.FC = () => {
     // --- UI ---
     return (
         <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
+            {/* Mobile Menu Button */}
+            <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="fixed top-4 left-4 z-50 lg:hidden bg-white p-2 rounded-lg shadow-lg border border-slate-200"
+            >
+                {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+
+            {/* Overlay for mobile */}
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <div className="w-80 flex flex-col bg-white border-r border-slate-200 z-10 shadow-xl">
+            <div className={`
+                w-80 flex flex-col bg-white border-r border-slate-200 z-40 shadow-xl
+                fixed lg:relative inset-y-0 left-0
+                transform transition-transform duration-300 ease-in-out
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            `}>
                 <div className="p-4 border-b border-slate-200 flex justify-between items-center">
                     <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
                         PathFinder Pro
                     </h1>
+                    <button
+                        onClick={() => setSidebarOpen(false)}
+                        className="lg:hidden text-slate-500 hover:text-slate-700"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
@@ -1722,17 +1751,25 @@ const GraphVisualizer: React.FC = () => {
 
                 {/* Logs */}
                 {showLogs && stepLogs.length > 0 && (
-                    <div className="absolute top-4 right-4 w-[500px] max-h-[calc(100vh-2rem)] flex flex-col bg-white/95 backdrop-blur shadow-2xl border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="absolute top-4 right-4 w-full max-w-[500px] lg:w-[500px] max-h-[50vh] lg:max-h-[calc(100vh-2rem)] mx-4 lg:mx-0 flex flex-col bg-white/95 backdrop-blur shadow-2xl border border-slate-200 rounded-xl overflow-hidden">
                         <div className="p-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
                             <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
                                 <List className="w-4 h-4 text-blue-600" /> Trace
                             </h3>
-                            <button
-                                onClick={() => setStepLogs([])}
-                                className="text-xs text-slate-500 hover:text-slate-800"
-                            >
-                                Clear
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowLogs(false)}
+                                    className="text-xs text-slate-500 hover:text-slate-800 lg:hidden"
+                                >
+                                    Hide
+                                </button>
+                                <button
+                                    onClick={() => setStepLogs([])}
+                                    className="text-xs text-slate-500 hover:text-slate-800"
+                                >
+                                    Clear
+                                </button>
+                            </div>
                         </div>
 
                         <div className="overflow-y-auto p-0 custom-scrollbar">
@@ -1911,8 +1948,8 @@ const GraphVisualizer: React.FC = () => {
                     </div>
                 )}
 
-                {/* Instructions */}
-                <div className="absolute bottom-16 left-4 bg-white/90 backdrop-blur border border-slate-200 rounded-xl p-3 shadow-lg pointer-events-none select-none max-w-xs z-10">
+                {/* Instructions - Hidden on mobile */}
+                <div className="hidden lg:block absolute bottom-16 left-4 bg-white/90 backdrop-blur border border-slate-200 rounded-xl p-3 shadow-lg pointer-events-none select-none max-w-xs z-10">
                     <div className="text-[11px] text-slate-600 space-y-1">
                         <p>
                             <span className="font-bold text-slate-800">
@@ -1942,8 +1979,8 @@ const GraphVisualizer: React.FC = () => {
                 </div>
 
                 {/* Legend */}
-                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-slate-200 rounded-xl p-3 pointer-events-none select-none shadow-lg">
-                    <div className="flex gap-4 text-[10px] text-slate-600 font-medium">
+                <div className="absolute bottom-4 left-4 lg:left-4 bg-white/90 backdrop-blur border border-slate-200 rounded-xl p-2 lg:p-3 pointer-events-none select-none shadow-lg">
+                    <div className="flex flex-wrap gap-2 lg:gap-4 text-[9px] lg:text-[10px] text-slate-600 font-medium">
                         <div className="flex items-center gap-1.5">
                             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />{' '}
                             Start

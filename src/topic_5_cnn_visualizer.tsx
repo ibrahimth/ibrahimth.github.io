@@ -273,8 +273,9 @@ export default function CNNVisualizer() {
     maxCellSize: number = 40
   ) => {
     const size = matrix.length;
-    // Increased base width from 300 to 600 to keep cells larger
-    const cellSize = Math.min(maxCellSize, 600 / size);
+    // Responsive max width: smaller on mobile
+    const baseWidth = window.innerWidth < 768 ? 300 : 600;
+    const cellSize = Math.min(maxCellSize, baseWidth / size);
 
     const flatValues = matrix.flat();
     const min = Math.min(...flatValues);
@@ -331,24 +332,26 @@ export default function CNNVisualizer() {
   };
 
   const containerStyle: React.CSSProperties = {
-    padding: '1.5rem',
+    padding: window.innerWidth < 768 ? '0.5rem' : '1.5rem',
     fontFamily: 'system-ui, -apple-system, sans-serif',
   };
 
   const cardStyle: React.CSSProperties = {
     background: 'white',
     borderRadius: '12px',
-    padding: '1.5rem',
+    padding: window.innerWidth < 768 ? '0.75rem' : '1.5rem',
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
     marginBottom: '1rem',
   };
 
   const controlGroupStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '1rem',
+    gridTemplateColumns: window.innerWidth < 768
+      ? 'repeat(auto-fit, minmax(140px, 1fr))'
+      : 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: window.innerWidth < 768 ? '0.5rem' : '1rem',
     marginBottom: '1.5rem',
-    padding: '1rem',
+    padding: window.innerWidth < 768 ? '0.5rem' : '1rem',
     background: '#f9fafb',
     borderRadius: '8px',
   };

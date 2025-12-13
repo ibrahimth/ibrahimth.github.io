@@ -724,60 +724,62 @@ export default function CSPVisualizer() {
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans text-gray-800">
       {/* Header */}
-      <div className="bg-white p-4 shadow-sm border-b flex flex-col md:flex-row justify-between items-center gap-4 z-10">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
-            CSP Studio
-          </h1>
-          <div className="flex bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => { setAlgo('AC3'); handleReset(); }}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${algo === 'AC3' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              AC-3
-            </button>
-            <button
-              onClick={() => { setAlgo('Backtracking'); handleReset(); }}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${algo === 'Backtracking' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Backtracking
-            </button>
-          </div>
-        </div>
-        <div className="flex gap-2 items-center">
-          <button onClick={() => loadPreset('AC3')} className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600">
-            Load AC-3 Example
-          </button>
-          <button onClick={() => loadPreset('Map')} className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 rounded text-blue-700 flex items-center gap-1">
-            <MapIcon size={12} /> Load Map Coloring
-          </button>
-          <div className="w-px h-6 bg-gray-300 mx-2" />
-          <button onClick={handleReset} className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">
-            <RotateCcw size={16} /> Reset
-          </button>
-          {!isSolving ? (
-            <button onClick={handleSolve} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md shadow hover:bg-green-700">
-              <Play size={16} /> Run {algo}
-            </button>
-          ) : (
-            <div className="flex gap-2">
-              <button onClick={handleStepBack} disabled={currentStepIndex === 0} className="p-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">
-                &lt; Prev
+      <div className="bg-white p-3 lg:p-4 shadow-sm border-b flex flex-col gap-3 z-10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg lg:text-xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+              CSP Studio
+            </h1>
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+              <button
+                onClick={() => { setAlgo('AC3'); handleReset(); }}
+                className={`px-2 lg:px-3 py-1.5 rounded-md text-xs font-bold transition-all ${algo === 'AC3' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                AC-3
               </button>
-              <span className="flex items-center text-sm font-mono">
-                Step {currentStepIndex} / {steps.length - 1}
-              </span>
-              <button onClick={handleStepForward} disabled={currentStepIndex === steps.length - 1} className="p-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50">
-                Next &gt;
+              <button
+                onClick={() => { setAlgo('Backtracking'); handleReset(); }}
+                className={`px-2 lg:px-3 py-1.5 rounded-md text-xs font-bold transition-all ${algo === 'Backtracking' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Backtracking
               </button>
             </div>
-          )}
+          </div>
+          <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
+            <button onClick={() => loadPreset('AC3')} className="px-2 lg:px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600">
+              AC-3 Ex
+            </button>
+            <button onClick={() => loadPreset('Map')} className="px-2 lg:px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 rounded text-blue-700 flex items-center gap-1">
+              <MapIcon size={12} /> Map
+            </button>
+            <div className="hidden sm:block w-px h-6 bg-gray-300 mx-1" />
+            <button onClick={handleReset} className="flex items-center gap-1 px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm text-gray-600 hover:bg-gray-100 rounded-md">
+              <RotateCcw size={14} /> <span className="hidden sm:inline">Reset</span>
+            </button>
+            {!isSolving ? (
+              <button onClick={handleSolve} className="flex items-center gap-1 lg:gap-2 px-3 lg:px-4 py-1.5 lg:py-2 bg-green-600 text-white text-xs lg:text-sm rounded-md shadow hover:bg-green-700">
+                <Play size={14} /> Run
+              </button>
+            ) : (
+              <div className="flex gap-1 lg:gap-2 items-center">
+                <button onClick={handleStepBack} disabled={currentStepIndex === 0} className="p-1.5 lg:p-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 text-xs">
+                  &lt;
+                </button>
+                <span className="flex items-center text-xs font-mono">
+                  {currentStepIndex}/{steps.length - 1}
+                </span>
+                <button onClick={handleStepForward} disabled={currentStepIndex === steps.length - 1} className="p-1.5 lg:p-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50 text-xs">
+                  &gt;
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left: Editor & Graph */}
-        <div className="w-2/3 border-r bg-white flex flex-col select-none">
+        <div className="w-full lg:w-2/3 border-r bg-white flex flex-col select-none h-1/2 lg:h-full">
           {/* Toolbar */}
           <div className="flex-1 relative overflow-hidden">
             <div className="absolute top-4 left-4 flex flex-col bg-white shadow-md border rounded-lg z-20">
@@ -810,8 +812,8 @@ export default function CSPVisualizer() {
               </div>
             )}
 
-            {/* Quick Instructions */}
-            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-slate-200 rounded-lg p-3 shadow-md border-l-4 border-l-blue-500 max-w-xs select-none pointer-events-none z-10">
+            {/* Quick Instructions - Hidden on mobile */}
+            <div className="hidden lg:block absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-slate-200 rounded-lg p-3 shadow-md border-l-4 border-l-blue-500 max-w-xs select-none pointer-events-none z-10">
               <div className="font-bold text-xs text-gray-700 mb-1">Quick Guide</div>
               <ul className="text-[10px] text-gray-600 space-y-1 list-disc list-inside">
                 <li><strong>Double-click</strong> Domain/Constraint to edit.</li>
@@ -1127,7 +1129,7 @@ export default function CSPVisualizer() {
         </div>
 
         {/* Right: Algorithm Log */}
-        <div className="w-1/3 flex flex-col bg-gray-50 border-l">
+        <div className="w-full lg:w-1/3 flex flex-col bg-gray-50 border-l h-1/2 lg:h-full">
           <div className="p-4 bg-white border-b font-bold text-gray-700 flex justify-between items-center">
             <span>Algorithm Log</span>
             <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded">{algo}</span>
