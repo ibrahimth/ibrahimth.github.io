@@ -316,8 +316,60 @@ const GraphVisualizer: React.FC = () => {
         setTreeSearch(false);   // Graph search (with extended list) as shown in slides
         setIsDirected(true);
         setAlgorithm('AStar');
-        resetGraph();
         showToast('Loaded Example 3', 'success');
+    };
+
+    // Example 4 (User Provided Image)
+    const loadExample4 = () => {
+        const newNodes: NodeType[] = [
+            { id: 'S', x: 100, y: 350 },
+            { id: 'A', x: 250, y: 250 },
+            { id: 'B', x: 250, y: 450 },
+            { id: 'C', x: 400, y: 350 },
+            { id: 'D', x: 550, y: 250 },
+            { id: 'E', x: 550, y: 450 },
+            { id: 'G', x: 700, y: 350 },
+        ];
+        // S->A(3), S->B(2)
+        // A->D(3), A->C(2)
+        // B->C(2), B->E(4)
+        // C->D(2), C->E(2)
+        // D->G(4)
+        // E->G(3)
+        const newEdges: EdgeType[] = [
+            { from: 'S', to: 'A', weight: 3 },
+            { from: 'S', to: 'B', weight: 2 },
+            { from: 'A', to: 'D', weight: 3 },
+            { from: 'A', to: 'C', weight: 2 },
+            { from: 'B', to: 'C', weight: 2 },
+            { from: 'B', to: 'E', weight: 4 },
+            { from: 'C', to: 'D', weight: 2 },
+            { from: 'C', to: 'E', weight: 2 },
+            { from: 'D', to: 'G', weight: 4 },
+            { from: 'E', to: 'G', weight: 3 },
+        ];
+        setNodes(newNodes);
+        setEdges(newEdges);
+        setStartNode('S');
+        setGoalNode('G');
+
+        setManualHeuristics(true);
+        setHeuristics({
+            S: 7,
+            A: 5,
+            B: 5,
+            C: 4,
+            D: 3,
+            E: 2,
+            G: 0,
+        });
+
+        setShowIndirect(false);
+        setTreeSearch(true);   // Tree Search (Duplicates allowed) as requested
+        setIsDirected(true);
+        setAlgorithm('AStar');
+        resetGraph();
+        showToast('Loaded Example 4', 'success');
     };
 
     // --- Drawing ---
@@ -1119,9 +1171,12 @@ const GraphVisualizer: React.FC = () => {
             } else {
                 if (a.g !== b.g) return a.g - b.g;   // UCS: by g
             }
-            // Tie-breaker: Lexical order of the FULL path
-            // (Standard requirement: SBE < SBEC, SAB < SZA, etc.)
-            return a.path.join('').localeCompare(b.path.join(''));
+            // Tie-breaker: Compare paths REVERSE (Leaf -> Root)
+            // Rule: Smallest leaf value; if equal, compare parents, etc.
+            // This is equivalent to comparing the reversed path strings.
+            const revA = [...a.path].reverse().join('');
+            const revB = [...b.path].reverse().join('');
+            return revA.localeCompare(revB);
         };
 
         const snapshotQueue = (): QueueItem[] => {
@@ -1592,27 +1647,35 @@ const GraphVisualizer: React.FC = () => {
                         <div className="flex gap-2">
                             <button
                                 onClick={randomizeWeights}
-                                className="flex-1 p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 flex items-center justify-center gap-2 text-xs font-medium"
+                                className="w-full p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 flex items-center justify-center gap-2 text-xs font-medium"
                             >
-                                <Shuffle className="w-4 h-4" /> Random
+                                <Shuffle className="w-4 h-4" /> Random Graph
                             </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={loadExample1}
-                                className="flex-1 p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all"
+                                className="p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all"
                             >
                                 <Info className="w-4 h-4" /> Ex 1
                             </button>
                             <button
                                 onClick={loadExample2}
-                                className="flex-1 p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all"
+                                className="p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all"
                             >
                                 <Info className="w-4 h-4" /> Ex 2
                             </button>
                             <button
                                 onClick={loadExample3}
-                                className="flex-1 p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all"
+                                className="p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all"
                             >
                                 <Info className="w-4 h-4" /> Ex 3
+                            </button>
+                            <button
+                                onClick={loadExample4}
+                                className="p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all"
+                            >
+                                <Info className="w-4 h-4" /> Ex 4
                             </button>
                         </div>
                         <div className="flex gap-2">
