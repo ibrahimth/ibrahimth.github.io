@@ -1085,6 +1085,7 @@ const GraphVisualizer: React.FC = () => {
                     queue: currentStackSnapshot,
                     extendedNode: current,
                     extendedList: Array.from(extended),
+                    extendedListWithCosts: {},
                     extendedCount,
                     enqueuedCount,
                     events
@@ -1118,9 +1119,8 @@ const GraphVisualizer: React.FC = () => {
             } else {
                 if (a.g !== b.g) return a.g - b.g;   // UCS: by g
             }
-            const leafA = a.path[a.path.length - 1];
-            const leafB = b.path[b.path.length - 1];
-            if (leafA !== leafB) return leafA.localeCompare(leafB);
+            // Tie-breaker: Lexical order of the FULL path
+            // (Standard requirement: SBE < SBEC, SAB < SZA, etc.)
             return a.path.join('').localeCompare(b.path.join(''));
         };
 
@@ -1840,9 +1840,8 @@ const GraphVisualizer: React.FC = () => {
                 {/* Logs */}
                 {showLogs && stepLogs.length > 0 && (
                     <div
-                        className={`absolute w-full max-w-[95vw] sm:max-w-[500px] lg:w-[500px] max-h-[50vh] lg:max-h-[calc(100vh-2rem)] flex flex-col bg-white/95 backdrop-blur shadow-2xl rounded-xl overflow-hidden transition-shadow ${
-                            isDraggingPanel ? 'border-4 border-blue-400 shadow-blue-500/50' : 'border-2 border-slate-300'
-                        }`}
+                        className={`absolute w-full max-w-[95vw] sm:max-w-[500px] lg:w-[500px] max-h-[50vh] lg:max-h-[calc(100vh-2rem)] flex flex-col bg-white/95 backdrop-blur shadow-2xl rounded-xl overflow-hidden transition-shadow ${isDraggingPanel ? 'border-4 border-blue-400 shadow-blue-500/50' : 'border-2 border-slate-300'
+                            }`}
                         style={{
                             left: tracePanelPos.x === 0 ? (window.innerWidth < 640 ? '0.5rem' : 'auto') : `${tracePanelPos.x}px`,
                             top: tracePanelPos.x === 0 ? '1rem' : `${tracePanelPos.y}px`,
@@ -1982,9 +1981,9 @@ const GraphVisualizer: React.FC = () => {
                                                                     key={i}
                                                                     className={
                                                                         e.includes('better path') ||
-                                                                        e.includes('updated') ||
-                                                                        e.includes('Extended List updated') ||
-                                                                        e.includes('reopened')
+                                                                            e.includes('updated') ||
+                                                                            e.includes('Extended List updated') ||
+                                                                            e.includes('reopened')
                                                                             ? 'text-green-600 font-bold'
                                                                             : e.includes('NOT enqueued') ||
                                                                                 e.includes('NOT extended') ||

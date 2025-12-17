@@ -4,7 +4,7 @@ import Topic2Studio from './topic_2_interactive_studio_coe_292.tsx'
 import SVMPlayground from './topic_3_svm_playground.tsx'
 import NeuralNetworksComplete from './topic_4_neural_networks_complete.tsx'
 import CNNVisualizer from './topic_5_cnn_visualizer.tsx'
-import Topic6SearchVisualizer from './topic_6_search_visualizer.tsx'
+import Topic6SearchVisualizer from './topic_6_search_visualizer.js'
 import SVMInteractiveAux from './svm_support_vector_selection.tsx'
 import CSPVisualizer from './topic_7_csp_visualizer.tsx'
 
