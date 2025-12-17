@@ -1618,6 +1618,15 @@ const GraphVisualizer: React.FC = () => {
                             >
                                 <Info className="w-4 h-4" /> Ex 3
                             </button>
+<<<<<<< HEAD
+=======
+                            {/* < button
+                                onClick={loadExample4}
+                                className="p-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2 text-xs font-bold transition-all"
+                            >
+                                <Info className="w-4 h-4" /> Ex 4
+                            </button> */}
+>>>>>>> ad48ffab9edf0d11a27d74cf9710728739d7a325
                         </div>
                         <div className="flex gap-2">
                             <button
