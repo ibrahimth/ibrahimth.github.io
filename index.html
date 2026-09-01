@@ -63,6 +63,7 @@
             background-size: cover;
             pointer-events: none;
             animation: wave 20s linear infinite;
+            z-index: -1; /* ensure the overlay sits behind the page content */
         }
 
         @keyframes wave {
@@ -86,6 +87,7 @@
             animation: slideDown 0.8s ease-out;
             position: relative;
             overflow: hidden;
+            z-index: 1; /* bring hero above the background overlay */
         }
 
         .hero::before {
@@ -263,6 +265,8 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             animation: fadeInUp 0.8s ease-out;
             transition: transform 0.3s ease;
+            position: relative; /* ensure section stacks above overlay */
+            z-index: 1;
         }
 
         .section:hover {
@@ -495,6 +499,8 @@
             max-width: 1200px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            position: relative; /* ensure footer stacks above overlay */
+            z-index: 1;
         }
 
         @media (max-width: 768px) {
@@ -698,4 +704,6 @@
             <div class="pub-year">2024</div>
             <div class="publication">
             ... (truncated unchanged)
+
+
 
