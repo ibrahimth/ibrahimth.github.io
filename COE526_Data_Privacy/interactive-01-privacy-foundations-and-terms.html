@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COE 526 — Privacy Foundations and Terms Lab</title>
+  <style>
+    :root{--navy:#1b365d;--green:#00843d;--teal:#007e7a;--gold:#c9a227;--ink:#20262e;--muted:#5b6573;--line:#d6dde5;--blue:#e8eef5;--mint:#eaf4ee;--sand:#f7f1db;--white:#fff;--shadow:0 16px 42px rgba(27,54,93,.12)}
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:#f5f7fa;line-height:1.45}
+    header{background:var(--white);border-top:6px solid var(--green);border-bottom:1px solid var(--line);padding:18px clamp(20px,5vw,70px);display:flex;gap:24px;align-items:center;justify-content:space-between}
+    .brand{display:flex;gap:14px;align-items:center}.seal{width:56px;height:46px;min-width:56px;border:2.5px solid var(--green);border-radius:12px;background:var(--mint);display:grid;place-items:center;color:var(--green);font-weight:900;font-size:.8rem;letter-spacing:.5px}.brand strong{color:var(--navy);font-size:.95rem;display:block;line-height:1.25;font-weight:800}.brand small{display:block;color:var(--muted);font-size:.76rem;margin-top:2px;font-weight:600}
+    .course{font-size:.76rem;letter-spacing:.09em;font-weight:800;color:var(--navy);text-align:right}
+    main{max-width:1240px;margin:auto;padding:36px 24px 60px}.eyebrow{color:var(--green);font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}h1{color:var(--navy);font-size:clamp(2rem,4vw,3.4rem);line-height:1.04;margin:.35rem 0 .75rem;max-width:900px} .lede{font-size:1.05rem;color:var(--muted);max-width:850px;margin:0 0 28px}
+    .tabs{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px}.tab{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;padding:11px 16px;font-weight:750;cursor:pointer;transition:.2s}.tab:hover,.tab:focus-visible{border-color:var(--green);outline:3px solid rgba(0,132,61,.15)}.tab[aria-selected="true"]{background:var(--green);color:#fff;border-color:var(--green);transform:translateY(-2px)}
+    .grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:24px}.panel{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}.panel h2{font-size:1.05rem;color:var(--navy);margin:0;padding:18px 20px;border-bottom:1px solid var(--line)}
+    .stage{min-height:470px;padding:28px;position:relative;background:linear-gradient(180deg,#fbfcfe,#f1f5f8);display:grid;place-items:center}.diagram{position:relative;width:min(720px,100%);height:360px}.observer{position:absolute;right:2%;top:120px;width:116px;height:116px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;text-align:center;font-weight:800;box-shadow:0 0 0 12px rgba(27,54,93,.08)}
+    .person{position:absolute;width:116px;height:116px;border-radius:26px;display:grid;place-items:center;text-align:center;font-weight:800;color:var(--navy);transition:.45s;box-shadow:0 9px 20px rgba(27,54,93,.11)}.p1{left:4%;top:24px;background:var(--blue);border:2px solid var(--navy)}.p2{left:4%;bottom:20px;background:var(--mint);border:2px solid var(--green)}
+    .record{position:absolute;left:38%;width:184px;height:82px;border-radius:14px;background:#fff;border:2px solid var(--teal);padding:14px;color:var(--navy);font-weight:750;transition:.45s;box-shadow:0 8px 18px rgba(0,126,122,.1)}.r1{top:52px}.r2{bottom:48px}.link{position:absolute;left:24%;width:16%;height:3px;background:var(--teal);transition:.45s;transform-origin:left}.l1{top:107px}.l2{bottom:105px}.observe-line{position:absolute;left:57%;top:179px;width:25%;height:3px;background:var(--gold);transition:.45s}.event-dot{position:absolute;left:60%;top:155px;width:50px;height:50px;border-radius:50%;background:var(--gold);display:grid;place-items:center;color:#fff;font-weight:900;transition:.45s}
+    .hidden-identity .person span.identity{filter:blur(7px);opacity:.45}.hidden-link .link{opacity:.08;transform:scaleX(.15)}.hidden-link .record{border-style:dashed}.hidden-event .event-dot,.hidden-event .observe-line{opacity:.08;transform:scale(.35)}.hidden-actor .person{opacity:.16;filter:grayscale(1)}
+    .pulse{animation:pulse 1.7s infinite}@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,132,61,.22)}50%{box-shadow:0 0 0 18px rgba(0,132,61,0)}}
+    .legend{position:absolute;left:0;bottom:-2px;display:flex;gap:15px;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}.swatch{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+    .detail{padding:22px}.term{font-size:1.7rem;color:var(--navy);font-weight:850;margin:0 0 7px}.definition{font-size:1rem;margin:0 0 18px}.question{background:var(--mint);border-left:5px solid var(--green);padding:14px 15px;border-radius:9px;margin:0 0 20px;color:var(--navy);font-weight:700}.signals{display:grid;gap:9px}.signal{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.9rem}.state{font-weight:800}.yes{color:var(--green)}.no{color:#b54747}.context{color:var(--gold)}
+    .compare{margin-top:26px;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:auto}.compare table{width:100%;border-collapse:collapse;min-width:800px}.compare th,.compare td{padding:13px 15px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.compare th{background:var(--navy);color:#fff;font-size:.82rem}.compare tbody tr:hover{background:#f7faf9}.compare td:first-child{font-weight:800;color:var(--navy)}
+    .claim-lab{margin-top:26px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}.claim-head{padding:22px 24px;background:var(--navy);color:#fff}.claim-head h2{margin:0;font-size:1.5rem}.claim-head p{margin:.4rem 0 0;color:#dce7f3}.claim-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.75fr);gap:0}.claim-controls{padding:24px;display:grid;gap:16px}.field label{display:block;color:var(--navy);font-weight:850;margin-bottom:6px}.field select{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:11px;color:var(--ink)}.field select:focus-visible{outline:3px solid rgba(0,132,61,.16);border-color:var(--green)}.evidence{border:1px solid var(--line);border-radius:12px;padding:14px}.evidence legend{color:var(--navy);font-weight:850;padding:0 5px}.check{display:flex;gap:9px;align-items:flex-start;margin:8px 0}.check input{accent-color:var(--green);margin-top:4px}.claim-output{background:linear-gradient(150deg,#f1f5f8,#e7eef4);padding:24px;border-left:1px solid var(--line)}.claim-output h3{color:var(--navy);margin:0 0 11px}.claim-statement{background:#fff;border-radius:13px;padding:16px;border-left:5px solid var(--gold);min-height:116px}.claim-status{display:inline-block;margin-top:14px;border-radius:999px;padding:6px 10px;background:var(--sand);color:#5e5323;font-size:.78rem;font-weight:850}.claim-status.ready{background:var(--mint);color:var(--green)}.claim-warning{font-size:.9rem;color:var(--muted);margin-top:13px}.quick-check{padding:0 24px 24px}.quick-check h3{color:var(--navy)}.scenario-check{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.scenario-card{border:1px solid var(--line);border-radius:13px;padding:15px;background:#fbfcfe}.scenario-card p{font-size:.9rem;min-height:80px}.scenario-card button{width:100%;border:1px solid var(--green);background:#fff;color:var(--green);border-radius:9px;padding:8px;font-weight:850;cursor:pointer}.scenario-card button:hover,.scenario-card button:focus-visible{background:var(--green);color:#fff;outline:3px solid rgba(0,132,61,.14)}.scenario-card .result{min-height:52px;margin-top:10px;font-size:.83rem;color:var(--muted)}
+    .note{margin-top:18px;padding:14px 16px;background:var(--sand);border:1px solid #e7d99c;border-radius:12px;font-size:.9rem;color:#5e5323}footer{max-width:1240px;margin:auto;padding:0 24px 28px;color:var(--muted);font-size:.78rem}
+    .section-nav{position:sticky;top:0;z-index:20;display:flex;gap:9px;overflow-x:auto;margin:0 0 28px;padding:11px 0;background:rgba(245,247,250,.95);backdrop-filter:blur(8px)}.section-nav a{white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:9px 13px;background:#fff;color:var(--navy);font-size:.84rem;font-weight:800;text-decoration:none}.section-nav a:hover,.section-nav a:focus-visible{border-color:var(--green);outline:3px solid rgba(0,132,61,.14)}
+    .primer{margin-bottom:28px;padding:24px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.primer h2,.attack-lab h2{margin:0;color:var(--navy);font-size:clamp(1.45rem,3vw,2rem)}.primer>p,.attack-lab>p{color:var(--muted);max-width:900px}.primer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:18px}.primer-card{padding:16px;border:1px solid var(--line);border-radius:13px;background:#fbfcfe}.primer-card strong{display:block;color:var(--navy);margin-bottom:6px}.primer-card p{margin:0;font-size:.9rem;color:var(--muted)}
+    .attack-lab{margin:0 0 28px;padding:24px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.attack-buttons{display:flex;flex-wrap:wrap;gap:9px;margin:17px 0}.attack-button{border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:#fff;color:var(--navy);font-weight:800;cursor:pointer}.attack-button[aria-pressed="true"]{color:#fff;border-color:var(--teal);background:var(--teal)}.attack-button:hover,.attack-button:focus-visible{border-color:var(--teal);outline:3px solid rgba(0,126,122,.13)}.attack-output{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;padding:18px;border-radius:14px;background:linear-gradient(145deg,#f4f8fa,#eaf4ee)}.attack-output h3{margin:0 0 6px;color:var(--navy)}.attack-output p{margin:0;color:var(--muted)}.attack-flow{display:grid;grid-template-columns:1fr auto 1fr;gap:9px;align-items:center}.attack-flow span{padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--navy);font-size:.85rem;font-weight:750}.attack-flow b{color:var(--green)}
+    .observer-lab{margin-top:18px;display:grid;grid-template-columns:minmax(240px,.55fr) 1fr;gap:15px}.observer-control{padding:16px;border:1px solid var(--line);border-radius:13px;background:#fff}.observer-control label{display:block;color:var(--navy);font-weight:850;margin-bottom:7px}.observer-control select{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:#fff}.observer-output{padding:16px;border-left:5px solid var(--gold);border-radius:12px;background:var(--sand)}.observer-output strong{color:var(--navy)}.observer-output p{margin:6px 0 0;color:#5e5323}
+    @media(max-width:850px){.grid,.claim-grid,.attack-output,.observer-lab{grid-template-columns:1fr}.primer-grid{grid-template-columns:1fr}.diagram{transform:scale(.88);transform-origin:center}.stage{min-height:420px}.course{display:none}.claim-output{border-left:0;border-top:1px solid var(--line)}.scenario-check{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Interactive 01 • Foundations and terms</div>
+    <h1>Privacy foundations and terminology</h1>
+    <p class="lede">Select a property and watch what the observer can distinguish. The animation is a teaching model: every real privacy claim still needs an adversary, prior knowledge, system boundary, and measurable criterion.</p>
+    <nav class="section-nav" aria-label="Lecture sections"><a href="#primer">Why privacy is hard</a><a href="#attacks">Attack lab</a><a href="#properties">Privacy properties</a><a href="#claims">Claim stress test</a></nav>
+    <section class="primer" id="primer">
+      <h2>What must a privacy analysis distinguish?</h2>
+      <p>Lecture 1B moves from the breadth of privacy to concrete data, actors, attacks, and claims. These distinctions prevent “remove the names” from being treated as a complete privacy method.</p>
+      <div class="primer-grid">
+        <article class="primer-card"><strong>Personal data is broader than direct identifiers</strong><p>Names, contact details, device identifiers, locations, records, and inferences may identify or relate to a person. “Personally Identifiable Information (PII)” is common U.S. terminology, while each law defines its own scope.</p></article>
+        <article class="primer-card"><strong>Sensitive personal data is a legal subset</strong><p>Health, genetic, biometric, religious, or similar data may receive extra protection depending on the applicable law. Children’s data needs special care, but age alone is not a General Data Protection Regulation special category.</p></article>
+        <article class="primer-card"><strong>Privacy depends on context and perspective</strong><p>A company, data subject, analyst, privacy officer, insider, outsider, and attacker may see different evidence and face different incentives. State whose perspective defines the claim.</p></article>
+      </div>
+    </section>
+
+    <section class="attack-lab" id="attacks">
+      <h2>Attack and adversary lab</h2>
+      <p>Choose an attack, then change the observer. A privacy result is meaningful only relative to what the observer can access and already knows.</p>
+      <div class="attack-buttons" role="group" aria-label="Privacy attack type">
+        <button class="attack-button" aria-pressed="true" data-attack="linkage">Re-identification</button>
+        <button class="attack-button" aria-pressed="false" data-attack="membership">Membership inference</button>
+        <button class="attack-button" aria-pressed="false" data-attack="reconstruction">Reconstruction</button>
+      </div>
+      <div class="attack-output" aria-live="polite">
+        <div><h3 id="attackName"></h3><p id="attackDescription"></p></div>
+        <div class="attack-flow"><span id="attackInput"></span><b>→</b><span id="attackResult"></span></div>
+      </div>
+      <div class="observer-lab">
+        <div class="observer-control"><label for="observerScope">Observer scope</label><select id="observerScope"><option value="outsider">Outsider</option><option value="insider">Insider</option><option value="operator">Service operator</option></select></div>
+        <div class="observer-output" aria-live="polite"><strong id="observerName"></strong><p id="observerDescription"></p></div>
+      </div>
+    </section>
+
+    <div class="tabs" id="properties" role="tablist" aria-label="Privacy properties">
+      <button class="tab" role="tab" aria-selected="true" data-term="anonymity">Anonymity</button>
+      <button class="tab" role="tab" aria-selected="false" data-term="pseudonymity">Pseudonymity</button>
+      <button class="tab" role="tab" aria-selected="false" data-term="unlinkability">Unlinkability</button>
+      <button class="tab" role="tab" aria-selected="false" data-term="undetectability">Undetectability</button>
+      <button class="tab" role="tab" aria-selected="false" data-term="unobservability">Unobservability</button>
+    </div>
+    <section class="grid">
+      <article class="panel">
+        <h2>What the observer can distinguish</h2>
+        <div class="stage">
+          <div class="diagram hidden-identity" id="diagram" aria-live="polite">
+            <div class="person p1"><span>Subject<br><span class="identity">Amina</span></span></div>
+            <div class="person p2"><span>Subject<br><span class="identity">Bader</span></span></div>
+            <div class="link l1"></div><div class="link l2"></div>
+            <div class="record r1">Record α<br><small>time • route • action</small></div>
+            <div class="record r2">Record β<br><small>time • route • action</small></div>
+            <div class="observe-line"></div><div class="event-dot">E</div>
+            <div class="observer pulse">Observer<br><small>defined access</small></div>
+            <div class="legend"><span><i class="swatch" style="background:var(--navy)"></i>identity</span><span><i class="swatch" style="background:var(--teal)"></i>link</span><span><i class="swatch" style="background:var(--gold)"></i>event</span></div>
+          </div>
+        </div>
+      </article>
+      <aside class="panel">
+        <h2>Property card</h2>
+        <div class="detail">
+          <p class="term" id="termName">Anonymity</p>
+          <p class="definition" id="definition"></p>
+          <p class="question" id="question"></p>
+          <div class="signals" id="signals"></div>
+        </div>
+      </aside>
+    </section>
+    <section class="compare" aria-label="Terminology comparison">
+      <table>
+        <thead><tr><th>Property</th><th>Primary question</th><th>What may remain visible</th><th>Typical failure</th></tr></thead>
+        <tbody>
+          <tr><td>Anonymity</td><td>Which subject performed the action?</td><td>The action and an anonymity set.</td><td>Side information singles out the subject.</td></tr>
+          <tr><td>Pseudonymity</td><td>Can processing be attributed without separately held additional information?</td><td>A persistent pseudonym and linked activity.</td><td>The mapping is exposed or attributes re-identify.</td></tr>
+          <tr><td>Unlinkability</td><td>Do two items relate to the same subject or event?</td><td>Each item may be visible separately.</td><td>Stable identifiers, timing, or rare patterns link items.</td></tr>
+          <tr><td>Undetectability</td><td>Can the observer tell whether an item or event exists?</td><td>Cover traffic or a background distribution.</td><td>Volume, timing, or artifacts reveal occurrence.</td></tr>
+          <tr><td>Unobservability</td><td>Can the observer detect the event or identify participating subjects?</td><td>Only what the defined adversary cannot distinguish from background.</td><td>Either occurrence or a subject becomes distinguishable.</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="claim-lab" id="claims" aria-labelledby="claimTitle">
+      <div class="claim-head"><h2 id="claimTitle">Privacy-claim stress test</h2><p>Turn a broad property into a claim that can be evaluated. Change the protected property, observer, accessible evidence, and auxiliary knowledge.</p></div>
+      <div class="claim-grid">
+        <div class="claim-controls">
+          <div class="field"><label for="claimProperty">Protected property</label><select id="claimProperty"><option value="anonymity">Anonymity</option><option value="pseudonymity">Pseudonymity</option><option value="unlinkability">Unlinkability</option><option value="undetectability">Undetectability</option><option value="unobservability">Unobservability</option></select></div>
+          <div class="field"><label for="claimObserver">Observer</label><select id="claimObserver"><option value="public outsider">Public outsider using the released interface</option><option value="network observer">Network observer who sees timing and metadata</option><option value="authorized analyst">Authorized analyst with row-level access</option><option value="service operator">Service operator with logs and account mappings</option></select></div>
+          <div class="field"><label for="claimEvidence">Accessible evidence</label><select id="claimEvidence"><option value="published aggregate outputs">Published aggregate outputs</option><option value="persistent pseudonyms and timestamps">Persistent pseudonyms and timestamps</option><option value="message timing, volume, and endpoints">Message timing, volume, and endpoints</option><option value="row-level records and system logs">Row-level records and system logs</option></select></div>
+          <div class="field"><label for="claimKnowledge">Auxiliary knowledge</label><select id="claimKnowledge"><option value="public population statistics">Public population statistics</option><option value="a second linkable dataset">A second linkable dataset</option><option value="several known subject–record pairs">Several known subject–record pairs</option><option value="the full pseudonym-to-identity mapping">The full pseudonym-to-identity mapping</option></select></div>
+          <fieldset class="evidence"><legend>Evaluation plan</legend><label class="check"><input type="checkbox" data-proof="success criterion"><span>Define a measurable attacker success criterion.</span></label><label class="check"><input type="checkbox" data-proof="comparison"><span>Compare against a baseline or neighboring world.</span></label><label class="check"><input type="checkbox" data-proof="utility"><span>Measure the utility retained by the system.</span></label></fieldset>
+        </div>
+        <aside class="claim-output" aria-live="polite"><h3>Generated claim</h3><div class="claim-statement" id="claimStatement"></div><span class="claim-status" id="claimStatus">Needs an evaluation plan</span><p class="claim-warning" id="claimWarning"></p></aside>
+      </div>
+      <div class="quick-check"><h3>Three fast checks</h3><div class="scenario-check">
+        <article class="scenario-card"><strong>Names removed; stable IDs remain.</strong><p>Records from the same person can still be grouped over time.</p><button data-check="pseudo">Reveal the strongest claim</button><div class="result" id="result-pseudo" aria-live="polite"></div></article>
+        <article class="scenario-card"><strong>Two records look unrelated.</strong><p>Timing and rare attributes allow an outsider to connect them.</p><button data-check="link">Reveal the failure</button><div class="result" id="result-link" aria-live="polite"></div></article>
+        <article class="scenario-card"><strong>Message contents are encrypted.</strong><p>A network observer still sees who communicates, when, and how much.</p><button data-check="observe">Reveal the limit</button><div class="result" id="result-observe" aria-live="polite"></div></article>
+      </div></div>
+    </section>
+    <p class="note"><strong>Instructor note:</strong> Ask students to name the adversary and auxiliary information before accepting any property. A system can provide one property without the others.</p>
+  </main>
+  <footer>COE 526 • First Semester 2026–27 • Offline teaching artifact • No personal data used</footer>
+  <script>
+    const attacks={
+      linkage:{name:'Re-identification through data linkage',description:'Match an apparently de-identified release with auxiliary records using shared or rare attributes. The Massachusetts health-record example and the Netflix Prize show why removing names alone is insufficient.',input:'Released data + auxiliary data',result:'Identity or profile link'},
+      membership:{name:'Membership inference',description:'Use high-dimensional aggregate statistics to test whether a known person contributed to a dataset. Genome-wide association study summaries showed that aggregate publication can still reveal participation.',input:'Aggregate statistics + known record',result:'Participation estimate'},
+      reconstruction:{name:'Reconstruction attack',description:'Issue or combine too many highly accurate answers until individual records can be partially or fully recovered. Privacy loss accumulates across outputs and repeated queries.',input:'Many accurate query answers',result:'Recovered records'}
+    };
+    const observers={
+      outsider:{name:'Outsider',description:'Observes from outside the system boundary. Public releases, timing, endpoints, and external datasets may still support linkage or inference.'},
+      insider:{name:'Insider',description:'Has legitimate or compromised access to traffic, records, logs, or internal state. Access authorization does not make every use privacy-appropriate.'},
+      operator:{name:'Service operator',description:'May control accounts, mappings, infrastructure, retention, and telemetry. Claims that hide identity from the public may fail against the operator.'}
+    };
+    function renderAttack(key){
+      const attack=attacks[key];
+      document.querySelector('#attackName').textContent=attack.name;
+      document.querySelector('#attackDescription').textContent=attack.description;
+      document.querySelector('#attackInput').textContent=attack.input;
+      document.querySelector('#attackResult').textContent=attack.result;
+      document.querySelectorAll('[data-attack]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.attack===key)));
+    }
+    function renderObserver(key){
+      const observer=observers[key];
+      document.querySelector('#observerName').textContent=observer.name;
+      document.querySelector('#observerDescription').textContent=observer.description;
+    }
+    document.querySelectorAll('[data-attack]').forEach(button=>button.addEventListener('click',()=>renderAttack(button.dataset.attack)));
+    document.querySelector('#observerScope').addEventListener('change',event=>renderObserver(event.target.value));
+    renderAttack('linkage');
+    renderObserver('outsider');
+
+    const terms={
+      anonymity:{definition:"A subject is not sufficiently identifiable within a defined set of possible subjects, relative to a specified observer and evidence.",question:"Can the observer single out who performed the action?",classes:["hidden-identity"],signals:[["Identity","hidden","no"],["Record existence","visible","yes"],["Cross-record link","context-dependent","context"],["Actor participation","visible as a set","context"]]},
+      pseudonymity:{definition:"Processing cannot be attributed to a specific data subject without separately kept additional information; activity may remain linkable under a pseudonym.",question:"Is the real identity separated from the activity mapping?",classes:["hidden-identity"],signals:[["Real identity","separated","no"],["Persistent alias","visible","yes"],["Cross-record link","often visible","yes"],["Event existence","visible","yes"]]},
+      unlinkability:{definition:"The observer cannot determine that two or more items of interest are related beyond what was already known.",question:"Can the observer connect Record α and Record β to the same subject or event?",classes:["hidden-link"],signals:[["Identity","may be visible","context"],["Each record","visible","yes"],["Cross-record link","hidden","no"],["Event existence","visible","yes"]]},
+      undetectability:{definition:"The observer cannot sufficiently distinguish whether an item or event of interest exists, relative to a defined background and test.",question:"Can the observer tell whether event E occurred?",classes:["hidden-event"],signals:[["Event existence","hidden","no"],["Actor identity","not the primary claim","context"],["Records","may be cover traffic","context"],["Cross-record link","not the primary claim","context"]]},
+      unobservability:{definition:"In the selected terminology, the observer cannot sufficiently detect the event and cannot identify the participating subjects within the defined system and adversary model.",question:"Can the observer detect E or identify who participated?",classes:["hidden-event","hidden-actor","hidden-link"],signals:[["Event existence","hidden","no"],["Actor participation","hidden","no"],["Identity","hidden","no"],["Links","hidden","no"]]}
+    };
+    const diagram=document.querySelector('#diagram'),nameEl=document.querySelector('#termName'),definition=document.querySelector('#definition'),question=document.querySelector('#question'),signals=document.querySelector('#signals');
+    function render(key){const t=terms[key];diagram.className='diagram '+t.classes.join(' ');nameEl.textContent=key[0].toUpperCase()+key.slice(1);definition.textContent=t.definition;question.textContent=t.question;signals.innerHTML=t.signals.map(([label,value,state])=>`<div class="signal"><span>${label}</span><span class="state ${state}">${value}</span></div>`).join('');document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.term===key)));}
+    document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>render(button.dataset.term)));
+    render('anonymity');
+    const propertySelect=document.querySelector('#claimProperty'),observerSelect=document.querySelector('#claimObserver'),evidenceSelect=document.querySelector('#claimEvidence'),knowledgeSelect=document.querySelector('#claimKnowledge'),claimStatement=document.querySelector('#claimStatement'),claimStatus=document.querySelector('#claimStatus'),claimWarning=document.querySelector('#claimWarning');
+    const protectedItems={anonymity:'which subject performed an action',pseudonymity:'the real identity behind a pseudonym',unlinkability:'whether two items relate to the same subject or event',undetectability:'whether the item or event exists',unobservability:'whether the event exists or who participates'};
+    const limits={anonymity:'The action may remain visible, and side information can shrink the anonymity set.',pseudonymity:'Activity may remain linkable; anyone holding the mapping can attribute it.',unlinkability:'Each item may remain visible, and new side information can create a link.',undetectability:'This does not by itself hide participating identities if the event becomes detectable.',unobservability:'This is the strongest combined claim here and requires both occurrence and participation to remain indistinguishable.'};
+    function renderClaim(){const property=propertySelect.value,checked=[...document.querySelectorAll('[data-proof]:checked')].map(x=>x.dataset.proof);claimStatement.textContent=`Relative to a ${observerSelect.value} who can access ${evidenceSelect.value} and knows ${knowledgeSelect.value}, the system aims to provide ${property}: the observer should not reliably determine ${protectedItems[property]}.`;claimWarning.textContent=limits[property];const ready=checked.length===3;claimStatus.textContent=ready?'Evaluation plan specified':`${3-checked.length} evaluation element${3-checked.length===1?'':'s'} missing`;claimStatus.classList.toggle('ready',ready);}
+    [propertySelect,observerSelect,evidenceSelect,knowledgeSelect,...document.querySelectorAll('[data-proof]')].forEach(el=>el.addEventListener('change',renderClaim));renderClaim();
+    const checkResults={pseudo:'Pseudonymity is supportable if the identity mapping is separately protected. Anonymity and unlinkability are not established.',link:'Unlinkability fails for this observer because auxiliary timing and rare attributes distinguish a relationship.',observe:'Confidentiality protects content, but it does not establish undetectability or unobservability against the metadata observer.'};
+    document.querySelectorAll('[data-check]').forEach(button=>button.addEventListener('click',()=>{document.querySelector('#result-'+button.dataset.check).textContent=checkResults[button.dataset.check];button.textContent='Reasoning shown';button.disabled=true;}));
+  </script>
+</body>
+</html>
