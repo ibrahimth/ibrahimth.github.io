@@ -50,6 +50,7 @@
             overflow-x: hidden;
         }
 
+        /* Removed malformed data URI that caused PostCSS "Unclosed string" during CI build */
         body::before {
             content: '';
             position: fixed;
@@ -57,7 +58,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.05" d="M0,96L48,112C96,128,192,160,288,160C384[...]")
+            /* replaced complex inline SVG data URI with a subtle translucent overlay to avoid build errors */
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03));
             background-size: cover;
             pointer-events: none;
             animation: wave 20s linear infinite;
@@ -696,3 +698,4 @@
             <div class="pub-year">2024</div>
             <div class="publication">
             ... (truncated unchanged)
+
