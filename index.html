@@ -24,7 +24,7 @@
     </script>
     <!-- End Google Tag Manager -->
 
-    <style>
+     <style>
         * {
             margin: 0;
             padding: 0;
@@ -50,7 +50,6 @@
             overflow-x: hidden;
         }
 
-        /* Removed malformed data URI that caused PostCSS "Unclosed string" during CI build */
         body::before {
             content: '';
             position: fixed;
@@ -58,12 +57,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            /* replaced complex inline SVG data URI with a subtle translucent overlay to avoid build errors */
-            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03));
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.05" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,106.7C1248,96,1344,96,1392,96L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat center;
             background-size: cover;
             pointer-events: none;
             animation: wave 20s linear infinite;
-            z-index: -1; /* ensure the overlay sits behind the page content */
         }
 
         @keyframes wave {
@@ -87,7 +84,6 @@
             animation: slideDown 0.8s ease-out;
             position: relative;
             overflow: hidden;
-            z-index: 1; /* bring hero above the background overlay */
         }
 
         .hero::before {
@@ -265,8 +261,6 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             animation: fadeInUp 0.8s ease-out;
             transition: transform 0.3s ease;
-            position: relative; /* ensure section stacks above overlay */
-            z-index: 1;
         }
 
         .section:hover {
@@ -499,8 +493,6 @@
             max-width: 1200px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            position: relative; /* ensure footer stacks above overlay */
-            z-index: 1;
         }
 
         @media (max-width: 768px) {
