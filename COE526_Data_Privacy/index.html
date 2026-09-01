@@ -1,1 +1,322 @@
 
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="COE 526 Data Privacy interactive course hub for the first semester of 2026–27.">
+  <title>COE 526 Data Privacy | Interactive Course</title>
+  <style>
+    :root {
+      --navy: #18365f;
+      --navy-deep: #102744;
+      --green: #00843d;
+      --green-soft: #eaf5ee;
+      --violet: #7656e8;
+      --gold: #c9a227;
+      --ink: #202733;
+      --muted: #5f6b7a;
+      --line: #d9e1e8;
+      --paper: #ffffff;
+      --page: #f3f6f8;
+      --shadow: 0 18px 48px rgba(16, 39, 68, .12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    a { color: inherit; }
+    button { font: inherit; }
+    .shell { width: min(1440px, calc(100% - 32px)); margin: 0 auto; }
+
+    .site-header {
+      color: #fff;
+      background:
+        radial-gradient(circle at 86% 18%, rgba(118, 86, 232, .55), transparent 27%),
+        linear-gradient(130deg, var(--navy-deep), var(--navy) 58%, #215f72);
+      border-top: 6px solid var(--green);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 18px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .16);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(255, 255, 255, .72);
+      border-radius: 12px;
+      font-weight: 900;
+      letter-spacing: .04em;
+    }
+    .brand strong { display: block; line-height: 1.2; }
+    .brand small { color: rgba(255, 255, 255, .72); }
+    .back { color: #fff; text-underline-offset: 4px; font-weight: 700; }
+
+    .hero { padding: 52px 0 58px; }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: #bce4c9;
+      font-size: .8rem;
+      font-weight: 850;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1 { max-width: 900px; margin: 0; font-size: clamp(2.35rem, 6vw, 5.25rem); line-height: .98; letter-spacing: -.045em; }
+    .hero p { max-width: 790px; margin: 20px 0 0; color: rgba(255, 255, 255, .82); font-size: clamp(1rem, 2vw, 1.2rem); }
+    .hero-facts { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 26px; }
+    .hero-facts span { padding: 8px 12px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 999px; background: rgba(255, 255, 255, .08); font-size: .86rem; }
+
+    .course-nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--line);
+      background: rgba(243, 246, 248, .96);
+      backdrop-filter: blur(10px);
+    }
+    .tabs { display: flex; gap: 8px; overflow-x: auto; padding: 11px 0; scrollbar-width: thin; }
+    .tab {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 15px;
+      color: var(--navy);
+      background: var(--paper);
+      cursor: pointer;
+      font-weight: 800;
+    }
+    .tab:hover, .tab:focus-visible { border-color: var(--green); outline: 3px solid rgba(0, 132, 61, .13); }
+    .tab[aria-selected="true"] { color: #fff; border-color: var(--green); background: var(--green); }
+
+    main { padding: 28px 0 56px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .surface { border: 1px solid var(--line); border-radius: 20px; background: var(--paper); box-shadow: var(--shadow); overflow: hidden; }
+    .surface-head { display: flex; align-items: start; justify-content: space-between; gap: 20px; padding: 22px 24px; border-bottom: 1px solid var(--line); }
+    .surface-head h2 { margin: 0; color: var(--navy); font-size: clamp(1.35rem, 3vw, 2rem); }
+    .surface-head p { max-width: 760px; margin: 6px 0 0; color: var(--muted); }
+    .open-link { flex: 0 0 auto; padding: 9px 12px; border: 1px solid var(--green); border-radius: 10px; color: var(--green); text-decoration: none; font-weight: 800; }
+    .open-link:hover, .open-link:focus-visible { color: #fff; background: var(--green); outline: 3px solid rgba(0, 132, 61, .14); }
+    iframe { display: block; width: 100%; min-height: 900px; border: 0; background: #fff; }
+
+    .home-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: 22px; }
+    .intro { padding: 30px; }
+    .intro h2, .side h2, .slides h2 { color: var(--navy); }
+    .intro h2 { margin: 0; font-size: clamp(1.7rem, 3vw, 2.6rem); }
+    .intro > p { max-width: 800px; color: var(--muted); font-size: 1.04rem; }
+    .path { display: grid; gap: 11px; margin-top: 24px; }
+    .path button {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      color: var(--ink);
+      background: #fff;
+      text-align: left;
+      cursor: pointer;
+    }
+    .path button:hover, .path button:focus-visible { border-color: var(--green); outline: 3px solid rgba(0, 132, 61, .12); transform: translateY(-1px); }
+    .num { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; color: #fff; background: var(--navy); font-weight: 900; }
+    .path strong { display: block; color: var(--navy); }
+    .path small { color: var(--muted); }
+    .arrow { color: var(--green); font-size: 1.4rem; }
+
+    .side { padding: 26px; background: linear-gradient(160deg, #fff, var(--green-soft)); }
+    .side h2 { margin-top: 0; }
+    .side dl { display: grid; grid-template-columns: auto 1fr; gap: 11px 16px; margin: 0; }
+    .side dt { color: var(--muted); font-weight: 700; }
+    .side dd { margin: 0; color: var(--navy); font-weight: 800; }
+    .note { margin-top: 24px; padding: 15px; border: 1px solid #e6d793; border-radius: 12px; background: #fff8dc; color: #625522; font-size: .9rem; }
+
+    .slides { padding: 30px; }
+    .slides > p { max-width: 850px; color: var(--muted); }
+    .deck-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+    .deck { display: flex; flex-direction: column; min-height: 270px; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(165deg, #fff, #f5f8fb); }
+    .deck .deck-code { color: var(--green); font-size: .78rem; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+    .deck h3 { margin: 12px 0 8px; color: var(--navy); font-size: 1.25rem; }
+    .deck p { margin: 0 0 20px; color: var(--muted); }
+    .deck a { margin-top: auto; padding: 10px 12px; border-radius: 10px; color: #fff; background: var(--navy); text-decoration: none; text-align: center; font-weight: 800; }
+    .deck a:hover, .deck a:focus-visible { background: var(--green); outline: 3px solid rgba(0, 132, 61, .13); }
+    .coverage { margin-top: 22px; padding: 17px 19px; border-left: 5px solid var(--violet); border-radius: 12px; background: #f2efff; color: #403475; }
+    .coverage-table { width: 100%; margin-top: 22px; border-collapse: collapse; font-size: .92rem; }
+    .coverage-table th, .coverage-table td { padding: 11px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .coverage-table th { color: #fff; background: var(--navy); }
+    .coverage-table td:first-child { color: var(--navy); font-weight: 850; white-space: nowrap; }
+
+    footer { padding: 0 0 34px; color: var(--muted); font-size: .84rem; text-align: center; }
+    @media (max-width: 900px) { .home-grid, .deck-grid { grid-template-columns: 1fr; } .deck { min-height: 0; } }
+    @media (max-width: 650px) {
+      .shell { width: min(100% - 20px, 1440px); }
+      .header-top { align-items: flex-start; }
+      .brand small { display: none; }
+      .hero { padding: 38px 0 42px; }
+      .surface-head { flex-direction: column; padding: 18px; }
+      .intro, .side, .slides { padding: 20px; }
+      .path button { grid-template-columns: 40px 1fr; }
+      .arrow { display: none; }
+      iframe { min-height: 1100px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <div class="header-top">
+        <a class="brand" href="./" aria-label="COE 526 course home">
+          <span class="brand-mark">526</span>
+          <span><strong>COE 526 · Data Privacy</strong><small>King Fahd University of Petroleum and Minerals</small></span>
+        </a>
+        <a class="back" href="../#teaching">← Teaching Experience</a>
+      </div>
+      <div class="hero">
+        <p class="eyebrow">First Semester · 2026–27</p>
+        <h1>Learn privacy by tracing what systems do.</h1>
+        <p>Three classroom labs connect course orientation, privacy foundations, terminology, and data-protection law. Use the tabs to move between the updated lecture materials without leaving the course page.</p>
+        <div class="hero-facts"><span>Tuesday · 6:45–8:00 p.m.</span><span>Building 59 · Room 1016</span><span>Instructor: Ibrahim ALthamary</span></div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="course-nav" aria-label="COE 526 course tabs">
+    <div class="shell tabs" role="tablist">
+      <button class="tab" id="tab-home" role="tab" aria-selected="true" aria-controls="home" data-panel="home">Course Home</button>
+      <button class="tab" id="tab-orientation" role="tab" aria-selected="false" aria-controls="orientation" data-panel="orientation">00 · Orientation</button>
+      <button class="tab" id="tab-foundations" role="tab" aria-selected="false" aria-controls="foundations" data-panel="foundations">01 · Foundations & Terms</button>
+      <button class="tab" id="tab-laws" role="tab" aria-selected="false" aria-controls="laws" data-panel="laws">02 · Privacy Laws</button>
+      <button class="tab" id="tab-slides" role="tab" aria-selected="false" aria-controls="slides" data-panel="slides">Updated Slides</button>
+    </div>
+  </nav>
+
+  <main class="shell">
+    <section class="panel active" id="home" role="tabpanel" aria-labelledby="tab-home">
+      <div class="home-grid">
+        <article class="surface intro">
+          <p class="eyebrow" style="color:var(--green)">Interactive course path</p>
+          <h2>Start with a system. Add the legal and technical lenses.</h2>
+          <p>The labs follow the revised lecture sequence. Each activity uses fictional or synthetic examples and asks students to state the system boundary, observer, purpose, data flow, control, evidence, and limitation.</p>
+          <div class="path">
+            <button data-open-panel="orientation"><span class="num">00</span><span><strong>Course orientation</strong><small>Data flows, security versus privacy, assessment, and safe class practice</small></span><span class="arrow">→</span></button>
+            <button data-open-panel="foundations"><span class="num">01</span><span><strong>Privacy foundations and terms</strong><small>Re-identification, adversaries, anonymity, unlinkability, undetectability, unobservability, and pseudonymity</small></span><span class="arrow">→</span></button>
+            <button data-open-panel="laws"><span class="num">02</span><span><strong>Privacy laws and regulations</strong><small>U.S. Fair Information Practice Principles, OECD principles, HIPAA, GDPR, EU–U.S. transfers, and Saudi law</small></span><span class="arrow">→</span></button>
+          </div>
+        </article>
+        <aside class="surface side">
+          <h2>Course details</h2>
+          <dl>
+            <dt>Course</dt><dd>COE 526 Data Privacy</dd>
+            <dt>Semester</dt><dd>First Semester 2026–27</dd>
+            <dt>Instructor</dt><dd>Ibrahim ALthamary</dd>
+          </dl>
+          <div class="note"><strong>Classroom use:</strong> The interactive pages are teaching aids, not legal advice. Check the linked primary sources and current law before making a compliance decision.</div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="panel" id="orientation" role="tabpanel" aria-labelledby="tab-orientation" hidden>
+      <div class="surface">
+        <div class="surface-head"><div><h2>Interactive 00 · Course Orientation</h2><p>Trace data, separate privacy from security, review the course map, and establish a safe working agreement.</p></div><a class="open-link" href="interactive-00-course-orientation.html" target="_blank" rel="noopener">Open full page ↗</a></div>
+        <iframe title="COE 526 course orientation interactive lab" data-src="interactive-00-course-orientation.html"></iframe>
+      </div>
+    </section>
+
+    <section class="panel" id="foundations" role="tabpanel" aria-labelledby="tab-foundations" hidden>
+      <div class="surface">
+        <div class="surface-head"><div><h2>Interactive 01 · Privacy Foundations and Terms</h2><p>Examine privacy attacks, adversary knowledge, and the exact claim made by anonymity-related properties.</p></div><a class="open-link" href="interactive-01-privacy-foundations-and-terms.html" target="_blank" rel="noopener">Open full page ↗</a></div>
+        <iframe title="COE 526 privacy foundations and terminology interactive lab" data-src="interactive-01-privacy-foundations-and-terms.html"></iframe>
+      </div>
+    </section>
+
+    <section class="panel" id="laws" role="tabpanel" aria-labelledby="tab-laws" hidden>
+      <div class="surface">
+        <div class="surface-head"><div><h2>Interactive 02 · Privacy Laws and Regulations</h2><p>Compare principles and legal regimes, then apply them to system-design scenarios.</p></div><a class="open-link" href="interactive-02-privacy-laws.html" target="_blank" rel="noopener">Open full page ↗</a></div>
+        <iframe title="COE 526 privacy law interactive lab" data-src="interactive-02-privacy-laws.html"></iframe>
+      </div>
+    </section>
+
+    
+  </main>
+
+  <footer class="shell">COE 526 Data Privacy · First Semester 2026–27 · Interactive teaching materials</footer>
+
+  <script>
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    const panels = [...document.querySelectorAll('[role="tabpanel"]')];
+
+    function resizeFrame(frame) {
+      try {
+        const doc = frame.contentDocument;
+        if (!doc) return;
+        frame.style.height = Math.max(900, doc.documentElement.scrollHeight, doc.body.scrollHeight) + 'px';
+        if (!frame._courseObserver && 'ResizeObserver' in window) {
+          frame._courseObserver = new ResizeObserver(() => resizeFrame(frame));
+          frame._courseObserver.observe(doc.body);
+        }
+      } catch (_) {
+        frame.style.height = '1100px';
+      }
+    }
+
+    function openPanel(id, updateHash = true) {
+      const targetTab = tabs.find(tab => tab.dataset.panel === id) || tabs[0];
+      const targetId = targetTab.dataset.panel;
+      tabs.forEach(tab => {
+        const selected = tab === targetTab;
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      });
+      panels.forEach(panel => {
+        const selected = panel.id === targetId;
+        panel.classList.toggle('active', selected);
+        panel.hidden = !selected;
+      });
+      const frame = document.querySelector('#' + targetId + ' iframe');
+      if (frame) {
+        if (!frame.getAttribute('src')) frame.setAttribute('src', frame.dataset.src);
+        frame.addEventListener('load', () => resizeFrame(frame), { once: true });
+      }
+      if (updateHash) history.replaceState(null, '', '#' + targetId);
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => openPanel(tab.dataset.panel));
+      tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        let next = index;
+        if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+        if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+        if (event.key === 'Home') next = 0;
+        if (event.key === 'End') next = tabs.length - 1;
+        tabs[next].focus();
+        openPanel(tabs[next].dataset.panel);
+      });
+    });
+    document.querySelectorAll('[data-open-panel]').forEach(button => button.addEventListener('click', () => {
+      openPanel(button.dataset.openPanel);
+      document.querySelector('.course-nav').scrollIntoView({ block: 'start' });
+    }));
+    openPanel(location.hash.replace('#', '') || 'home', false);
+  </script>
+</body>
+</html>
