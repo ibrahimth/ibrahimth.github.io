@@ -20,30 +20,46 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+      - name: Show node & npm versions
+        run: |
+          node -v
+          npm -v
+          uname -a
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build --if-present
+      - name: Build (Vite)
+        run: |
+          set -e
+          npm run build
+
+      - name: Show dist contents
+        if: success()
+        run: |
+          echo "dist size and listing:"
+          du -sh dist || true
+          ls -la dist || true
+          find dist -maxdepth 3 -type f -print || true
 
       - name: Copy static course pages into dist
         run: |
           set -e
-          # Copy COE526 static site into the built output so it will be published
           if [ -d "COE526_Data_Privacy" ]; then
             cp -r COE526_Data_Privacy dist/ || true
           fi
-          # Copy other standalone HTML pages you may want published
           if [ -f "personal-website.html" ]; then
             cp personal-website.html dist/ || true
+          fi
+          echo "dist after copy:"
+          ls -la dist || true
+
+      - name: Fail if dist missing index.html
+        run: |
+          if [ ! -f dist/index.html ]; then
+            echo "dist/index.html not found — aborting deploy"
+            ls -la dist || true
+            exit 1
           fi
 
       - name: Deploy to gh-pages
