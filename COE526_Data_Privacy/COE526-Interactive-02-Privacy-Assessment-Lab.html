@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COE526 — Privacy Assessment Lab</title>
+  <style>
+    :root {
+      /* matches the rebuilt Lecture 03 deck */
+      --green:#007a4d; --deep:#005336; --gold:#f2c500; --gold-dark:#8a6600;
+      --ink:#142a22; --muted:#5f736a; --line:#c9d8d1; --mint:#ecf6f1;
+      --blue:#2c5f7a; --pale-blue:#e7f1f6; --pale-gold:#fff6d2;
+      --red:#a83a3a; --pale-red:#fbecec;
+      --white:#fff; --shadow:0 14px 36px rgba(20,42,34,.10); --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:#f5f8f6;color:var(--ink);font:16px/1.45 Arial,Helvetica,sans-serif}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    a{color:var(--deep)}
+    .topbar{background:linear-gradient(135deg,var(--deep),var(--green));color:#fff;border-bottom:7px solid var(--gold)}
+    .topbar-inner{max-width:1240px;margin:auto;padding:28px 24px 24px;display:flex;gap:20px;align-items:center}
+    .course-mark{width:76px;height:76px;border-radius:50%;border:4px solid var(--gold);display:grid;place-items:center;font-weight:800;letter-spacing:.04em;flex:none}
+    h1{font-size:clamp(1.7rem,4vw,2.7rem);line-height:1.05;margin:0 0 7px}
+    .subtitle{margin:0;color:#e9fff6}
+    .shell{max-width:1240px;margin:24px auto;padding:0 24px 48px;display:grid;grid-template-columns:290px minmax(0,1fr);gap:22px}
+    .sidebar,.workspace,.source-panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .sidebar{padding:18px;align-self:start;position:sticky;top:16px}
+    .eyebrow{font-size:.76rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--green)}
+    h2{font-size:1.45rem;line-height:1.2;margin:5px 0 12px}
+    h3{font-size:1.1rem;margin:0 0 8px;color:var(--deep)}
+    .scenario-list{display:grid;gap:9px;margin-top:14px}
+    .scenario-btn{width:100%;padding:12px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--ink)}
+    .scenario-btn strong,.scenario-btn span{display:block}
+    .scenario-btn span{font-size:.82rem;color:var(--muted);margin-top:2px}
+    .scenario-btn.active{border-color:var(--green);background:var(--mint);box-shadow:inset 5px 0 var(--green)}
+    .scenario-btn.composite.active{border-color:#d8ae00;background:var(--pale-gold);box-shadow:inset 5px 0 var(--gold)}
+    .sidebar-note{margin:16px 0 0;padding:12px;background:#f4f6f5;border-radius:11px;color:var(--muted);font-size:.86rem}
+    .main{min-width:0}
+    .progress{display:flex;gap:7px;overflow:auto;padding:0 0 12px;scrollbar-width:thin}
+    .step-btn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;white-space:nowrap;color:var(--muted);font-weight:700;cursor:pointer;transition:all .15s ease}
+    .step-btn:hover{border-color:var(--green);color:var(--deep);background:var(--mint)}
+    .step-btn.active{background:var(--deep);border-color:var(--deep);color:#fff}
+    .step-btn.active:hover{background:var(--deep);border-color:var(--deep);color:#fff}
+    .step-btn.done::before{content:"✓ ";color:var(--green)}
+    .step-btn.active.done::before{color:var(--gold)}
+    .workspace{overflow:hidden}
+    .scenario-hero{padding:22px 24px;background:var(--mint);border-bottom:1px solid var(--line)}
+    .scenario-hero h2{font-size:1.65rem;margin:4px 0 5px}
+    .badge{display:inline-flex;align-items:center;border-radius:999px;background:var(--deep);color:#fff;padding:5px 10px;font-size:.76rem;font-weight:800;letter-spacing:.04em}
+    .badge.gold{background:var(--gold);color:var(--ink)}
+    .facts{margin:15px 0 0;padding-left:21px;display:grid;gap:5px}
+    .source-link{display:inline-block;margin-top:12px;font-weight:700}
+    .panel{display:none;padding:25px}
+    .panel.active{display:block}
+    .panel-intro{max-width:820px;color:var(--muted);margin:0 0 20px}
+    .callout{border-left:6px solid var(--gold);background:var(--pale-gold);padding:13px 15px;border-radius:10px;margin:16px 0}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .field{display:grid;gap:6px}
+    .field.full{grid-column:1/-1}
+    .field.is-correct select{border-color:var(--green);box-shadow:0 0 0 2px rgba(0,122,77,.10)}
+    .field.needs-retry select{border-color:var(--red);box-shadow:0 0 0 2px rgba(191,73,73,.10)}
+    label,.label{font-weight:700;color:var(--deep)}
+    .hint{font-size:.82rem;color:var(--muted);font-weight:400}
+    input[type=text],select,textarea{width:100%;border:1px solid #adc1b8;background:#fff;border-radius:10px;padding:11px 12px;color:var(--ink)}
+    textarea{min-height:92px;resize:vertical}
+    input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid rgba(242,197,0,.45);outline-offset:2px}
+    .checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .check{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+    .check input{margin-top:4px;accent-color:var(--green)}
+    .risk-card{border:1px solid var(--line);border-radius:15px;padding:16px;background:#fbfdfc;margin:0 0 16px}
+    .risk-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+    .risk-num{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#fff;font-weight:800}
+    .score{border-radius:999px;padding:6px 10px;background:#edf2ef;color:var(--muted);font-size:.84rem;font-weight:800}
+    .score.medium{background:var(--pale-gold);color:#7d5a00}.score.high,.score.very-high{background:var(--pale-red);color:var(--red)}
+    .score.low{background:var(--mint);color:var(--green)}
+    .controls-table{display:grid;gap:14px}
+    .feedback{display:none;margin-top:2px;padding:9px 11px;border-radius:9px;font-size:.86rem;font-weight:700}
+    .feedback.show{display:block}
+    .feedback.correct{background:var(--mint);color:var(--deep);border-left:4px solid var(--green)}
+    .feedback.retry{background:var(--pale-red);color:#8f3030;border-left:4px solid var(--red)}
+    .step-feedback{margin:12px 0 0}
+    .control-row{padding:16px;border:1px solid var(--line);border-radius:15px;background:#fbfdfc}
+    .control-title{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+    .control-title strong{color:var(--deep)}
+    .decision-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:17px}
+    .decision{border:1px solid var(--line);border-radius:12px;padding:13px;display:flex;gap:10px;align-items:center}
+    .decision input{accent-color:var(--green)}
+    .rubric{display:grid;gap:9px;margin:16px 0}
+    .rubric-row{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:center;padding:10px;background:var(--mint);border-radius:10px}
+    .points{height:34px;border-radius:50%;display:grid;place-items:center;background:var(--gold);font-weight:800}
+    .debrief{display:none;margin-top:20px;border:2px solid var(--green);border-radius:15px;padding:18px;background:var(--mint)}
+    .debrief.revealed{display:block}
+    .nav{display:flex;justify-content:space-between;gap:12px;padding:18px 25px;border-top:1px solid var(--line);background:#fafcfb}
+    .btn{border:1px solid var(--deep);border-radius:10px;padding:10px 15px;background:#fff;color:var(--deep);font-weight:800}
+    .btn.primary{background:var(--deep);color:#fff}.btn.gold{background:var(--gold);border-color:#c79f00;color:var(--ink)}.btn.danger{border-color:var(--red);color:var(--red)}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+    .save-state{margin-left:auto;color:var(--muted);align-self:center;font-size:.84rem}
+    .source-panel{margin-top:20px;padding:22px}
+    .source-panel summary{cursor:pointer;font-weight:800;color:var(--deep)}
+    .sources{margin-top:16px;display:grid;gap:10px}
+    .sources li{padding-left:4px}
+    .status-note{font-size:.86rem;color:var(--muted);padding:12px;background:#f4f6f5;border-radius:10px}
+    /* --- live risk matrix ------------------------------------------- */
+    .matrix-wrap{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;
+      border:1px solid var(--line);border-radius:15px;padding:16px;background:#fbfdfc;margin:18px 0}
+    .matrix{display:grid;grid-template-columns:auto repeat(4,1fr);grid-template-rows:repeat(4,1fr) auto;gap:4px}
+    .matrix .cell{position:relative;border-radius:8px;display:grid;place-items:center;
+      min-height:48px;font-weight:700;font-size:.72rem;color:#8d9490}
+    .matrix .axis{display:grid;place-items:center;font-size:.68rem;font-weight:700;
+      color:var(--muted);text-align:center;padding:2px 5px;min-width:62px}
+    .matrix .pin{position:absolute;width:19px;height:19px;border-radius:50%;
+      display:grid;place-items:center;font-size:.62rem;font-weight:800;line-height:1;
+      box-shadow:0 1px 3px rgba(20,42,34,.30)}
+    .matrix .pin.inherent{background:#fff;border:2px solid var(--red);color:var(--red)}
+    .matrix .pin.residual{background:var(--deep);border:2px solid #fff;color:#fff}
+    .matrix .pin.n0{transform:translate(-22px,-13px)}
+    .matrix .pin.n1{transform:translate(0,-13px)}
+    .matrix .pin.n2{transform:translate(22px,-13px)}
+    .matrix .pin.residual.n0{transform:translate(-22px,11px)}
+    .matrix .pin.residual.n1{transform:translate(0,11px)}
+    .matrix .pin.residual.n2{transform:translate(22px,11px)}
+    .matrix-key{display:grid;gap:11px;font-size:.85rem;min-width:170px}
+    .matrix-key .k{display:flex;gap:9px;align-items:center}
+    .matrix-key .dot{width:17px;height:17px;border-radius:50%;flex:none}
+    .matrix-key .dot.inherent{background:#fff;border:2px solid var(--red)}
+    .matrix-key .dot.residual{background:var(--deep)}
+    .delta{margin-top:6px;padding:11px;border-radius:11px;background:var(--mint);
+      border-left:5px solid var(--green);font-weight:700;color:var(--deep);font-size:.88rem}
+    .delta.none{background:var(--pale-gold);border-left-color:var(--gold);color:var(--gold-dark)}
+    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    @media(max-width:850px){.matrix-wrap{grid-template-columns:1fr}.shell{grid-template-columns:1fr}.sidebar{position:static}.scenario-list{grid-template-columns:repeat(2,minmax(0,1fr))}.grid,.grid.three,.checks,.decision-grid{grid-template-columns:1fr}.save-state{width:100%;margin:0}.topbar-inner{align-items:flex-start}.course-mark{width:62px;height:62px}}
+    @media print{body{background:#fff}.topbar{border:0}.shell{display:block;margin:0;max-width:none}.sidebar,.progress,.nav,.toolbar,.source-panel summary{display:none}.workspace{box-shadow:none;border:0}.panel{display:block;break-inside:avoid}.panel::before{content:attr(data-print-title);display:block;font-size:22px;font-weight:800;color:var(--deep);margin-bottom:12px}.debrief{display:block}.source-panel{display:block;box-shadow:none}.source-panel .sources{display:grid}.scenario-hero{background:#fff}.risk-card,.control-row{break-inside:avoid}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="course-mark" aria-hidden="true">COE526</div>
+      <div><h1>Privacy Assessment Lab</h1><p class="subtitle">COE526 Lecture 03 &middot; from what a system does, to who it hurts, to a decision you can defend</p></div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar" aria-label="Scenario selection">
+      <div class="eyebrow">Choose a case</div>
+      <h2>One team, one assessment</h2>
+      <p class="hint">Your answers are saved in this browser, separately for each case. Finish on the machine you started on.</p>
+      <div class="scenario-list" id="scenarioList"></div>
+      <p class="sidebar-note"><strong>25 minutes:</strong> screen 3 &middot; map 5 &middot; risks 8 &middot; controls 5 &middot; decide 4.<br><br>Every choice is marked as you make it. All tabs are unlocked so you can navigate and work through the assessment in any order.<br><br><strong>Keys:</strong> Alt + &larr; and Alt + &rarr; move between steps.</p>
+    </aside>
+
+    <main class="main">
+      <nav class="progress" id="progress" aria-label="Lab progress"></nav>
+      <section class="workspace">
+        <div class="scenario-hero" id="scenarioHero"></div>
+
+        <section class="panel active" data-step="0" data-print-title="1. Screen">
+          <div class="eyebrow">Step 1 · Screen</div><h2>Does this need a full assessment?</h2>
+          <p class="panel-intro">Tick every signal you can see in the case. The law sets the legal threshold; this screen also gives you a reason you can write down and defend.</p>
+          <div class="checks" id="screenChecks"></div>
+          <div class="callout"><strong>This list is not complete.</strong> One signal can be enough on its own. Whichever way you decide, write down why.</div>
+          <div class="grid">
+            <div class="field"><label for="screenDecision">Screening result</label><select id="screenDecision" data-save><option value="">Choose…</option><option>Full assessment required</option><option>Full assessment prudent</option><option>Short assessment sufficient</option><option>Not required — record rationale</option></select></div>
+            <div class="field"><label for="legalTrigger">Which rule makes it a trigger</label><select id="legalTrigger" data-save data-choice="legalTrigger"></select></div>
+            <div class="field full"><label for="screenRationale">Why you decided that</label><select id="screenRationale" data-save data-choice="screenRationale"></select></div>
+          </div>
+        </section>
+
+        <section class="panel" data-step="1" data-print-title="2. Map">
+          <div class="eyebrow">Step 2 · Map</div><h2>Describe what the system does, before you score it</h2>
+          <p class="panel-intro">Keep <em>why</em> separate from <em>how</em>. Follow the data all the way through: collected, guessed at, used, stored, shared, deleted.</p>
+          <div class="grid">
+            <div class="field"><label for="purpose">What is it for, exactly</label><select id="purpose" data-save data-choice="purpose"></select></div>
+            <div class="field"><label for="people">Who is affected, and who holds the power</label><select id="people" data-save data-choice="people"></select></div>
+            <div class="field"><label for="data">What data, and where it comes from</label><select id="data" data-save data-choice="data"></select></div>
+            <div class="field"><label for="actions">What is done with it, including automatic decisions</label><select id="actions" data-save data-choice="actions"></select></div>
+            <div class="field"><label for="recipients">Who receives it, and where it goes</label><select id="recipients" data-save data-choice="recipients"></select></div>
+            <div class="field"><label for="retention">How long it is kept, and how deletion is proved</label><select id="retention" data-save data-choice="retention"></select></div>
+            <div class="field full"><label for="necessity">Is it really needed? What is the lighter-touch option?</label><select id="necessity" data-save data-choice="necessity"></select></div>
+          </div>
+        </section>
+
+        <section class="panel" data-step="2" data-print-title="3. Risks">
+          <div class="eyebrow">Step 3 · Choose and rate risks</div><h2>Write three risks that name a real person</h2>
+          <p class="panel-intro">Each risk must join four things: what the system does, the setting, who is affected, and what goes wrong for them. Cover normal operation as well as things going wrong.</p>
+          <div id="riskCards"></div>
+        </section>
+
+        <section class="panel" data-step="3" data-print-title="4. Controls">
+          <div class="eyebrow">Step 4 · Treat and re-score</div><h2>Treat the cause, prove it works, then score what is left</h2>
+          <p class="panel-intro">Try to remove or replace the feature, collect less by default, or keep data on the device &mdash; before you fall back on a notice, a contract or training. The score that matters is the one left over after the control works.</p>
+          <div class="controls-table" id="controlRows"></div>
+          <div class="matrix-wrap" id="matrixWrapControls">
+            <div class="matrix" id="matrixControls" role="img"
+                 aria-label="Likelihood by severity matrix showing each risk before and after its control"></div>
+            <div>
+              <div class="label">Where your risks sit</div>
+              <div class="matrix-key">
+                <div class="k"><span class="dot inherent"></span><span>Before the control</span></div>
+                <div class="k"><span class="dot residual"></span><span>After the control</span></div>
+              </div>
+              <div class="delta" id="deltaControls">Rate a risk to see it appear.</div>
+            </div>
+          </div>
+          <div class="callout"><strong>Three questions for every control:</strong> how does it change the risk? Who owns it? What evidence would prove it is working?</div>
+        </section>
+
+        <section class="panel" data-step="4" data-print-title="5. Decide">
+          <div class="eyebrow">Step 5 · Decide</div><h2>Decide, using the risk that is left over</h2>
+          <p class="panel-intro">A score cannot accept risk &mdash; only a person can. Name who decides, on what conditions, with what evidence, and what would reopen it.</p>
+          <div class="label">Decision</div>
+          <div class="decision-grid" id="decisionGrid">
+            <label class="decision"><input type="radio" name="decision" value="Go" data-save> <strong>Go</strong></label>
+            <label class="decision"><input type="radio" name="decision" value="Go with conditions" data-save> <strong>Go with conditions</strong></label>
+            <label class="decision"><input type="radio" name="decision" value="Redesign" data-save> <strong>Redesign</strong></label>
+            <label class="decision"><input type="radio" name="decision" value="Stop / consult" data-save> <strong>Stop / consult</strong></label>
+          </div>
+          <div class="grid">
+            <div class="field full"><label for="decisionRationale">What the decision rests on, and any conditions</label><select id="decisionRationale" data-save data-choice="decisionRationale"></select></div>
+            <div class="field"><label for="owner">Who owns it, and who signs it off</label><select id="owner" data-save data-choice="owner"></select></div>
+            <div class="field"><label for="review">When it gets reviewed, or what reopens it</label><select id="review" data-save data-choice="review"></select></div>
+            <div class="field"><label for="evidenceGap">What you still do not know</label><select id="evidenceGap" data-save data-choice="evidenceGap"></select></div>
+            <div class="field"><label for="consultation">Who you consulted</label><select id="consultation" data-save data-choice="consultation"></select></div>
+          </div>
+        </section>
+
+        <section class="panel" data-step="5" data-print-title="6. Debrief">
+          <div class="eyebrow">Step 6 · Defend the decision</div><h2>Submit, compare, and explain yourself</h2>
+          <p class="panel-intro">Under the facts given, one answer fits best. In real work a different answer can also be defensible &mdash; if the different evidence and assumptions are written down.</p>
+          <div class="rubric">
+            <div class="rubric-row"><span class="points">2</span><span>Purpose, affected people, actors, and data lifecycle are accurate.</span></div>
+            <div class="rubric-row"><span class="points">3</span><span>At least three specific risk statements connect processing to human harms.</span></div>
+            <div class="rubric-row"><span class="points">2</span><span>Trigger, necessity, proportionality, and alternatives are reasoned.</span></div>
+            <div class="rubric-row"><span class="points">2</span><span>Controls change causes, have owners or evidence, and residual risk is re-rated.</span></div>
+            <div class="rubric-row"><span class="points">1</span><span>Decision, accountable owner, uncertainty, and review trigger are clear.</span></div>
+          </div>
+          <button class="btn gold" id="submitDebrief" type="button">Submit and reveal teaching debrief</button>
+          <div class="matrix-wrap" id="matrixWrapDebrief">
+            <div class="matrix" id="matrixDebrief" role="img"
+                 aria-label="Likelihood by severity matrix for the finished assessment"></div>
+            <div>
+              <div class="label">Your assessment, in one picture</div>
+              <div class="matrix-key">
+                <div class="k"><span class="dot inherent"></span><span>Before the control</span></div>
+                <div class="k"><span class="dot residual"></span><span>After the control</span></div>
+              </div>
+              <div class="delta" id="deltaDebrief">Rate a risk to see it appear.</div>
+            </div>
+          </div>
+          <div class="debrief" id="debrief" aria-live="polite"></div>
+        </section>
+
+        <div class="nav"><button class="btn" id="backBtn" type="button">← Back</button><button class="btn primary" id="nextBtn" type="button">Next →</button></div>
+      </section>
+
+      <div class="toolbar">
+        <button class="btn" id="exportText" type="button">Export team report</button>
+        <button class="btn" id="exportJson" type="button">Export JSON</button>
+        <button class="btn" id="printBtn" type="button">Print / save PDF</button>
+        <button class="btn danger" id="resetBtn" type="button">Reset this scenario</button>
+        <span class="save-state" id="saveState">Ready</span>
+      </div>
+
+      <details class="source-panel">
+        <summary>Sources and current-status notes</summary>
+        <ol class="sources">
+          <li><a href="https://sdaia.gov.sa/en/SDAIA/about/Documents/ImplementingRegulationPersonalDataProtectionLaw.pdf">Saudi Data and Artificial Intelligence Authority — Personal Data Protection Law Implementing Regulation</a> (especially Articles 16, 25, and 32).</li>
+          <li><a href="https://dgp.sdaia.gov.sa/wps/portal/pdp/services/privacyimpactassessment/">Saudi National Data Governance Platform — Privacy Impact Assessment service</a>.</li>
+          <li><a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">General Data Protection Regulation</a> (Articles 35–36 and relevant recitals).</li>
+          <li><a href="https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/obligations_en">European Commission — Data Protection Impact Assessment obligations</a>.</li>
+          <li><a href="https://www.edpb.europa.eu/documents/guideline/data-protection-impact-assessments-high-risk-processing_en">European Data Protection Board — high-risk processing guidelines</a>.</li>
+          <li><a href="https://www.edpb.europa.eu/system/files/2026-05/edpb_dpia_template_explainer_2026_v1_en.pdf">European Data Protection Board — 2026 Data Protection Impact Assessment template explainer</a>.</li>
+          <li><a href="https://doi.org/10.6028/NIST.IR.8062">United States National Institute of Standards and Technology Internal Report 8062 — Privacy Engineering and Risk Model</a>.</li>
+          <li><a href="https://www.nist.gov/itl/applied-cybersecurity/privacy-engineering/resources">National Institute of Standards and Technology — Privacy Framework and Privacy Risk Assessment Methodology resources</a>.</li>
+          <li><a href="https://www.nist.gov/privacy-framework/new-projects/privacy-framework-version-11">National Institute of Standards and Technology — Privacy Framework 1.1 project status</a>.</li>
+          <li><a href="https://www.iso.org/standard/86012.html">International Organization for Standardization / International Electrotechnical Commission 29134:2023 — Privacy impact assessment guidance</a>.</li>
+          <li><a href="https://www.iso.org/standard/71675.html">International Organization for Standardization / International Electrotechnical Commission 27557:2022 — Organizational privacy risk management</a>.</li>
+          <li><a href="https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines/guidelines-042020-use-location-data-and-contact-tracing_en">European Data Protection Board — Guidelines 04/2020 on the use of location data and contact-tracing tools</a> (basis for the contact-tracing scenario).</li>
+          <li><a href="https://health.ec.europa.eu/publications/ehealth-network-common-eu-toolbox-member-states-mobile-applications-support-contact-tracing-eus-fight_en">European Commission eHealth Network — common European Union toolbox for contact-tracing and warning apps</a>.</li>
+          <li><a href="https://www.who.int/publications/i/item/WHO-2019-nCoV-Ethics_Contact_tracing_apps-2020.1">World Health Organization — ethical considerations for digital proximity tracking</a>.</li>
+          <li><a href="https://www.ftc.gov/news-events/news/press-releases/2023/02/ftc-enforcement-action-bar-goodrx-sharing-consumers-sensitive-health-info-advertising">United States Federal Trade Commission — GoodRx enforcement</a>.</li>
+          <li><a href="https://www.priv.gc.ca/en/opc-actions-and-decisions/investigations/investigations-into-businesses/2022/pipeda-2022-001/">Office of the Privacy Commissioner of Canada — Tim Hortons findings</a>.</li>
+          <li><a href="https://www.ftc.gov/legal-library/browse/cases-proceedings/2023190-rite-aid-corporation-ftc-v">United States Federal Trade Commission — Rite Aid facial-recognition case</a>.</li>
+        </ol>
+        <p class="status-note">Checked 2 September 2026. The European Data Protection Board 2026 template is identified as a public-consultation version. National Institute of Standards and Technology Privacy Framework 1.0 remains the stable teaching anchor while version 1.1 is still presented by NIST as an update in progress. Scenario summaries distinguish regulator allegations, findings, and orders.</p>
+      </details>
+    </main>
+  </div>
+
+  <script>
+    "use strict";
+
+    const scenarios = {
+      goodrx: {
+        label:"GoodRx", meta:"Actual case · United States · 2023", kind:"actual", topic:"Health data and advertising technology",
+        facts:[
+          "The United States Federal Trade Commission alleged that prescription and health information was disclosed to Facebook, Google, and others contrary to privacy promises.",
+          "The action was the first under the Health Breach Notification Rule and included a $1.5 million civil penalty.",
+          "The order addressed advertising use, consent, deletion, retention, and a comprehensive privacy program."
+        ], source:"https://www.ftc.gov/news-events/news/press-releases/2023/02/ftc-enforcement-action-bar-goodrx-sharing-consumers-sensitive-health-info-advertising",
+        debrief:["A software development kit or advertising platform is part of the data flow—not outside the assessment.","Compare stated promises, legal basis, contracts, and observed network flows.","Test whether advertising use is necessary for the health service; do not jump directly to consent language."]
+      },
+      timhortons: {
+        label:"Tim Hortons", meta:"Actual case · Canada · 2022", kind:"actual", topic:"Background location tracking",
+        facts:[
+          "Canadian regulators found that the app tracked precise location even while it was closed; one reporter observed more than 2,700 location records in under five months.",
+          "The service inferred home, work, travel, and visits to competitors.",
+          "Regulators found the purpose inappropriate and consent invalid; the company agreed to deletion and a privacy program."
+        ], source:"https://www.priv.gc.ca/en/opc-actions-and-decisions/investigations/investigations-into-businesses/2022/pipeda-2022-001/",
+        debrief:["Start with necessity: finding a nearby restaurant does not require continuous background location.","A strong alternative is foreground-only, request-specific, coarse location with short retention.","Assess intended-operation harms such as revealing routines, not only unauthorized access."]
+      },
+      riteaid: {
+        label:"Rite Aid", meta:"Actual case · United States · 2012–2024", kind:"actual", topic:"Retail facial recognition",
+        facts:[
+          "The Federal Trade Commission alleged that facial recognition used from 2012 to 2020 generated thousands of false-positive matches.",
+          "People were followed, searched, removed, or publicly accused after alerts; the alleged impact was disproportionate in plurality-Black and Asian communities.",
+          "A 2024 stipulated order imposed a five-year ban on surveillance facial recognition and required safeguards for later automated biometric systems."
+        ], source:"https://www.ftc.gov/legal-library/browse/cases-proceedings/2023190-rite-aid-corporation-ftc-v",
+        debrief:["Aggregate accuracy is insufficient: test false positives, group effects, context, and human response to alerts.","A human reviewer is not a control unless authority, training, thresholds, escalation, and outcomes are tested.","Vendor claims need independent evidence before deployment and throughout operation."]
+      },
+      proctor: {
+        label:"Campus proctor", meta:"Composite teaching scenario · Saudi university", kind:"composite", topic:"Artificial-intelligence remote-exam proctoring",
+        facts:[
+          "A university proposes remote proctoring that captures webcam and microphone feeds, an identity-document image, screen and device signals, gaze, face, and room activity.",
+          "A vendor generates an integrity score and flags short clips for human review before an academic decision.",
+          "The initial proposal retains recordings and model outputs for one year and may use data to improve the vendor model."
+        ], source:"https://sdaia.gov.sa/en/SDAIA/about/Documents/ImplementingRegulationPersonalDataProtectionLaw.pdf",
+        debrief:["This is a composite, not a claim about a specific institution or vendor.","Screen for sensitive or biometric data, automated decisions, monitoring, new technology, and students' limited power to refuse.","Test alternatives such as assessment redesign, oral checks, minimal event capture, on-device processing, shorter retention, and meaningful appeal."]
+      },
+      tracing: {
+        label:"Contact tracing", meta:"Lecture case study \u00b7 composite, built on 2020 official guidance", kind:"composite", topic:"Exposure notification apps",
+        facts:[
+          "During COVID-19, governments released phone apps that warn a person when they have recently been close to someone who later tested positive.",
+          "Two designs competed: proximity identifiers matched on the phone itself, and contact records uploaded to a central server. Some proposals used GPS location instead of proximity.",
+          "European guidance recommended that use be voluntary and temporary, that apps rely on proximity rather than location, and that as little as possible be held centrally."
+        ], source:"https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines/guidelines-042020-use-location-data-and-contact-tracing_en",
+        debrief:["The strongest default meets the purpose with the least data: proximity rather than location, meaningless identifiers rather than names, matching on the phone rather than on a server.","A centralised design is not automatically wrong \u2014 but it needs a stated extra purpose, an argument that it is necessary, real safeguards and outside oversight.","Voluntary only counts as voluntary if refusing costs nothing. Ask what happens to someone with no smartphone.","Notice that the alert is not an automated decision about a person. Keeping that distinction straight changes which legal triggers apply."]
+      }
+    };
+
+    const commonChoices = {
+      owner:[
+        "Product owner with formal approval from the accountable executive",
+        "Data Protection Officer as adviser; accountable executive approves",
+        "Procurement owner and controller representative jointly approve",
+        "Vendor alone accepts the risk"
+      ],
+      consultation:[
+        "Affected people, Data Protection Officer, product, security, legal, and procurement",
+        "Data Protection Officer, technical team, and accountable decision-maker",
+        "Product team and vendor only",
+        "No consultation before launch"
+      ],
+      evidence:[
+        "Official case findings or order plus observed system behavior",
+        "Independent test results and representative user research",
+        "Vendor documentation without independent verification",
+        "An assumption that must be tested before launch"
+      ],
+      proof:[
+        "Named owner, configuration test, audit log, and deletion evidence",
+        "Independent accuracy or fairness test with acceptance limits",
+        "Contract clause plus technical verification of the actual data flow",
+        "Policy statement without a test or operating evidence"
+      ]
+    };
+
+    const scenarioChoices = {
+      goodrx:{
+        legalTrigger:["Health Breach Notification Rule and Federal Trade Commission Act","Saudi Personal Data Protection Law Implementing Regulation, Article 25","General Data Protection Regulation, Article 35","Internal security review only"],
+        screenRationale:["Sensitive health data and invisible advertising disclosures justify a full assessment","Advertising tools are outside the assessment because they are vendors","A privacy notice alone makes the processing low risk","Only a cybersecurity assessment is needed"],
+        purpose:["Help users compare prescription prices and obtain discounts","Build advertising profiles from medication interests","Retain health activity for unspecified future use","Measure employee performance"],
+        people:["Users seeking medication information, including people with sensitive conditions","Only employees of advertising platforms","Only registered pharmacies","No identifiable people are affected"],
+        data:["Prescription searches, medication interests, account, device, and network identifiers","Only anonymous total visitor counts","Employee payroll records","Vehicle registration data"],
+        actions:["Collect health activity, send tracking events, create audiences, store, and delete","Collect a postal code only for a one-time price search","Process information only on the user's device","Publish aggregate medicine prices without user activity"],
+        recipients:["Service operator, pharmacies, analytics and advertising partners, and software development kit providers","The user and selected pharmacy only","University departments","No external recipient"],
+        retention:["Short documented retention with deletion across partners, backups, and derived audiences","Keep every event indefinitely","Delete only the visible account but retain advertising copies","Let each vendor choose its own period without review"],
+        necessity:["Provide the core health service without advertising disclosure and use privacy-preserving analytics","Share health activity because targeted advertising increases revenue","Collect more fields now in case they become useful","Rely on consent while keeping the same hidden flow"],
+        risks:["Health activity sent to advertising platforms may enable sensitive inference, stigma, or manipulation","Promises may differ from actual data flows, removing meaningful user choice","Partners may retain health events or derived audiences after the user requests deletion","Weak access controls may expose prescription interests to unauthorized parties","Health interests may influence pricing, eligibility, or other decisions beyond the service"],
+        affected:["Users with sensitive or stigmatized health conditions","All users, with greater severity for people facing discrimination","Users who reasonably expect the service to remain confidential","Users whose deletion request does not reach downstream partners"],
+        controls:["Remove advertising trackers from health-service flows","Separate the core service from optional advertising and require a specific opt-in","Minimize event fields and prohibit sensitive audience creation","Set short retention and verified deletion for all partners and derived data","Use contracts, network-flow testing, access limits, and regular privacy audits"],
+        decisionRationale:["Redesign before launch by removing advertising disclosures from health-service flows","Go with conditions only after controls are implemented and independently verified","Go because the privacy notice mentions partners","Stop permanently without testing a less-intrusive design"],
+        review:["Before any new advertising tool, data use, partner, or retention change","After 90 days and whenever network-flow monitoring detects a new recipient","Only after a complaint or breach","No scheduled review"],
+        evidenceGap:["Actual event-level data flows and deletion across every advertising partner","Whether users read the privacy notice","The vendor's marketing description","No further evidence is needed"]
+      },
+      timhortons:{
+        legalTrigger:["Personal Information Protection and Electronic Documents Act and applicable provincial law","Saudi Personal Data Protection Law Implementing Regulation, Article 25","General Data Protection Regulation, Article 35","Internal security review only"],
+        screenRationale:["Continuous precise location and inferred routines justify a full assessment","Location is harmless because it was rarely used","Permission settings make the purpose automatically appropriate","Only unauthorized access should be assessed"],
+        purpose:["Show nearby restaurants when the user requests that function","Continuously infer home, work, travel, and competitor visits","Build a permanent movement history for unspecified analysis","Monitor restaurant employees"],
+        people:["App users whose routines and sensitive visits may be inferred","Only restaurant franchise owners","Only mobile operating-system providers","No people because coordinates are technical data"],
+        data:["Precise background location, time, device identifier, and inferred places","A one-time coarse location while the feature is open","Only an anonymous restaurant identifier","Payment card data"],
+        actions:["Collect location while closed, infer places and routines, store, disclose, and delete","Use foreground location for one nearby-search request and discard it","Process only a manually entered city","Publish restaurant addresses"],
+        recipients:["App operator, location-service vendor, analytics provider, and sub-processors","User's device only","All restaurant customers","No recipient"],
+        retention:["Request-specific processing followed by prompt deletion and deletion evidence","Keep precise movement history for years","Delete the app but keep vendor copies","Use an undefined vendor-controlled period"],
+        necessity:["Use foreground-only coarse location or a manually entered area for the immediate request","Track continuously to improve convenience","Keep background tracking but rewrite the notice","Collect precise data first and decide the purpose later"],
+        risks:["Background location may reveal home, work, travel, and sensitive visits, increasing stalking or discrimination risk","Continuous collection may chill movement and reduce autonomy even without a breach","Location permissions may not explain collection while the app is closed, undermining meaningful choice","A vendor or employee may misuse a detailed movement history","Long retention may make a single incident expose months of routines"],
+        affected:["All app users, especially people at risk of stalking or surveillance","People visiting sensitive locations such as clinics or places of worship","Users who expected location use only during an immediate request","Users whose routines identify family, work, or travel patterns"],
+        controls:["Replace background tracking with foreground-only, request-specific location","Reduce precision and retain location only for the active request","Offer manual city or neighborhood entry as an equivalent alternative","Block secondary profiling and verify vendor deletion","Test permission language against actual operating-system and network behavior"],
+        decisionRationale:["Redesign to foreground-only, request-specific location before release","Go with conditions after minimization and deletion controls are verified","Go because users granted operating-system permission","Keep background collection but promise not to examine it"],
+        review:["Before any change to location precision, background use, vendor, purpose, or retention","After 90 days and after any permission or complaint trend","Only after a public investigation","No scheduled review"],
+        evidenceGap:["Actual background collection frequency, inference logic, recipients, and deletion behavior","Whether the app has a popular brand","The number of restaurants","No further evidence is needed"]
+      },
+      riteaid:{
+        legalTrigger:["Federal Trade Commission Act and the 2024 stipulated order","Saudi Personal Data Protection Law Implementing Regulation, Article 25","General Data Protection Regulation, Article 35","Internal security review only"],
+        screenRationale:["Biometric surveillance, false positives, group effects, and significant human actions justify a full assessment","A human reviewer eliminates the need for an assessment","Vendor accuracy claims make the processing low risk","Only database security matters"],
+        purpose:["Prevent specific, evidenced retail theft while protecting customers from false accusation","Identify every shopper and build a permanent watchlist","Test facial recognition on customers without a defined decision","Use images for future marketing"],
+        people:["Customers and visitors, with attention to groups experiencing higher false-positive effects","Only store security employees","Only the technology vendor","No affected people until an arrest occurs"],
+        data:["Face images, biometric templates, watchlist records, alert history, and employee actions","Anonymous footfall counts","Only product inventory data","Customer email addresses"],
+        actions:["Capture faces, compare with a watchlist, generate alerts, prompt staff action, retain, and delete","Count entries without identifying people","Review confirmed incident video after an event","Publish store opening hours"],
+        recipients:["Retailer, technology vendor, store staff, and any watchlist or investigation partner","Customer alone","Payment network only","No recipient"],
+        retention:["Short, justified retention with watchlist quality review, deletion, and audit evidence","Keep all face images and alerts indefinitely","Delete only false alerts after a complaint","Let the vendor retain data for model improvement"],
+        necessity:["Test less-intrusive loss-prevention measures before biometric surveillance","Deploy broadly because theft is costly","Add a notice while keeping the same system","Assume facial recognition is necessary if a vendor sells it"],
+        risks:["A false-positive match may lead staff to follow, search, remove, or publicly accuse an innocent person","Unequal error rates or deployment patterns may create disproportionate harm for particular groups","Poor watchlist quality may repeatedly flag the wrong person","Staff may over-rely on an alert and fail to conduct an independent review","Retained biometric data may expose people to irreversible identity and surveillance risks"],
+        affected:["Customers falsely matched to a watchlist","Groups experiencing disproportionate error or deployment effects","People subjected to public accusation, search, or removal","All visitors whose biometric templates are retained"],
+        controls:["Avoid facial recognition and use less-intrusive loss-prevention measures","Require independent accuracy and group-effect testing with strict acceptance limits","Limit watchlists, retention, locations, and staff actions; require supervisor confirmation","Provide notice, complaint, correction, and appeal paths with outcome monitoring","Stop deployment when error, complaint, or harm thresholds are exceeded"],
+        decisionRationale:["Stop or redesign because high residual risk and less-intrusive alternatives remain","Go with conditions only after independent tests, strict action limits, and executive approval","Go because a human can review every alert","Go because the vendor reports high overall accuracy"],
+        review:["Before pilot, after each model or watchlist change, and when harm thresholds are reached","Monthly during a limited pilot with group-level outcome review","Only after litigation","No scheduled review"],
+        evidenceGap:["Representative false-positive rates, group effects, watchlist quality, and staff response outcomes","The vendor's overall accuracy percentage alone","Whether stores prefer the interface","No further evidence is needed"]
+      },
+      proctor:{
+        legalTrigger:["Saudi Personal Data Protection Law Implementing Regulation, Article 25","General Data Protection Regulation, Article 35","Both may be relevant depending on students and processing location","Internal security review only"],
+        screenRationale:["Biometric data, monitoring, new technology, automated scoring, and students' limited choice justify a full assessment","Human review removes every high-risk signal","A university purpose makes all collection necessary","Only a cybersecurity assessment is needed"],
+        purpose:["Support exam integrity for a defined remote assessment with a fair appeal process","Continuously monitor students beyond the examination","Train the vendor's commercial model on student recordings","Retain room video for unspecified research"],
+        people:["Students, including people with disabilities, limited bandwidth, shared rooms, or limited ability to refuse","Only instructors","Only the vendor's engineers","No affected people until a misconduct penalty is issued"],
+        data:["Identity image, face and gaze signals, webcam and microphone, screen, device, room, and integrity score","Student name and final grade only","Anonymous course attendance total","Library borrowing history"],
+        actions:["Capture exam signals, infer behavior, generate a score, flag clips, enable review, retain, transfer, and delete","Verify identity once and delete the image immediately","Record only the submitted examination answers","Publish the exam schedule"],
+        recipients:["University controller, proctoring vendor, sub-processors, instructors, reviewers, and appeal body","Student alone","All classmates","No recipient"],
+        retention:["Short course-defined retention with separate appeal hold and verified vendor deletion","Retain all recordings and model outputs for one year","Allow model training without a separate purpose and choice","Use an undefined vendor policy"],
+        necessity:["Use assessment redesign, oral checks, minimal event capture, or on-device processing where effective","Collect every available signal because more data may improve accuracy","Keep full monitoring but add a long notice","Require acceptance because students need the course"],
+        risks:["False or biased flags may cause stress, extra scrutiny, or an unfair academic decision","Room and audio capture may reveal family, disability, religion, health, or living conditions","Students may feel compelled to disclose more than necessary because refusal affects access to the exam","Vendor model training may create an incompatible secondary use of student data","A breach or insider misuse may expose identity images, recordings, and sensitive room information"],
+        affected:["All students, with greater effects for disability, skin tone, caregiving, shared rooms, or poor connectivity","Students who cannot meaningfully refuse the required system","Students whose home environment reveals sensitive information","Students incorrectly flagged and subjected to academic procedures"],
+        controls:["Replace continuous monitoring with less-intrusive assessment design where feasible","Minimize signals, process locally, and upload only short evidence clips","Prohibit vendor model training and unrelated secondary use","Use a short retention period, verified deletion, and a separate appeal hold","Require trained human review, accessible alternatives, correction, and meaningful appeal"],
+        decisionRationale:["Redesign before pilot to minimize capture, prohibit secondary use, and provide an equivalent alternative","Go with conditions after testing, accessibility review, deletion controls, and accountable approval","Go because students can click accept","Stop all remote assessment without testing alternatives"],
+        review:["Before pilot, after model or vendor change, after complaints, and before each new examination use","After the first pilot with subgroup outcomes and appeal results","Only after a breach","No scheduled review"],
+        evidenceGap:["Representative accuracy, subgroup effects, accessibility, network behavior, and deletion evidence","The vendor's marketing accuracy claim","Whether instructors like the dashboard","No further evidence is needed"]
+      },
+      tracing:{
+        legalTrigger:["The health authority's legal basis, plus the data protection law where users live \u2014 an assessment is required because the monitoring is systematic and large scale","Emergency powers alone, because an outbreak overrides data protection law","No trigger applies, because taking part is voluntary","Internal security review only"],
+        screenRationale:["Population-wide proximity monitoring, health inference and new technology together justify a full assessment","Voluntary use removes the high-risk signals","A public-health purpose makes any collection necessary","Only the security of the server needs assessing"],
+        purpose:["Warn a person quickly that they were recently close to someone who tested positive","Build a lasting record of who met whom","Enforce quarantine by tracking where people go","Keep the data for research that has not been defined yet"],
+        people:["Everyone who installs it and the people they were near \u2014 including people who cannot refuse without losing access to work or travel","Only people who test positive","Only health-ministry staff","Nobody, because the identifiers are random"],
+        data:["Rotating Bluetooth identifiers, when contacts happened, the app's own logs, and a one-time code confirming a positive test","Names, national identity numbers and phone numbers of everyone who installs it","A continuous GPS location history for every user","Only the total number of downloads"],
+        actions:["Broadcast and record nearby identifiers, match them, notify the person, then delete after a stated period","Upload every contact record to a central server and keep it indefinitely","Send a live location feed to the police","Publish the list of infected users"],
+        recipients:["The public-health authority, the app operator, and the platform providing the proximity service \u2014 and nobody else","Health authority, police, employers and immigration","Any government body that asks for access","Advertising partners who help fund the app"],
+        retention:["14 to 21 days, matched to the infectious period, with deletion that can be tested and a date the whole system shuts down","90 days, so that trends can be studied","Kept indefinitely in case it becomes useful","Whatever period the vendor chooses"],
+        necessity:["Proximity identifiers matched on the phone meet the purpose without identity or location","Collect precise location as well, because it might improve accuracy","Make the app compulsory so that more people use it","Keep the central design and add a longer privacy notice"],
+        risks:["Central contact records may reveal who a person meets, exposing relationships and inviting reuse for policing or immigration","Being notified \u2014 or being seen to install the app \u2014 may mark someone as infected and lead to stigma or exclusion","People with no smartphone, or who decline, may be shut out of work, travel or services","A false or unexplained alert may cost someone income through isolation they did not need","Data gathered for the emergency may quietly stay in use after the emergency ends"],
+        affected:["Everyone using the app, and the people they were near","People whose health status becomes visible to employers, family or neighbours","People with no smartphone, or who cannot afford mobile data","People already under scrutiny, for whom a contact record carries extra risk"],
+        controls:["Match contacts on the phone and never build a central contact graph","Use rotating, meaningless identifiers and no location at all","Set retention to the infectious period, with a published shutdown date","Keep it voluntary and provide an equally good route to the same service without the app","Put the ban on secondary use into law and contract, and publish independent oversight reports"],
+        decisionRationale:["Go with conditions: matching on the phone, no location, short retention, a published shutdown date and independent oversight","Go, because the purpose is a public-health emergency","Go, because taking part is voluntary","Stop entirely, without testing a less intrusive design"],
+        review:["Before any new purpose, recipient or data type, and at a fixed date tied to the end of the emergency","After 90 days, and whenever uptake or false-alert rates move","Only if somebody complains","No scheduled review"],
+        evidenceGap:["How accurate proximity detection really is, how many alerts are false, and whether deletion and shutdown actually happen","How many people downloaded the app","Whether people like the interface","No further evidence is needed"]
+      }
+    };
+
+    const answerKey = {
+      goodrx:{
+        signals:["sensitive","matching","secondary"], screenDecision:"Full assessment prudent", decision:"Redesign",
+        slots:[
+          {risk:0,affected:[0,1,2],evidence:[0,1],like:3,sev:4,control:0,proof:[0,2],resLike:1,resSev:3,why:"The documented disclosure makes recurrence plausible, while health inference can create severe and difficult-to-reverse harm."},
+          {risk:1,affected:[1,2],evidence:[0,1],like:3,sev:3,control:1,proof:[1,2],resLike:1,resSev:2,why:"The mismatch was evidenced, and it undermines autonomy and trust across the user population."},
+          {risk:2,affected:[3],evidence:[0,1],like:3,sev:4,control:3,proof:[0,2],resLike:1,resSev:3,why:"Downstream copies make deletion failure plausible and can prolong exposure of sensitive health interests."}
+        ]
+      },
+      timhortons:{
+        signals:["monitoring","scale","matching","secondary"], screenDecision:"Full assessment prudent", decision:"Redesign",
+        slots:[
+          {risk:0,affected:[0,1,3],evidence:[0,1],like:4,sev:4,control:0,proof:[0,2],resLike:1,resSev:3,why:"Frequent background collection was observed, and routine or sensitive-place inference can lead to serious safety and discrimination harms."},
+          {risk:1,affected:[0],evidence:[0,1],like:4,sev:3,control:1,proof:[0,2],resLike:1,resSev:2,why:"Continuous tracking affects every exposed user even when no breach occurs, making the autonomy effect highly likely."},
+          {risk:2,affected:[2],evidence:[0,1],like:4,sev:3,control:4,proof:[0,2],resLike:1,resSev:2,why:"The regulator found that permission language did not match actual operation, so the choice failure was not hypothetical."}
+        ]
+      },
+      riteaid:{
+        signals:["sensitive","monitoring","scale","automated","matching","technology"], screenDecision:"Full assessment prudent", decision:"Stop / consult",
+        slots:[
+          {risk:0,affected:[0,2],evidence:[0,1],like:4,sev:4,control:1,proof:[1],resLike:1,resSev:4,why:"Thousands of alleged false positives and consequential staff actions support the highest likelihood and severity bands."},
+          {risk:1,affected:[1],evidence:[0,1],like:3,sev:4,control:1,proof:[1],resLike:1,resSev:4,why:"Observed disproportionate effects make group harm plausible, and public accusation or exclusion can remain severe."},
+          {risk:2,affected:[0],evidence:[0,1],like:3,sev:4,control:2,proof:[0,1],resLike:1,resSev:3,why:"Weak watchlist quality can repeatedly affect innocent people; strict limits reduce recurrence but do not erase the consequence."}
+        ]
+      },
+      proctor:{
+        signals:["sensitive","monitoring","scale","automated","matching","vulnerable","technology","secondary"], screenDecision:"Full assessment required", decision:"Redesign",
+        slots:[
+          {risk:0,affected:[0,3],evidence:[1,3],like:3,sev:4,control:4,proof:[1],resLike:1,resSev:3,why:"Automated flags are likely enough to require testing, while an unfair academic decision can have serious consequences."},
+          {risk:1,affected:[0,2],evidence:[1,3],like:3,sev:4,control:1,proof:[0,2],resLike:1,resSev:3,why:"Room capture routinely exposes private context, and some disclosures can be sensitive or difficult to reverse."},
+          {risk:2,affected:[1],evidence:[1,3],like:4,sev:3,control:4,proof:[0,1],resLike:1,resSev:2,why:"Students generally cannot freely refuse a required examination system, making compelled disclosure highly likely."}
+        ]
+      },
+      tracing:{
+        signals:["sensitive","monitoring","scale","matching","vulnerable","technology","secondary"], screenDecision:"Full assessment required", decision:"Go with conditions",
+        slots:[
+          {risk:0,affected:[0,3],evidence:[1,3],like:3,sev:4,control:0,proof:[0,2],resLike:1,resSev:3,why:"A central contact graph was a real design option in 2020, and a record of who meets whom is hard to undo once it exists. Matching on the phone removes the store rather than guarding it, so likelihood drops sharply while the consequence, if it ever happened, stays serious."},
+          {risk:1,affected:[1],evidence:[1,3],like:3,sev:3,control:1,proof:[0,1],resLike:2,resSev:2,why:"Being told to isolate is visible to the people around you, so social consequences are plausible rather than rare. Meaningless identifiers and no location make it harder to single someone out, but they cannot remove the social effect of the alert itself."},
+          {risk:2,affected:[2],evidence:[1,3],like:4,sev:3,control:3,proof:[0,1],resLike:2,resSev:2,why:"Not everyone owns a smartphone, so exclusion is near certain unless it is designed out. An equally good non-app route keeps the service reachable, which limits both how often it bites and how much it costs the person."}
+        ]
+      }
+    };
+
+    const steps = ["Screen","Map","Risks","Controls","Decide","Debrief"];
+    const signals = [
+      ["sensitive","Sensitive or biometric data"],["monitoring","Systematic monitoring"],["scale","Large scale or long duration"],["automated","Automated decisions or significant effects"],
+      ["matching","Data matching or inference"],["vulnerable","Children or people with limited power"],["technology","New or uncertain technology"],["secondary","Invisible or secondary use"]
+    ];
+    const saveKey = id => `coe526-pia-lab-v2:${id}`;
+    let scenarioId = "goodrx";
+    let currentStep = 0;
+    const attempts = {};
+
+    function esc(value){return String(value ?? "").replace(/[&<>\"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#039;"}[m]));}
+    function slug(value){return String(value).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");}
+    function download(name,text,type="text/plain"){
+      const blob=new Blob([text],{type}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),500);
+    }
+
+    function deterministicShuffle(items,seedText){
+      const result=[...items];
+      let seed=2166136261;
+      for(const character of seedText){seed^=character.charCodeAt(0);seed=Math.imul(seed,16777619);}
+      for(let i=result.length-1;i>0;i-=1){
+        seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+        const j=seed%(i+1);
+        [result[i],result[j]]=[result[j],result[i]];
+      }
+      return result;
+    }
+
+    function buildStaticUI(){
+      document.getElementById("scenarioList").innerHTML=Object.entries(scenarios).map(([id,s])=>`<button type="button" class="scenario-btn ${s.kind==='composite'?'composite':''}" data-scenario="${id}"><strong>${esc(s.label)}</strong><span>${esc(s.topic)}</span></button>`).join("");
+      document.getElementById("progress").innerHTML=steps.map((s,i)=>`<button type="button" class="step-btn" data-step-btn="${i}">${i+1}. ${s}</button>`).join("");
+      document.getElementById("screenChecks").innerHTML=signals.map(([id,label])=>`<label class="check"><input type="checkbox" id="signal-${id}" data-save><span><strong>${esc(label)}</strong></span></label>`).join("");
+      document.getElementById("riskCards").innerHTML=[1,2,3].map(riskCard).join("");
+      document.getElementById("controlRows").innerHTML=[1,2,3].map(controlRow).join("");
+    }
+
+    function riskCard(i){
+      const focus=["Intended processing harm","Choice, fairness, or group effect","Retention, vendor, or abnormal event"][i-1];
+      return `<article class="risk-card"><div class="risk-head"><div class="risk-num">${i}</div><strong>${focus}</strong><span class="score" id="inherentScore${i}">Not rated</span></div><div class="grid"><div class="field full"><label for="risk${i}">Risk scenario</label><select id="risk${i}" data-save data-choice="risks"></select></div><div class="field"><label for="affected${i}">Affected people</label><select id="affected${i}" data-save data-choice="affected"></select></div><div class="field"><label for="riskEvidence${i}">Evidence basis</label><select id="riskEvidence${i}" data-save data-choice="evidence"></select></div><div class="field"><label for="like${i}">Likelihood</label><select id="like${i}" data-save data-score="inherent" data-index="${i}">${ratingOptions()}</select></div><div class="field"><label for="sev${i}">Severity</label><select id="sev${i}" data-save data-score="inherent" data-index="${i}">${ratingOptions()}</select></div></div></article>`;
+    }
+
+    function controlRow(i){
+      return `<article class="control-row"><div class="control-title"><span class="risk-num">${i}</span><strong>Control for risk ${i}</strong><span class="score" id="residualScore${i}">Residual not rated</span></div><div class="grid"><div class="field full"><label for="control${i}">Design change or control</label><select id="control${i}" data-save data-choice="controls"></select></div><div class="field"><label for="proof${i}">Owner and verification evidence</label><select id="proof${i}" data-save data-choice="proof"></select></div><div class="field"><label for="controlStatus${i}">Implementation status</label><select id="controlStatus${i}" data-save><option value="">Choose…</option><option>Implemented and verified</option><option>Implemented, verification pending</option><option>Planned before launch</option><option>Not agreed</option></select></div><div class="field"><label for="resLike${i}">Residual likelihood</label><select id="resLike${i}" data-save data-score="residual" data-index="${i}">${ratingOptions()}</select></div><div class="field"><label for="resSev${i}">Residual severity</label><select id="resSev${i}" data-save data-score="residual" data-index="${i}">${ratingOptions()}</select></div></div></article>`;
+    }
+
+    function ratingOptions(){
+      return `<option value="">Choose…</option><option value="1">1 — Rare / limited</option><option value="2">2 — Unlikely / moderate</option><option value="3">3 — Likely / major</option><option value="4">4 — Almost certain / severe</option>`;
+    }
+
+    function choiceOptions(items,seedText){
+      const shuffled=deterministicShuffle(items,seedText);
+      return `<option value="">Choose the best fit…</option>${shuffled.map(item=>`<option value="${esc(item)}">${esc(item)}</option>`).join("")}`;
+    }
+
+    function populateScenarioChoices(){
+      const choices=scenarioChoices[scenarioId];
+      document.querySelectorAll("select[data-choice]").forEach(select=>{
+        const key=select.dataset.choice;
+        const items=choices[key]||commonChoices[key]||[];
+        select.innerHTML=choiceOptions(items,`${scenarioId}:${key}:${select.id}`);
+      });
+    }
+
+    function renderScenario(){
+      const s=scenarios[scenarioId];
+      document.querySelectorAll(".scenario-btn").forEach(b=>b.classList.toggle("active",b.dataset.scenario===scenarioId));
+      document.getElementById("scenarioHero").innerHTML=`<span class="badge ${s.kind==='composite'?'gold':''}">${s.kind==='actual'?'REAL-WORLD CASE':'COMPOSITE SCENARIO'}</span><h2>${esc(s.label)}: ${esc(s.topic)}</h2><div class="hint">${esc(s.meta)}</div><ul class="facts">${s.facts.map(f=>`<li>${esc(f)}</li>`).join("")}</ul><a class="source-link" href="${s.source}" target="_blank" rel="noopener">Open official source ↗</a><p class="status-note"><strong>Guided practice:</strong> choices are evaluated against the official case facts and the assumptions shown here. Real assessments may reach different ratings when evidence or context changes.</p>`;
+      populateScenarioChoices();
+      restore();
+      clearFeedback();
+      document.getElementById("debrief").classList.remove("revealed");
+      updateScores();
+      updateProgress();
+    }
+
+    function showStep(index){
+      currentStep=Math.max(0,Math.min(steps.length-1,index));
+      document.querySelectorAll(".panel").forEach((p,i)=>p.classList.toggle("active",i===currentStep));
+      document.querySelectorAll(".step-btn").forEach((b,i)=>{
+        const isActive=i===currentStep;
+        b.classList.toggle("active",isActive);
+        b.setAttribute("aria-current",isActive?"step":"false");
+      });
+      document.getElementById("backBtn").disabled=currentStep===0;
+      document.getElementById("nextBtn").textContent=currentStep===steps.length-1?"Back to screen ↺":"Next →";
+      document.querySelector(".workspace").scrollIntoView({behavior:"smooth",block:"start"});
+    }
+
+    function formState(){
+      const data={};
+      document.querySelectorAll("[data-save]").forEach(el=>{
+        if(el.type==="radio"){if(el.checked)data[el.name]=el.value;}
+        else data[el.id]=el.type==="checkbox"?el.checked:el.value;
+      });
+      data._updated=new Date().toISOString(); return data;
+    }
+    function save(){localStorage.setItem(saveKey(scenarioId),JSON.stringify(formState()));const el=document.getElementById("saveState");el.textContent=`Saved locally · ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;updateProgress();}
+    function restore(){
+      document.querySelectorAll("[data-save]").forEach(el=>{if(el.type==="checkbox"||el.type==="radio")el.checked=false;else el.value="";});
+      const data=JSON.parse(localStorage.getItem(saveKey(scenarioId))||"{}");
+      document.querySelectorAll("[data-save]").forEach(el=>{if(el.type==="radio")el.checked=data[el.name]===el.value;else if(Object.prototype.hasOwnProperty.call(data,el.id)){if(el.type==="checkbox")el.checked=!!data[el.id];else el.value=data[el.id];}});
+      document.getElementById("saveState").textContent=data._updated?`Restored · ${new Date(data._updated).toLocaleString()}`:"Ready — progress saves locally";
+    }
+    function populated(id){
+      const el=document.getElementById(id);
+      return !!(el&&(el.type==="checkbox"?el.checked:String(el.value).trim()));
+    }
+
+    function evaluationSpec(element){
+      const key=element.dataset.choice;
+      const slotNumber=Number((element.id.match(/(\d+)$/)||[])[1]||0);
+      const slot=slotNumber?answerKey[scenarioId].slots[slotNumber-1]:null;
+      const hints={
+        legalTrigger:"Choose the authority most directly connected to the stated jurisdiction and case.",
+        screenRationale:"Use the documented high-risk signals; a notice, vendor, or human reviewer does not remove them.",
+        purpose:"Choose the core service outcome, not advertising, surveillance, model training, or unspecified future use.",
+        people:"Include the people affected by the processing and any power or vulnerability differences.",
+        data:"Choose the complete personal-data set described in the facts, including inferred or biometric data.",
+        actions:"Choose the end-to-end lifecycle, including inference, decisions, transfers, retention, and deletion.",
+        recipients:"Treat vendors, software tools, reviewers, and sub-processors as part of the processing.",
+        retention:"Choose a limited period with deletion that can be verified across copies and partners.",
+        necessity:"Choose an effective, less-intrusive way to meet the legitimate purpose.",
+        risks:"Match this card's focus and choose a concrete person-centered consequence, not a vague concern.",
+        affected:"Match the affected group to the selected risk and consider who may experience greater severity.",
+        evidence:"Prefer official findings, observed behavior, representative tests, or a clearly labeled assumption.",
+        controls:"Choose the measure that changes the cause of this risk rather than relying only on a notice or policy.",
+        proof:"Choose objective operating evidence with a named owner; a policy statement alone is insufficient.",
+        decisionRationale:"Match the decision to necessity, the available redesign, and the remaining risk.",
+        owner:"The Data Protection Officer advises and challenges; the accountable business or institutional owner approves.",
+        review:"Choose early review and concrete reopening triggers, not complaint-only review.",
+        evidenceGap:"Choose evidence that could materially change the risk or decision.",
+        consultation:"Include affected people and the functions needed to test legal, technical, operational, and human effects."
+      };
+
+      if(element.id==="screenDecision"){
+        return {values:[answerKey[scenarioId].screenDecision],hint:"Distinguish a legal requirement from a prudent full assessment under governance practice.",success:"Best fit — the assessment depth matches the applicable trigger and the case context."};
+      }
+      if(element.id.startsWith("controlStatus")){
+        return {values:["Implemented and verified"],hint:"A planned control should not reduce the residual rating until it is implemented and verified.",success:"Best fit — only an implemented and verified control earns residual-risk credit."};
+      }
+
+      const ratingMatch=element.id.match(/^(like|sev|resLike|resSev)([1-3])$/);
+      if(ratingMatch){
+        const property=ratingMatch[1];
+        const label={like:"inherent likelihood",sev:"inherent severity",resLike:"residual likelihood",resSev:"residual severity"}[property];
+        const expected=String(slot[property]);
+        return {values:[expected],hint:`${slot.why} For this guided case, the best-fit ${label} is ${expected}.`,success:`Best fit — ${label} ${expected} matches the stated evidence and assumptions.`,revealNow:true};
+      }
+
+      if(key){
+        const items=scenarioChoices[scenarioId][key]||commonChoices[key]||[];
+        const slotProperty={risks:"risk",affected:"affected",evidence:"evidence",controls:"control",proof:"proof"}[key];
+        const rawExpected=slot&&slotProperty?slot[slotProperty]:0;
+        const indices=Array.isArray(rawExpected)?rawExpected:[rawExpected];
+        return {values:indices.map(index=>items[index]),hint:hints[key]||"Recheck the scenario facts and choose the closest fit.",success:"Best fit — this choice is supported by the scenario facts and assessment method."};
+      }
+      return {values:[],hint:"Recheck the scenario facts.",success:"Best fit."};
+    }
+
+    function selectionCorrect(element){
+      const spec=evaluationSpec(element);
+      return !!element.value&&spec.values.includes(element.value);
+    }
+
+    function feedbackNode(element){
+      const host=element.closest(".field");
+      let node=host.querySelector(".feedback");
+      if(!node){
+        node=document.createElement("div");
+        node.className="feedback";
+        node.setAttribute("aria-live","polite");
+        host.appendChild(node);
+      }
+      return node;
+    }
+
+    function setSelectionFeedback(element,correct,message){
+      const host=element.closest(".field");
+      const node=feedbackNode(element);
+      host.classList.toggle("is-correct",correct);
+      host.classList.toggle("needs-retry",!correct);
+      node.className=`feedback show ${correct?"correct":"retry"}`;
+      node.textContent=message;
+      element.dataset.correct=correct?"true":"false";
+    }
+
+    function evaluateSelection(element,countAttempt=true){
+      const spec=evaluationSpec(element);
+      const correct=selectionCorrect(element);
+      if(correct){
+        setSelectionFeedback(element,true,spec.success);
+        return true;
+      }
+      const key=`${scenarioId}:${element.id}`;
+      if(countAttempt&&element.value)attempts[key]=(attempts[key]||0)+1;
+      let message=element.value?`Try again — ${spec.hint}`:"Choose an answer before continuing.";
+      if(element.value&&(spec.revealNow||(attempts[key]||0)>=2))message+=` Best fit: ${spec.values.join(" OR ")}`;
+      setSelectionFeedback(element,false,message);
+      return false;
+    }
+
+    function groupFeedback(containerId){
+      const container=document.getElementById(containerId);
+      let node=container.parentElement.querySelector(`[data-feedback-for="${containerId}"]`);
+      if(!node){
+        node=document.createElement("div");
+        node.dataset.feedbackFor=containerId;
+        node.className="feedback step-feedback";
+        node.setAttribute("aria-live","polite");
+        container.insertAdjacentElement("afterend",node);
+      }
+      return node;
+    }
+
+    function signalsCorrect(){
+      const selected=signals.filter(([id])=>document.getElementById(`signal-${id}`).checked).map(([id])=>id).sort();
+      const expected=[...answerKey[scenarioId].signals].sort();
+      return selected.length===expected.length&&selected.every((value,index)=>value===expected[index]);
+    }
+
+    function evaluateSignals(countAttempt=true){
+      const correct=signalsCorrect();
+      const node=groupFeedback("screenChecks");
+      if(correct){
+        node.className="feedback step-feedback show correct";
+        node.textContent="Best fit — the selected signals are supported by the scenario facts.";
+        return true;
+      }
+      const key=`${scenarioId}:signals`;
+      if(countAttempt)attempts[key]=(attempts[key]||0)+1;
+      const selected=signals.filter(([id])=>document.getElementById(`signal-${id}`).checked).map(([id])=>id);
+      const expected=answerKey[scenarioId].signals;
+      const supported=selected.filter(value=>expected.includes(value)).length;
+      const extras=selected.filter(value=>!expected.includes(value)).length;
+      let message=`Keep checking — ${supported} of ${expected.length} supported signals selected`;
+      if(extras)message+=`; ${extras} selection${extras===1?" is":"s are"} not supported by the stated facts`;
+      message+=".";
+      if((attempts[key]||0)>=2)message+=` Best-fit signals: ${expected.map(id=>signals.find(([value])=>value===id)[1]).join(", ")}.`;
+      node.className="feedback step-feedback show retry";
+      node.textContent=message;
+      return false;
+    }
+
+    function decisionCorrect(){
+      const selected=document.querySelector('input[name="decision"]:checked');
+      return !!selected&&selected.value===answerKey[scenarioId].decision;
+    }
+
+    function evaluateDecision(countAttempt=true){
+      const correct=decisionCorrect();
+      const node=groupFeedback("decisionGrid");
+      if(correct){
+        node.className="feedback step-feedback show correct";
+        node.textContent="Best fit — the decision matches necessity, available controls, and residual risk in this guided case.";
+        return true;
+      }
+      const key=`${scenarioId}:decision`;
+      if(countAttempt&&document.querySelector('input[name="decision"]:checked'))attempts[key]=(attempts[key]||0)+1;
+      let message="Try again — choose the decision that addresses the strongest available redesign and the remaining human harm.";
+      if((attempts[key]||0)>=2)message+=` Best fit: ${answerKey[scenarioId].decision}.`;
+      node.className="feedback step-feedback show retry";
+      node.textContent=message;
+      return false;
+    }
+
+    function clearFeedback(){
+      document.querySelectorAll(".feedback").forEach(node=>{node.className=node.classList.contains("step-feedback")?"feedback step-feedback":"feedback";node.textContent="";});
+      document.querySelectorAll(".field").forEach(field=>field.classList.remove("is-correct","needs-retry"));
+      document.querySelectorAll("[data-correct]").forEach(element=>delete element.dataset.correct);
+    }
+
+    function evaluateStep(i,countAttempt=true){
+      let results=[];
+      if(i===0){
+        results=[evaluateSignals(countAttempt),...["screenDecision","legalTrigger","screenRationale"].map(id=>evaluateSelection(document.getElementById(id),countAttempt))];
+      }else if(i===1){
+        results=["purpose","people","data","actions","recipients","retention","necessity"].map(id=>evaluateSelection(document.getElementById(id),countAttempt));
+      }else if(i===2){
+        results=[1,2,3].flatMap(n=>["risk","affected","riskEvidence","like","sev"].map(prefix=>evaluateSelection(document.getElementById(`${prefix}${n}`),countAttempt)));
+      }else if(i===3){
+        results=[1,2,3].flatMap(n=>["control","proof","controlStatus","resLike","resSev"].map(prefix=>evaluateSelection(document.getElementById(`${prefix}${n}`),countAttempt)));
+      }else if(i===4){
+        results=[evaluateDecision(countAttempt),...["decisionRationale","owner","review","evidenceGap","consultation"].map(id=>evaluateSelection(document.getElementById(id),countAttempt))];
+      }else{
+        results=[document.getElementById("debrief").classList.contains("revealed")];
+      }
+      return results.every(Boolean);
+    }
+
+    function stepDone(i){
+      if(i===0)return signalsCorrect()&&["screenDecision","legalTrigger","screenRationale"].every(id=>selectionCorrect(document.getElementById(id)));
+      if(i===1)return ["purpose","people","data","actions","recipients","retention","necessity"].every(id=>selectionCorrect(document.getElementById(id)));
+      if(i===2)return [1,2,3].every(n=>["risk","affected","riskEvidence","like","sev"].every(prefix=>selectionCorrect(document.getElementById(`${prefix}${n}`))));
+      if(i===3)return [1,2,3].every(n=>["control","proof","controlStatus","resLike","resSev"].every(prefix=>selectionCorrect(document.getElementById(`${prefix}${n}`))));
+      if(i===4)return decisionCorrect()&&["decisionRationale","owner","review","evidenceGap","consultation"].every(id=>selectionCorrect(document.getElementById(id)));
+      return document.getElementById("debrief").classList.contains("revealed");
+    }
+
+    function updateProgress(){
+      document.querySelectorAll(".step-btn").forEach((button,index)=>button.classList.toggle("done",stepDone(index)));
+    }
+    function scoreLabel(a,b,prefix=""){
+      if(!a||!b)return {text:`${prefix}not rated`,className:""}; const score=Number(a)*Number(b); let level="Low"; if(score>=12)level="Very high";else if(score>=8)level="High";else if(score>=4)level="Medium";return{text:`${prefix}${score} · ${level}`,className:slug(level)};
+    }
+    function riskBandColor(value){
+      if(value<=3)return "#ecf6f1";
+      if(value<=6)return "#fff6d2";
+      if(value<=9)return "#f7dcc4";
+      return "#fbecec";
+    }
+
+    function ratedRisks(){
+      return [1,2,3].map(i=>({
+        n:i,
+        like:Number(document.getElementById(`like${i}`).value)||0,
+        sev:Number(document.getElementById(`sev${i}`).value)||0,
+        resLike:Number(document.getElementById(`resLike${i}`).value)||0,
+        resSev:Number(document.getElementById(`resSev${i}`).value)||0
+      }));
+    }
+
+    const SEV_WORDS=["","Limited","Moderate","Major","Severe"];
+    const LIKE_WORDS=["","Rare","Unlikely","Likely","Almost certain"];
+
+    function renderMatrix(target){
+      const grid=document.getElementById(target);
+      if(!grid)return;
+      const risks=ratedRisks();
+      const cells=[];
+      for(let sev=4;sev>=1;sev-=1){
+        cells.push(`<div class="axis">${sev} ${SEV_WORDS[sev]}</div>`);
+        for(let like=1;like<=4;like+=1){
+          const pins=[];
+          risks.forEach((r,index)=>{
+            if(r.like===like&&r.sev===sev)pins.push(`<span class="pin inherent n${index}" title="Risk ${r.n} before its control">${r.n}</span>`);
+            if(r.resLike===like&&r.resSev===sev)pins.push(`<span class="pin residual n${index}" title="Risk ${r.n} after its control">${r.n}</span>`);
+          });
+          cells.push(`<div class="cell" style="background:${riskBandColor(like*sev)}">${like*sev}${pins.join("")}</div>`);
+        }
+      }
+      cells.push('<div class="axis"></div>');
+      for(let like=1;like<=4;like+=1)cells.push(`<div class="axis">${like}<br>${LIKE_WORDS[like]}</div>`);
+      grid.innerHTML=cells.join("");
+    }
+
+    function renderDelta(target){
+      const el=document.getElementById(target);
+      if(!el)return;
+      const risks=ratedRisks();
+      const scored=risks.filter(r=>r.like&&r.sev);
+      if(!scored.length){
+        el.className="delta none";
+        el.textContent="Rate a risk in step 3 to see it appear here.";
+        return;
+      }
+      const before=scored.reduce((sum,r)=>sum+r.like*r.sev,0);
+      const treated=risks.filter(r=>r.resLike&&r.resSev);
+      if(treated.length<scored.length){
+        el.className="delta none";
+        el.textContent=`Before controls: ${before} across ${scored.length} risk${scored.length>1?"s":""}. Score the risk left over for each one to see the reduction.`;
+        return;
+      }
+      const after=treated.reduce((sum,r)=>sum+r.resLike*r.resSev,0);
+      const cut=before?Math.round((before-after)/before*100):0;
+      el.className=cut>0?"delta":"delta none";
+      el.textContent=cut>0
+        ? `Total ${before} before controls, ${after} after \u2014 a ${cut}% reduction. Only the ${after} on the right of that sentence is what you actually decide on.`
+        : `Total ${before} before controls, ${after} after. These controls are not changing the risk \u2014 look for one that treats the cause.`;
+    }
+
+    function updateScores(){
+      [1,2,3].forEach(i=>{
+        const inherent=scoreLabel(document.getElementById(`like${i}`).value,document.getElementById(`sev${i}`).value);
+        const residual=scoreLabel(document.getElementById(`resLike${i}`).value,document.getElementById(`resSev${i}`).value,"Residual ");
+        [[`inherentScore${i}`,inherent],[`residualScore${i}`,residual]].forEach(([id,s])=>{const el=document.getElementById(id);el.textContent=s.text;el.className=`score ${s.className}`;});
+      });
+      ["matrixControls","matrixDebrief"].forEach(renderMatrix);
+      ["deltaControls","deltaDebrief"].forEach(renderDelta);
+    }
+
+    function revealDebrief(){
+      const gaps=[];
+      if(!stepDone(0))gaps.push("choose the screening result, trigger, and rationale");
+      if(!stepDone(1))gaps.push("complete every purpose and lifecycle choice");
+      if(!stepDone(2))gaps.push("choose three different risks and rate each one");
+      if(!stepDone(3))gaps.push("choose controls, evidence, status, and residual ratings");
+      if(!stepDone(4))gaps.push("choose the decision, owner, uncertainty, consultation, and review trigger");
+      const s=scenarios[scenarioId];
+      const risks=[1,2,3].map(i=>scoreLabel(document.getElementById(`resLike${i}`).value,document.getElementById(`resSev${i}`).value).text);
+      const el=document.getElementById("debrief");
+      el.innerHTML=`<h3>${gaps.length?"Submission needs more choices":"Debrief ready"}</h3>${gaps.length?`<p><strong>Before presenting:</strong> ${esc(gaps.join("; "))}.</p>`:"<p>Your selected record contains the minimum assessed elements. Defend the links between facts, harms, controls, and the decision.</p>"}<h3>Teaching prompts for ${esc(s.label)}</h3><ul>${s.debrief.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><p><strong>Residual ratings:</strong> ${risks.map(esc).join(" · ")}</p><p><strong>Ask the team:</strong> Which fact drove your highest risk? Which alternative did you reject? What evidence could reverse your decision?</p>`;
+      el.classList.add("revealed");
+      save();
+      updateProgress();
+    }
+
+    function reportText(){
+      const d=formState(),s=scenarios[scenarioId],lines=["COE526 — PRIVACY ASSESSMENT LAB","",`Scenario: ${s.label} — ${s.topic}`,`Type/status: ${s.meta}`,`Official source: ${s.source}`,"",...s.facts.map(f=>`FACT: ${f}`),"","1. SCREEN",`Result: ${d.screenDecision||""}`,`Trigger: ${d.legalTrigger||""}`,`Rationale: ${d.screenRationale||""}`,"","2. MAP",`Purpose: ${d.purpose||""}`,`People: ${d.people||""}`,`Data and sources: ${d.data||""}`,`Actions: ${d.actions||""}`,`Recipients/vendors/locations: ${d.recipients||""}`,`Retention/deletion/evidence: ${d.retention||""}`,`Necessity and alternatives: ${d.necessity||""}`,"","3–4. RISKS AND CONTROLS"];
+      [1,2,3].forEach(i=>lines.push("",`Risk ${i}: ${d[`risk${i}`]||""}`,`Affected/effect: ${d[`affected${i}`]||""}`,`Evidence/assumption: ${d[`riskEvidence${i}`]||""}`,`Inherent: L${d[`like${i}`]||"?"} × S${d[`sev${i}`]||"?"} — ${scoreLabel(d[`like${i}`],d[`sev${i}`]).text}`,`Control: ${d[`control${i}`]||""}`,`Owner/evidence: ${d[`proof${i}`]||""}`,`Status: ${d[`controlStatus${i}`]||""}`,`Residual: L${d[`resLike${i}`]||"?"} × S${d[`resSev${i}`]||"?"} — ${scoreLabel(d[`resLike${i}`],d[`resSev${i}`]).text}`));
+      lines.push("","5. DECISION",`Decision: ${d.decision||""}`,`Rationale/conditions: ${d.decisionRationale||""}`,`Owner/approver: ${d.owner||""}`,`Review/reopen: ${d.review||""}`,`Evidence gap: ${d.evidenceGap||""}`,`Consultation/dissent: ${d.consultation||""}`,"",`Exported: ${new Date().toISOString()}`,"Remember: a score supports judgment; it does not accept risk."); return lines.join("\n");
+    }
+
+    function firstIncompleteStep(target){
+      for(let index=0;index<target;index+=1){
+        if(!stepDone(index))return index;
+      }
+      return -1;
+    }
+
+    function openPermittedStep(target){
+      showStep(target);
+    }
+
+    document.addEventListener("DOMContentLoaded",()=>{
+      buildStaticUI();
+      renderScenario();
+      showStep(0);
+      document.getElementById("scenarioList").addEventListener("click",event=>{
+        const button=event.target.closest("[data-scenario]");
+        if(!button)return;
+        save();
+        scenarioId=button.dataset.scenario;
+        renderScenario();
+        showStep(0);
+      });
+      document.getElementById("progress").addEventListener("click",event=>{
+        const button=event.target.closest("[data-step-btn]");
+        if(button)showStep(Number(button.dataset.stepBtn));
+      });
+      document.getElementById("nextBtn").addEventListener("click",()=>{
+        if(currentStep===steps.length-1){
+          showStep(0);
+          return;
+        }
+        showStep(currentStep+1);
+      });
+      document.getElementById("backBtn").addEventListener("click",()=>showStep(currentStep-1));
+      document.addEventListener("keydown",event=>{
+        if(!event.altKey||event.ctrlKey||event.metaKey)return;
+        if(event.key==="ArrowRight"){
+          event.preventDefault();
+          if(currentStep<steps.length-1)showStep(currentStep+1);
+        }else if(event.key==="ArrowLeft"){
+          event.preventDefault();
+          if(currentStep>0)showStep(currentStep-1);
+        }
+      });
+      document.addEventListener("change",event=>{
+        const element=event.target;
+        if(!element.matches("[data-save]"))return;
+        if(element.type==="checkbox"&&element.id.startsWith("signal-"))evaluateSignals(false);
+        else if(element.type==="radio"&&element.name==="decision")evaluateDecision(true);
+        else evaluateSelection(element,true);
+        updateScores();
+        save();
+      });
+      document.getElementById("submitDebrief").addEventListener("click",revealDebrief);
+      document.getElementById("exportText").addEventListener("click",()=>download(`COE526-${scenarioId}-privacy-assessment.txt`,reportText()));
+      document.getElementById("exportJson").addEventListener("click",()=>download(`COE526-${scenarioId}-privacy-assessment.json`,JSON.stringify({scenario:scenarios[scenarioId],answers:formState()},null,2),"application/json"));
+      document.getElementById("printBtn").addEventListener("click",()=>window.print());
+      document.getElementById("resetBtn").addEventListener("click",()=>{
+        if(!confirm(`Reset all saved answers for ${scenarios[scenarioId].label}?`))return;
+        localStorage.removeItem(saveKey(scenarioId));
+        Object.keys(attempts).filter(key=>key.startsWith(`${scenarioId}:`)).forEach(key=>delete attempts[key]);
+        restore();
+        clearFeedback();
+        updateScores();
+        updateProgress();
+        document.getElementById("debrief").classList.remove("revealed");
+      });
+    });
+  </script>
+</body>
+</html>
