@@ -3,16 +3,21 @@ name: Build and deploy Vite site to GitHub Pages
 on:
   push:
     branches:
-      - main              # Remove 'master' - keep only main
+      - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,8 +25,11 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'    # Change from '24' to '20'
-          cache: 'npm'          # ADD THIS LINE - was missing
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
       - name: Install dependencies
         run: npm ci
@@ -29,21 +37,30 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify deployment bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          test -f dist/app/index.html
+          test -f dist/COE526_Data_Privacy/index.html
+          test -f dist/COE526_Data_Privacy/interactive-01-privacy-foundations-and-terms.html
+          test -f dist/COE526_Data_Privacy/interactive-02-privacy-laws.html
+          test -f dist/COE526_Data_Privacy/COE526-Interactive-02-Privacy-Assessment-Lab.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
   deploy:
-    needs: build-and-deploy
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-
-    permissions:
-      pages: write
-      id-token: write
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4

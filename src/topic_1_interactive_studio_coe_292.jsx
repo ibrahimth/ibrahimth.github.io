@@ -219,7 +219,7 @@ const RC_SOLN = [
 
 const RiverCrossing = () => {
   const [state, setState] = useState(RC_START);
-  const [history, setHistory] = useState([RC_START]);
+  const [, setHistory] = useState([RC_START]);
   const [status, setStatus] = useState("Make a safe crossing.");
   const [auto, setAuto] = useState(false);
 
@@ -438,7 +438,7 @@ const FeaturePicker = () => {
             </p>
             <ul className="list-disc pl-5 text-sm mt-2 text-slate-700 space-y-1">
               <li>Good: rare traits, shape cues, distinctive textures/patterns.</li>
-              <li>Bad: universal facts ("lives in water"), photographer artifacts.</li>
+              <li>Bad: universal facts (&quot;lives in water&quot;), photographer artifacts.</li>
             </ul>
           </Card>
         </div>
@@ -682,10 +682,7 @@ export default function Topic1Studio() {
   useEffect(() => {
     const res = runSelfTests();
     setTests(res);
-    // Also log for developers
-    try {
-      console.table(res.map((r) => ({ test: r.name, pass: r.pass })));
-    } catch {}
+    console.table(res.map((r) => ({ test: r.name, pass: r.pass })));
   }, []);
 
   const passed = tests.filter((t) => t.pass).length;

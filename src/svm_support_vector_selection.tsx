@@ -514,18 +514,27 @@ function SanityTests() {
   type T = { name: string; pass: boolean; details: string };
   const tests: T[] = [];
 
-  // Test 1: two points only (+1 and −1) → margin = distance/2, both are SVs
   const A: Pt = { id: 'A', x: 1, y: 1, label: 1, active: true };
   const B: Pt = { id: 'B', x: 4, y: 5, label: -1, active: true };
   const fitAB = fitMaxMargin([A, B]);
   const distAB = Math.hypot(B.x - A.x, B.y - A.y);
-  tests.push({
-    name: 'Two points (opposite classes) separable',
-    pass: !!fitAB.valid && Math.abs(2*fitAB.half - distAB) < 1e-2 && (fitAB.svIds.includes('A') && fitAB.svIds.includes('B')),
-    details: `half=${fitAB.half?.toFixed(3)}, dist/2=${(distAB/2).toFixed(3)}, SVs=${fitAB.svIds?.join(',')}`,
-  });
+  if (fitAB.valid) {
+    tests.push({
+      name: 'Two points (opposite classes) separable',
+      pass:
+        Math.abs(2 * fitAB.half - distAB) < 1e-2 &&
+        fitAB.svIds.includes('A') &&
+        fitAB.svIds.includes('B'),
+      details: `half=${fitAB.half.toFixed(3)}, dist/2=${(distAB / 2).toFixed(3)}, SVs=${fitAB.svIds.join(',')}`,
+    });
+  } else {
+    tests.push({
+      name: 'Two points (opposite classes) separable',
+      pass: false,
+      details: 'fit was invalid',
+    });
+  }
 
-  // Test 2: clearly separable clusters (horizontal split)
   const C1: Pt[] = [
     { id: 'c1', x: 1, y: 1, label: -1, active: true },
     { id: 'c2', x: 2, y: 1.2, label: -1, active: true },
@@ -537,13 +546,20 @@ function SanityTests() {
     { id: 'd3', x: 3, y: 5.7, label: 1, active: true },
   ];
   const fitSep = fitMaxMargin([...C1, ...C2]);
-  tests.push({
-    name: 'Separable clusters → valid fit with positive margin',
-    pass: !!fitSep.valid && fitSep.half > 0.3,
-    details: `valid=${fitSep.valid}, half=${fitSep.half?.toFixed(3)}`,
-  });
+  if (fitSep.valid) {
+    tests.push({
+      name: 'Separable clusters have a positive margin',
+      pass: fitSep.half > 0.3,
+      details: `valid=true, half=${fitSep.half.toFixed(3)}`,
+    });
+  } else {
+    tests.push({
+      name: 'Separable clusters have a positive margin',
+      pass: false,
+      details: 'fit was invalid',
+    });
+  }
 
-  // Test 3: non‑separable (labels conflict)
   const bad: Pt[] = [
     { id: 'k1', x: 0, y: 0, label: 1, active: true },
     { id: 'k2', x: 0.2, y: 0.2, label: -1, active: true },
@@ -551,8 +567,9 @@ function SanityTests() {
   ];
   const fitBad = fitMaxMargin(bad);
   tests.push({
-    name: 'Non‑separable tiny set',
-    pass: !fitBad.valid, details: `valid=${fitBad.valid}`
+    name: 'Non-separable tiny set',
+    pass: !fitBad.valid,
+    details: `valid=${fitBad.valid}`,
   });
 
   return (
@@ -561,7 +578,7 @@ function SanityTests() {
       <div className="grid grid-cols-1 gap-2">
         {tests.map((t, i) => (
           <div key={i} className={`rounded-md p-2 text-xs border ${t.pass ? 'bg-white border-black text-black' : 'bg-gray-100 border-gray-400 text-black'}`}>
-            <div className="font-medium">{t.pass ? '✓ PASS' : '✗ FAIL'} — {t.name}</div>
+            <div className="font-medium">{t.pass ? 'PASS' : 'FAIL'}: {t.name}</div>
             <div className="opacity-80 font-mono">{t.details}</div>
           </div>
         ))}
