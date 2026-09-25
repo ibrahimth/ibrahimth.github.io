@@ -25,6 +25,14 @@ export default defineConfig({
           __dirname,
           'COE526_Data_Privacy/COE526-Interactive-02-Privacy-Assessment-Lab.html',
         ),
+        coe526L04: path.resolve(
+          __dirname,
+          'COE526_Data_Privacy/COE526-L04-Privacy-Design-Interactive.html',
+        ),
+        coe526L05: path.resolve(
+          __dirname,
+          'COE526_Data_Privacy/COE526-L05-Data-Anonymization-Interactive.html',
+        ),
       },
     },
   },
