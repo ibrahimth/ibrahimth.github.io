@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Greedy Partitioning Lab (Mondrian) · COE 526</title>
+<meta name="description" content="Interactive COE 526 lab: Mondrian greedy partitioning, worked iterations, k-anonymity and l-diversity on a 10-record medical table.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23201a3d'/%3E%3Cpath d='M12 12h40v40H12z' fill='%23a78bfa'/%3E%3Cpath d='M32 12v40M12 30h20M32 40h20' stroke='%23201a3d' stroke-width='3'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#f7f6ff;--ink:#201a3d;--muted:#69627e;--violet:#6d4aff;--violet2:#a78bfa;--soft:#f1effc;--orange:#f97316;--green:#15803d;--greenbg:#e9f8ed;--red:#dc2626;--redbg:#fff0f0;--paper:#fff;--line:#ddd8f0;--shadow:0 18px 45px rgba(52,35,106,.10);--c1:#6d4aff;--c2:#f97316;--c3:#0e9f6e;--c4:#db2777;--c5:#0284c7;--c6:#ca8a04}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:linear-gradient(135deg,#f8f7ff,#fff9f3);color:var(--ink);font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;display:flex;align-items:center;gap:18px;padding:12px max(20px,calc((100vw - 1180px)/2));background:rgba(247,246,255,.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.brand{font-weight:900;white-space:nowrap}.brand i{font-style:normal;color:var(--violet)}
+nav{display:flex;gap:4px;overflow-x:auto}
+nav button{border:0;background:transparent;color:var(--muted);padding:8px 12px;border-radius:9px;white-space:nowrap;cursor:pointer;font:inherit;font-size:15px}
+nav button:hover{background:#ece9ff;color:var(--violet)}
+nav button[aria-selected=true]{background:var(--violet);color:#fff;font-weight:700}
+.back{margin-left:auto;color:var(--muted);font-size:14px;white-space:nowrap;text-decoration:none}.back:hover{color:var(--violet)}
+main{max-width:1180px;margin:auto;padding:40px 24px 100px}
+.kicker{color:var(--violet);font-size:14px;font-weight:800}
+h1{font-size:clamp(34px,5.5vw,60px);line-height:1;letter-spacing:-.05em;margin:10px 0 16px}
+h2{font-size:clamp(26px,3.4vw,38px);letter-spacing:-.035em;line-height:1.08;margin:6px 0 10px}
+h3{margin:0 0 10px;font-size:19px;letter-spacing:-.01em}
+.intro{color:var(--muted);max-width:760px;margin:0 0 22px}
+.panel{display:none}.panel.on{display:block}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.split{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+.stack>*+*{margin-top:18px}
+.split>*,.grid2>*,.qa>*,.sides>*{min-width:0}
+.chips .rec{max-width:100%}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{color:var(--muted);font-size:13px;font-weight:700}
+.qi{background:#f4f1ff}.sa{background:#fff3ea}
+pre.code{margin:0;background:#1b1733;color:#e8e4ff;border-radius:14px;padding:18px;font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:auto}
+pre.code .kw{color:#fca5a5}.code .fn{color:#c4b5fd}.code .nm{color:#fdba74}
+pre.code .ln{display:block;padding:0 6px;border-radius:5px}
+pre.code .ln.hl{background:rgba(167,139,250,.28)}
+ol.rules{margin:0;padding-left:20px}ol.rules li+li{margin-top:8px}
+.pill{display:inline-block;padding:2px 8px;border-radius:7px;background:var(--soft);font-size:13px;font-weight:600}
+.seg{display:inline-flex;background:var(--soft);border-radius:12px;padding:4px;gap:4px}
+.seg button{border:0;background:transparent;padding:8px 14px;border-radius:9px;font:inherit;font-weight:800;color:var(--muted);cursor:pointer;min-width:44px}
+.seg button[aria-pressed=true]{background:var(--violet);color:#fff}
+.controls{display:flex;gap:18px 26px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.controls .lbl{font-weight:800;margin-right:8px}
+.toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:var(--muted)}
+.toggle input{accent-color:var(--violet);width:18px;height:18px}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:9px 14px;border-radius:11px;font:inherit;font-weight:700;cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--violet);color:var(--violet)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.primary{background:var(--violet);border-color:var(--violet);color:#fff}
+.btn.primary:hover{color:#fff;filter:brightness(1.08)}
+button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--violet2);outline-offset:2px}
+.stepbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.stepbar .count{font-weight:800;margin:0 6px}
+.tree{font-size:14px}
+.tree ul{list-style:none;margin:0;padding-left:16px;border-left:2px solid var(--line)}
+.tree>ul{padding-left:0;border:0}
+.tree li{margin:5px 0}
+.node{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#faf9ff;border-radius:10px;padding:7px 9px;font:inherit;cursor:pointer;color:var(--ink)}
+.node:hover{border-color:var(--violet)}
+.node.cur{border-color:var(--violet);background:#ece9ff;box-shadow:0 0 0 2px var(--violet2)}
+.node .cut{display:block;color:var(--muted);font-size:12.5px}
+.node.leaf{border-left:6px solid var(--cc,var(--violet))}
+.node.hidden{opacity:.35}
+.it-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.it-head .meta{color:var(--muted);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.rec{border:1px solid var(--line);border-radius:9px;padding:5px 8px;font-size:13px;background:#faf9ff}
+.rec b{color:var(--violet)}
+.rec small{color:var(--muted)}
+.attempt{border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
+.attempt.ok{border-color:#86efac;background:#f5fdf7}
+.attempt.bad{border-color:#fecaca;background:#fffafa}
+.attempt.skip{background:#faf9fd;color:var(--muted);padding:10px 14px}
+.attempt h4{margin:0 0 8px;font-size:15.5px}
+.fs{display:flex;flex-wrap:wrap;gap:5px}
+.fs span{background:var(--soft);border-radius:7px;padding:3px 8px;font-size:13px}
+.fs span.med{background:var(--violet);color:#fff;font-weight:700}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.side{border:1px dashed var(--line);border-radius:10px;padding:9px 10px;font-size:13.5px;background:#fff}
+.verdict{margin-top:10px;font-weight:700}
+.verdict.ok{color:var(--green)}.verdict.bad{color:var(--red)}
+.decision{margin-top:14px;padding:13px 15px;border-radius:12px;background:#261f4b;color:#fff}
+.decision b{color:#c4b5fd}
+.reveal{margin-top:14px;padding:14px;border:2px dashed var(--violet2);border-radius:14px;background:#faf9ff}
+.reveal p{margin:0 0 10px}
+.banner{padding:14px 16px;border-radius:14px;font-weight:600;margin-bottom:16px}
+.banner.ok{background:var(--greenbg);color:#14532d;border:1px solid #86efac}
+.banner.bad{background:var(--redbg);color:#7f1d1d;border:1px solid #fecaca}
+.banner.info{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.ecTag{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:7px;vertical-align:-1px}
+tr.grp td:first-child{border-left:5px solid var(--cc)}
+.yes{color:var(--green);font-weight:800}.no{color:var(--red);font-weight:800}
+.matrix td,.matrix th{text-align:center}.matrix td:first-child,.matrix th:first-child{text-align:left}
+.matrix td.cur{outline:3px solid var(--violet2);outline-offset:-3px;border-radius:6px}
+.ref{display:block;margin-top:4px;font-size:13px;color:var(--muted);font-style:italic}
+.small{font-size:13.5px;color:var(--muted)}
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.qa .card p{margin:.4em 0}
+details summary{cursor:pointer;font-weight:700;color:var(--violet)}
+@media (max-width:900px){.split,.grid2,.qa{grid-template-columns:1fr}.top{flex-wrap:wrap}.back{margin-left:0}.sides{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">COE 526 <i>Mondrian lab</i></div>
+  <nav role="tablist" aria-label="Lab sections">
+    <button role="tab" data-tab="setup" aria-selected="true">1. Data and rules</button>
+    <button role="tab" data-tab="kpanel" aria-selected="false">2. k-anonymity</button>
+    <button role="tab" data-tab="lpanel" aria-selected="false">3. l-diversity</button>
+    <button role="tab" data-tab="verdict" aria-selected="false">4. Does it work?</button>
+  </nav>
+  <a class="back" href="./index.html">Course home</a>
+</header>
+
+<main>
+<!-- ============ TAB 1 ============ -->
+<section class="panel on" id="setup" role="tabpanel">
+  <div class="kicker">COE 526 · Data anonymization lab</div>
+  <h1>Greedy partitioning,<br>one cut at a time</h1>
+  <p class="intro">Mondrian splits a table recursively on the quasi-identifiers until no further cut keeps every part large enough. Walk through every iteration on a 10-patient table, first for k-anonymity, then for l-diversity.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>The table</h3>
+      <p class="small" style="margin-top:0">Shaded purple: quasi-identifiers (QI). Shaded orange: sensitive attribute.</p>
+      <div class="scroll"><table id="origTable"></table></div>
+    </div>
+    <div class="card">
+      <h3>The algorithm</h3>
+<pre class="code"><span class="ln"><span class="nm">Anonymize</span>(partition)</span><span class="ln">  <span class="kw">if</span> (no allowable multidimensional cut <span class="kw">for</span> partition)</span><span class="ln">    <span class="kw">return</span> φ : partition → summary</span><span class="ln">  else</span><span class="ln">    dim ← <span class="fn">choose_dimension</span>()</span><span class="ln">    fs  ← <span class="fn">frequency_set</span>(partition, dim)</span><span class="ln">    splitVal ← <span class="fn">find_median</span>(fs)</span><span class="ln">    lhs ← {t ∈ partition : t.dim ≤ splitVal}</span><span class="ln">    rhs ← {t ∈ partition : t.dim &gt; splitVal}</span><span class="ln">    <span class="kw">return</span> <span class="nm">Anonymize</span>(rhs) ∪ <span class="nm">Anonymize</span>(lhs)</span></pre>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h3>How each line is applied</h3>
+    <ol class="rules">
+      <li><b>choose_dimension</b>: the quasi-identifier with the widest normalized range. Age: (max − min) / 12. Sex and City use the order Female &lt; Male and Rotterdam &lt; Utrecht &lt; Zwolle. Ties go to Age, then Sex, then City.</li>
+      <li><b>frequency_set</b>: each value of the dimension in the partition with its count.</li>
+      <li><b>find_median</b>: the median of the partition on that dimension, counting every record: record ⌊(n − 1)/2⌋ + 1 in sorted order.</li>
+      <li><b>Allowable cut</b>: lhs and rhs each have at least k records. In the l-diversity tab, each side must also have at least l distinct diseases. If the cut on the chosen dimension is not allowable, the next dimension is tried; if none is allowable, the partition is final.</li>
+      <li><b>φ</b>: each final partition is published with the min–max range of each quasi-identifier.</li>
+    </ol>
+  </div>
+  <p style="margin:18px 0 0"><button class="btn primary" data-go="kpanel">Start with k-anonymity</button></p>
+</section>
+
+<!-- ============ TAB 2 ============ -->
+<section class="panel" id="kpanel" role="tabpanel">
+  <div class="kicker">Part 1</div>
+  <h2>Make the table k-anonymous</h2>
+  <p class="intro">Pick k, then step through the recursion. Each iteration handles one partition: measure the ranges, pick a dimension, find the median, and test whether the cut is allowable.</p>
+  <div class="controls">
+    <div><span class="lbl">k =</span><span class="seg" data-param="k"></span></div>
+    <label class="toggle"><input type="checkbox" class="practice"> Practice mode: hide each decision until I reveal it</label>
+  </div>
+  <div id="kBanner"></div>
+  <div class="split">
+    <div class="card"><h3>Partition tree</h3><div class="tree" id="kTree"></div><p class="small">Select a partition to jump to its iteration.</p></div>
+    <div class="card">
+      <div class="stepbar">
+        <button class="btn" data-nav="k" data-dir="-1">Previous</button>
+        <span class="count" id="kCount"></span>
+        <button class="btn primary" data-nav="k" data-dir="1">Next iteration</button>
+        <label class="toggle" style="margin-left:auto"><input type="checkbox" data-all="k"> Show all</label>
+      </div>
+      <div id="kIter"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h3>The k-anonymous release</h3>
+    <p class="small" style="margin-top:0">Each final partition is published with min–max ranges on the QIs. "*" means the range covers the whole domain.</p>
+    <div class="scroll"><table id="kFinal"></table></div>
+  </div>
+  <p><button class="btn primary" data-go="lpanel">Continue to l-diversity</button></p>
+</section>
+
+<!-- ============ TAB 3 ============ -->
+<section class="panel" id="lpanel" role="tabpanel">
+  <div class="kicker">Part 2</div>
+  <h2>Make it l-diverse</h2>
+  <p class="intro">k-anonymity hides who is who, but a class where everyone has the same disease still leaks it. Distinct l-diversity requires at least l different diseases in every class. First check the k-anonymous table; if it fails, run Mondrian again with l added to the allowable-cut rule.</p>
+  <div class="controls">
+    <div><span class="lbl">k =</span><span class="seg" data-param="k"></span></div>
+    <div><span class="lbl">l =</span><span class="seg" data-param="l"></span></div>
+    <label class="toggle"><input type="checkbox" class="practice"> Practice mode</label>
+  </div>
+
+  <div class="card">
+    <h3>Step A: check the k-anonymous table</h3>
+    <div class="scroll"><table id="lCheck"></table></div>
+  </div>
+  <div id="lBanner" style="margin-top:18px"></div>
+  <div id="lRerun"></div>
+  <p><button class="btn primary" data-go="verdict">See the verdict</button></p>
+</section>
+
+<!-- ============ TAB 4 ============ -->
+<section class="panel" id="verdict" role="tabpanel">
+  <div class="kicker">Part 3</div>
+  <h2>Does it work?</h2>
+  <p class="intro">Answers for the k and l you picked, then every combination at once.</p>
+  <div class="controls">
+    <div><span class="lbl">k =</span><span class="seg" data-param="k"></span></div>
+    <div><span class="lbl">l =</span><span class="seg" data-param="l"></span></div>
+  </div>
+  <div class="qa" id="qa"></div>
+  <div class="card" style="margin-top:18px">
+    <h3>All combinations</h3>
+    <div class="scroll"><table class="matrix" id="matrix"></table></div>
+    <p class="small">"As is": the k-anonymous table already meets l. "Re-partition": Mondrian must be rerun with l in the cut rule. "Single class": no cut is allowable, so the whole table is one class. "Not applicable": even the whole table can't satisfy the requirement.</p>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h3>What to take away</h3>
+    <ol class="rules" id="takeaways"></ol>
+  </div>
+</section>
+</main>
+<script>
+const DATA=[
+{nr:1,age:16,sex:'Male',city:'Rotterdam',dis:'Viral infection'},
+{nr:2,age:18,sex:'Male',city:'Rotterdam',dis:'Heart-related'},
+{nr:3,age:19,sex:'Male',city:'Rotterdam',dis:'Cancer'},
+{nr:4,age:22,sex:'Female',city:'Rotterdam',dis:'Viral infection'},
+{nr:5,age:22,sex:'Male',city:'Zwolle',dis:'No illness'},
+{nr:6,age:23,sex:'Male',city:'Zwolle',dis:'Tuberculosis'},
+{nr:7,age:24,sex:'Male',city:'Zwolle',dis:'Heart-related'},
+{nr:8,age:25,sex:'Female',city:'Utrecht',dis:'Cancer'},
+{nr:9,age:26,sex:'Female',city:'Rotterdam',dis:'Heart-related'},
+{nr:10,age:28,sex:'Female',city:'Utrecht',dis:'Tuberculosis'}];
+const DIMS=[
+ {key:'age',label:'Age',type:'num',min:16,max:28},
+ {key:'sex',label:'Sex',type:'cat',order:['Female','Male']},
+ {key:'city',label:'City',type:'cat',order:['Rotterdam','Utrecht','Zwolle']}];
+const rank=(d,v)=>d.type==='num'?v:d.order.indexOf(v);
+const distinctDis=p=>new Set(p.map(r=>r.dis)).size;
+function spanOf(d,p){const vals=[...new Set(p.map(r=>r[d.key]))].sort((a,b)=>rank(d,a)-rank(d,b));
+ const lo=rank(d,vals[0]),hi=rank(d,vals[vals.length-1]);
+ if(d.type==='num')return{raw:`${lo}–${hi}`,norm:(hi-lo)/(d.max-d.min),num:hi-lo,den:d.max-d.min};
+ return{raw:`{${vals.join(', ')}} · order positions ${lo}–${hi}`,norm:(hi-lo)/(d.order.length-1),num:hi-lo,den:d.order.length-1};}
+function freqSet(d,p){const m=new Map();[...p].sort((a,b)=>rank(d,a[d.key])-rank(d,b[d.key])).forEach(r=>m.set(r[d.key],(m.get(r[d.key])||0)+1));return[...m.entries()];}
+/* find_median (LeFevre et al., ICDE 2006, Fig. 6 and Sec. 4.2): the median of the partition projected on dim.
+   Every record counts, so the frequency set's counts are accumulated until they reach record
+   position floor((n-1)/2)+1 (the lower median; with t.dim <= splitVal this gives the most balanced cut). */
+function findMedian(fs,n){const pos=Math.floor((n-1)/2)+1;let c=0;for(const [v,cnt] of fs){c+=cnt;if(c>=pos)return{median:v,pos};}}
+function run(k,l){
+ const steps=[],leaves=[];let idc=0;
+ const ok=p=>p.length>=k&&(!l||distinctDis(p)>=l);
+ function test(d,p,split){const lhs=p.filter(r=>rank(d,r[d.key])<=rank(d,split)),rhs=p.filter(r=>rank(d,r[d.key])>rank(d,split));
+   const why=[];if(lhs.length<k)why.push(`lhs has ${lhs.length} < k`);if(rhs.length<k)why.push(`rhs has ${rhs.length} < k`);
+   if(l){const a=distinctDis(lhs),b=distinctDis(rhs);if(a<l)why.push(`lhs has ${a} distinct disease${a===1?'':'s'} < l`);if(b<l)why.push(`rhs has ${b} distinct disease${b===1?'':'s'} < l`);}
+   return{split,lhs,rhs,allowed:!why.length,why};}
+ function rec(p,path,depth){const id='P'+(++idc);
+  const spans=DIMS.map(d=>({d,...spanOf(d,p)}));
+  const order=spans.map((s,i)=>({...s,i})).sort((a,b)=>b.norm-a.norm||a.i-b.i);
+  const attempts=[];let cut=null;
+  for(const s of order){const d=s.d;
+   if(s.norm===0){attempts.push({dim:d.label,skip:true,why:`only one ${d.label} value, nothing to split`});continue;}
+   const fs=freqSet(d,p);const dv=fs.map(x=>x[0]);const {median,pos}=findMedian(fs,p.length);const mi=pos-1;
+   const cands=[test(d,p,median)];
+   const chosen=cands.find(c=>c.allowed)||null;
+   const att={dim:d.label,fs,median,mi,n:p.length,cands,allowed:!!chosen,chosen};
+   attempts.push(att);if(chosen){cut={dim:d.label,split:chosen.split,lhs:chosen.lhs,rhs:chosen.rhs};break;}}
+  const step={id,path,depth,p,spans,attempts,cut};steps.push(step);
+  if(cut){step.rhsId=rec(cut.rhs,path+'R',depth+1);step.lhsId=rec(cut.lhs,path+'L',depth+1);} // paper order: Anonymize(rhs) then Anonymize(lhs)
+  else leaves.push({id,p});
+  return id;}
+ if(!ok(DATA))return{applicable:false,steps,leaves};
+ rec(DATA,'',0);return{applicable:true,steps,leaves};}
+const S={k:2,l:2,practice:false,revealed:new Set(),idx:{},all:{}};
+const COLORS=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
+const cache={};
+function R(k,l){const key=k+'_'+l;return cache[key]||(cache[key]=run(k,l));}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nrs=p=>'{'+p.map(r=>r.nr).sort((a,b)=>a-b).join(', ')+'}';
+const fmt=x=>x.toFixed(2);
+const disSet=p=>[...new Set(p.map(r=>r.dis))];
+
+function gen(d,p){const vals=[...new Set(p.map(r=>r[d.key]))].sort((a,b)=>rank(d,a)-rank(d,b));
+  const lo=vals[0],hi=vals[vals.length-1];
+  if(d.type==='cat'&&rank(d,lo)===0&&rank(d,hi)===d.order.length-1)return '*';
+  return lo===hi?String(lo):`[${lo}–${hi}]`;}
+
+/* ---------- original table ---------- */
+function origTable(){document.getElementById('origTable').innerHTML=
+ '<thead><tr><th>Nr</th><th class="qi">Age</th><th class="qi">Sex</th><th class="qi">City</th><th class="sa">Disease</th></tr></thead><tbody>'+
+ DATA.map(r=>`<tr><td>${r.nr}</td><td class="qi">${r.age}</td><td class="qi">${r.sex}</td><td class="qi">${r.city}</td><td class="sa">${r.dis}</td></tr>`).join('')+'</tbody>';}
+
+/* ---------- segmented controls ---------- */
+function segs(){document.querySelectorAll('.seg').forEach(el=>{const p=el.dataset.param;
+  const opts=[[2,'2'],[3,'3'],[4,'4']];
+  el.innerHTML=opts.map(([v,t])=>`<button aria-pressed="${S[p]===v}" data-v="${v}">${t}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{S[p]=+b.dataset.v;S.idx={};renderAll();});});}
+
+/* ---------- iteration view ---------- */
+function leafColorMap(run){const m={};run.leaves.forEach((lf,i)=>m[lf.id]=COLORS[i%COLORS.length]);return m;}
+function recChip(r,showDis){return `<span class="rec"><b>#${r.nr}</b> ${r.age}, ${r.sex[0]}, ${r.city}${showDis?` <small>· ${r.dis}</small>`:''}</span>`;}
+
+function candHTML(a,c,k,l){
+  const sideInfo=(p)=>`${p.length} record${p.length===1?'':'s'}${l?`, ${disSet(p).length} distinct disease${disSet(p).length===1?'':'s'} · ${disSet(p).join(', ')}`:''}`;
+  return `<div class="sides">
+     <div class="side"><b>lhs</b> (${a.dim} ≤ ${esc(c.split)}): ${nrs(c.lhs)}<br><span class="small">${sideInfo(c.lhs)}</span></div>
+     <div class="side"><b>rhs</b> (${a.dim} &gt; ${esc(c.split)}): ${nrs(c.rhs)}<br><span class="small">${sideInfo(c.rhs)}</span></div>
+   </div>
+   <div class="verdict ${c.allowed?'ok':'bad'}">${c.allowed?`Allowable: Count(≤ ${esc(c.split)}) ≥ ${k} and Count(&gt; ${esc(c.split)}) ≥ ${k}${l?`, and both sides have ≥ ${l} distinct diseases`:''}.`:`Not allowable: ${c.why.join('; ')}.`}</div>`;}
+function attemptHTML(a,k,l){
+  if(a.skip)return `<div class="attempt skip"><b>${a.dim}</b>: skipped, ${a.why}.</div>`;
+  const how=`${a.n} records, the median is record ⌊(${a.n} − 1)/2⌋ + 1 = ${a.mi+1}, so splitVal = <b>${esc(a.median)}</b>.`;
+  return `<div class="attempt ${a.allowed?'ok':'bad'}">
+   <h4>Try ${a.dim}</h4>
+   <div class="small">frequency_set (value : count), median highlighted</div>
+   <div class="fs">${a.fs.map(([v,n])=>`<span class="${v===a.median?'med':''}">${esc(v)} : ${n}</span>`).join('')}</div>
+   <p style="margin:8px 0 0">find_median: ${how}</p>
+   ${a.cands.map(cd=>candHTML(a,cd,k,l)).join('')}
+  </div>`;}
+
+function stepHTML(run,i,k,l,key){
+  const s=run.steps[i];const n=s.p.length;
+  const order=s.spans.map((x,j)=>({...x,j})).sort((a,b)=>b.norm-a.norm||a.j-b.j).map(x=>x.d.label);
+  const rk=`${key}${k}${l}:${s.id}`;const hide=S.practice&&!S.revealed.has(rk);
+  let dec;
+  if(s.cut)dec=`<div class="decision">Cut ${s.id} on <b>${s.cut.dim} ≤ ${esc(s.cut.split)}</b>. rhs becomes <b>${s.rhsId}</b> and lhs becomes <b>${s.lhsId}</b>. As in the paper, Anonymize(rhs) runs first, then Anonymize(lhs).</div>`;
+  else dec=`<div class="decision">No allowable multidimensional cut. <b>${s.id}</b> is final and becomes an equivalence class of ${n} records: Age <b>${gen(DIMS[0],s.p)}</b>, Sex <b>${gen(DIMS[1],s.p)}</b>, City <b>${gen(DIMS[2],s.p)}</b>.</div>`;
+  return `<article class="iter">
+   <div class="it-head"><h3>Iteration ${i+1}: partition ${s.id}</h3><span class="meta">${n} records${s.depth?` · depth ${s.depth}`:' · the whole table'}</span></div>
+   <div class="chips">${s.p.map(r=>recChip(r,!!l)).join('')}</div>
+   <div class="scroll" style="margin-top:10px"><table><thead><tr><th>Dimension</th><th>Values here</th><th>Normalized range</th></tr></thead><tbody>
+   ${s.spans.map(x=>`<tr><td>${x.d.label}</td><td>${esc(x.raw)}</td><td>${x.num} / ${x.den} = <b>${fmt(x.norm)}</b></td></tr>`).join('')}
+   </tbody></table></div>
+   <p style="margin:10px 0 0">choose_dimension order: <b>${order.join(' → ')}</b></p>
+   ${hide?`<div class="reveal"><p><b>Your turn.</b> Which dimension is tried first, what is splitVal, and is the cut allowable for k = ${k}${l?` and l = ${l}`:''}? If not, which dimension is tried next?</p><button class="btn primary" data-reveal="${rk}">Reveal the decision</button></div>`:
+   s.attempts.map(a=>attemptHTML(a,k,l)).join('')+dec}
+  </article>`;}
+
+function treeHTML(run,cur,key,colors,rp){
+  const byId={};run.steps.forEach((s,i)=>byId[s.id]={s,i});
+  const visible=i=>!S.practice||S.all[key]||i<=cur;
+  function node(id){const {s,i}=byId[id];if(!visible(i))return '';
+    const rk=rp+':'+s.id;const known=!S.practice||S.revealed.has(rk);
+    const lbl=!known?'decision hidden':s.cut?`cut: ${s.cut.dim} ≤ ${esc(s.cut.split)}`:'final class';
+    const leaf=!s.cut&&known;
+    let h=`<li><button class="node ${i===cur&&!S.all[key]?'cur':''} ${leaf?'leaf':''}" style="${leaf?`--cc:${colors[s.id]}`:''}" data-jump="${key}" data-i="${i}">${s.id} ${nrs(s.p)}<span class="cut">${lbl}</span></button>`;
+    if(s.cut&&known){const kids=node(s.rhsId)+node(s.lhsId);if(kids)h+=`<ul>${kids}</ul>`;}
+    return h+'</li>';}
+  return `<ul>${node(run.steps[0].id)}</ul>`;}
+
+function finalTable(run,colors,l){
+  const rows=run.leaves.map((lf,ci)=>{const c=colors[lf.id];const d=disSet(lf.p);
+    return lf.p.map((r,j)=>`<tr class="grp" style="--cc:${c}"><td>${j===0?`<span class="ecTag" style="background:${c}"></span>${lf.id}`:''}</td><td>${r.nr}</td><td>${gen(DIMS[0],lf.p)}</td><td>${gen(DIMS[1],lf.p)}</td><td>${gen(DIMS[2],lf.p)}</td><td>${r.dis}</td>${j===0?`<td rowspan="${lf.p.length}">${lf.p.length}</td><td rowspan="${lf.p.length}">${d.length}${l?(d.length>=l?' <span class="yes">✓</span>':' <span class="no">✗</span>'):''}</td>`:''}</tr>`).join('');}).join('');
+  return `<thead><tr><th>Class</th><th>Nr</th><th>Age</th><th>Sex</th><th>City</th><th>Disease</th><th>Size</th><th>Distinct diseases</th></tr></thead><tbody>${rows}</tbody>`;}
+
+function stepperHTML(key){
+  return `<div class="split" style="margin-top:18px">
+   <div class="card"><h3>Partition tree</h3><div class="tree" id="${key}Tree"></div></div>
+   <div class="card"><div class="stepbar">
+     <button class="btn" data-nav="${key}" data-dir="-1">Previous</button><span class="count" id="${key}Count"></span>
+     <button class="btn primary" data-nav="${key}" data-dir="1">Next iteration</button>
+     <label class="toggle" style="margin-left:auto"><input type="checkbox" data-all="${key}" ${S.all[key]?'checked':''}> Show all</label></div>
+     <div id="${key}Iter"></div></div></div>`;}
+
+function fillStepper(key,run,k,l){
+  const colors=leafColorMap(run);const n=run.steps.length;
+  let i=S.idx[key]??0;if(i>=n)i=n-1;S.idx[key]=i;
+  document.getElementById(key+'Tree').innerHTML=treeHTML(run,i,key,colors,`${key}${k}${l}`);
+  document.getElementById(key+'Count').textContent=S.all[key]?`${n} iterations`:`Iteration ${i+1} of ${n}`;
+  document.getElementById(key+'Iter').innerHTML=S.all[key]?run.steps.map((_,j)=>stepHTML(run,j,k,l,key)).join('<hr style="border:0;border-top:1px solid var(--line);margin:22px 0">'):stepHTML(run,i,k,l,key);
+  document.querySelectorAll(`[data-nav="${key}"]`).forEach(b=>{const d=+b.dataset.dir;b.disabled=S.all[key]||(d<0?i===0:i===n-1);});
+  return colors;}
+
+/* ---------- verdict logic ---------- */
+function analyse(k,l){
+  const kr=R(k,0);const out={k,l,kr};
+  if(!kr.applicable){out.kOk=false;return out;}
+  out.kOk=true;out.minSize=Math.min(...kr.leaves.map(x=>x.p.length));
+  out.fails=kr.leaves.filter(x=>disSet(x.p).length<l);
+  out.lDirect=out.fails.length===0;
+  out.lr=R(k,l);out.lOk=out.lr.applicable;
+  return out;}
+const sizes=r=>r.leaves.map(x=>x.p.length).join(' + ');
+
+/* ---------- panels ---------- */
+function renderK(){
+  const k=S.k,run=R(k,0);
+  const b=document.getElementById('kBanner');
+  if(!run.applicable){b.innerHTML=`<div class="banner bad">Not applicable: the table has only ${DATA.length} records, fewer than k = ${k}.</div>`;return;}
+  b.innerHTML=`<div class="banner ok">k = ${k} works. Mondrian ends with ${run.leaves.length} equivalence classes of sizes ${sizes(run)}; the smallest has ${Math.min(...run.leaves.map(x=>x.p.length))} ≥ ${k} records, after ${run.steps.length} iterations.</div>`;
+  const colors=fillStepper('k',run,k,0);
+  document.getElementById('kFinal').innerHTML=finalTable(run,colors,0);}
+
+function renderL(){
+  const {k,l}=S;const a=analyse(k,l);
+  const chk=document.getElementById('lCheck'),ban=document.getElementById('lBanner'),rr=document.getElementById('lRerun');
+  if(!a.kOk){chk.innerHTML='';ban.innerHTML=`<div class="banner bad">Not applicable: k = ${k} can't be met, so there is no k-anonymous table to check.</div>`;rr.innerHTML='';return;}
+  const colors=leafColorMap(a.kr);
+  chk.innerHTML=`<thead><tr><th>Class (k = ${k})</th><th>Records</th><th>Diseases</th><th>Distinct</th><th>≥ l = ${l}?</th></tr></thead><tbody>`+
+   a.kr.leaves.map(x=>{const d=disSet(x.p);return `<tr><td><span class="ecTag" style="background:${colors[x.id]}"></span>${x.id}</td><td>${nrs(x.p)}</td><td style="white-space:normal">${d.join(', ')}</td><td>${d.length}</td><td>${d.length>=l?'<span class="yes">Yes</span>':'<span class="no">No</span>'}</td></tr>`;}).join('')+'</tbody>';
+  const key='l';
+  if(a.lDirect){
+    ban.innerHTML=`<div class="banner ok">l = ${l} works as is. Every class of the k = ${k} table already contains at least ${l} distinct diseases, so no extra partitioning is needed.</div>`;
+    rr.innerHTML=`<details class="card" ${S.detailsOpen?'open':''}><summary>Compare: run Mondrian with l = ${l} in the cut rule anyway</summary>${stepperHTML(key)}<div class="card" style="margin-top:18px"><h3>k = ${k}, l = ${l} release</h3><div class="scroll"><table id="lFinal"></table></div></div></details>`;
+  } else {
+    ban.innerHTML=`<div class="banner bad">The k = ${k} table is not ${l}-diverse: ${a.fails.map(x=>`${x.id} has only ${disSet(x.p).length}`).join(', ')} distinct disease${a.fails.length>1||disSet(a.fails[0].p).length>1?'s':''}. ${a.lOk?'Step B reruns Mondrian with l in the allowable-cut rule.':''}</div>`;
+    if(!a.lOk){rr.innerHTML=`<div class="banner bad">Not applicable: even the whole table has only ${disSet(DATA).length} distinct diseases, fewer than l = ${l}. No partitioning can fix that.</div>`;return;}
+    rr.innerHTML=`<div class="card"><h3>Step B: rerun Mondrian with k = ${k} and l = ${l}</h3><p class="small" style="margin:0">A cut is allowable only if both sides have ≥ ${k} records <b>and</b> ≥ ${l} distinct diseases.</p></div>${stepperHTML(key)}
+      <div class="card" style="margin-top:18px"><h3>The k = ${k}, l = ${l} release</h3><div class="scroll"><table id="lFinal"></table></div></div>
+      <div class="banner ok" style="margin-top:18px">${a.lr.leaves.length===1?`l = ${l} works only as a single class: no median cut is allowable, so all ${DATA.length} records are published together with ${disSet(DATA).length} distinct diseases.`:`l = ${l} works after re-partitioning: ${a.lr.leaves.length} classes of sizes ${sizes(a.lr)}, each with ≥ ${k} records and ≥ ${l} distinct diseases.`}</div>`;
+  }
+  if(a.lOk){const c=fillStepper(key,a.lr,k,l);document.getElementById('lFinal').innerHTML=finalTable(a.lr,c,l);}
+}
+
+function renderVerdict(){
+  const {k,l}=S;const a=analyse(k,l);
+  const kq=a.kOk?`<p class="yes">Yes.</p><p>With k = ${k}, Mondrian produces ${a.kr.leaves.length} classes (sizes ${sizes(a.kr)}). The smallest has ${a.minSize} records, so every person is hidden among at least ${k}.</p>`
+     :`<p class="no">Not applicable.</p><p>The table has fewer than ${k} records.</p>`;
+  let lq;
+  if(!a.kOk)lq=`<p class="no">Not applicable.</p><p>There is no k-anonymous table to build on.</p>`;
+  else if(a.lDirect)lq=`<p class="yes">Yes, directly.</p><p>Every class of the k = ${k} table already has at least ${l} distinct diseases.</p>`;
+  else if(a.lOk&&a.lr.leaves.length===1)lq=`<p class="yes">Yes, but only as a single class.</p><p>The k = ${k} table fails (${a.fails.map(x=>x.id).join(', ')}). With l = ${l} in the cut rule, no median cut is allowable, so the whole table is one class with ${disSet(DATA).length} distinct diseases.</p>`;
+  else if(a.lOk)lq=`<p class="yes">Yes, but only after re-partitioning.</p><p>The k = ${k} table fails (${a.fails.map(x=>x.id).join(', ')}). Adding l = ${l} to the cut rule gives ${a.lr.leaves.length} classes (sizes ${sizes(a.lr)}), each with ≥ ${l} distinct diseases.</p>`;
+  else lq=`<p class="no">Not applicable.</p><p>The whole table has only ${disSet(DATA).length} distinct diseases, fewer than ${l}.</p>`;
+  document.getElementById('qa').innerHTML=`<div class="card"><h3>Does it work with k = ${k}?</h3>${kq}</div><div class="card"><h3>Does it work with l = ${l}?</h3>${lq}</div>`;
+  let m='<thead><tr><th></th><th>k-anonymous?</th><th>l = 2</th><th>l = 3</th><th>l = 4</th></tr></thead><tbody>';
+  for(const kk of [2,3,4]){const base=analyse(kk,2);
+    m+=`<tr><th>k = ${kk}</th><td>${base.kOk?`<span class="yes">Yes</span><br><span class="small">${sizes(base.kr)}</span>`:'<span class="no">Not applicable</span>'}</td>`;
+    for(const ll of [2,3,4]){const x=analyse(kk,ll);let c;
+      if(!x.kOk||!x.lOk)c='<span class="no">Not applicable</span>';
+      else if(x.lDirect)c='<span class="yes">Yes, as is</span>';
+      else if(x.lr.leaves.length===1)c=`<span class="yes">Yes</span>, single class<br><span class="small">${sizes(x.lr)}</span>`;
+      else c=`<span class="yes">Yes</span>, re-partition<br><span class="small">${sizes(x.lr)}</span>`;
+      m+=`<td class="${kk===k&&ll===l?'cur':''}">${c}</td>`;}
+    m+='</tr>';}
+  document.getElementById('matrix').innerHTML=m+'</tbody>';
+  const root=R(2,0).steps[0].cut;const k2=analyse(2,3);const l4=R(2,4);
+  document.getElementById('takeaways').innerHTML=`
+   <li>Every k from 2 to 4 works. The first cut is ${root.dim} ≤ ${root.split} (${root.lhs.length} + ${root.rhs.length}). Larger k stops the recursion earlier, so the classes are larger.</li>
+   ${k2.lDirect?'':`<li>k-anonymity does not imply l-diversity: the k = 2 table is 2-diverse, but ${k2.fails.map(x=>x.id).join(' and ')} ${k2.fails.length>1?'have':'has'} only 2 distinct diseases, so it is not 3-diverse.</li>`}
+   ${l4.leaves.length===1?`<li>For l = 4, no median cut is allowable on any dimension, so the whole table is published as a single class.</li>`:''}`;}
+
+function renderAll(){segs();document.querySelectorAll('.practice').forEach(c=>c.checked=S.practice);
+  document.querySelectorAll('[data-all="k"]').forEach(c=>c.checked=!!S.all.k);
+  renderK();renderL();renderVerdict();}
+
+/* ---------- events ---------- */
+function showTab(id){document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id===id));window.scrollTo(0,0);}
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.tab)showTab(t.dataset.tab);
+  if(t.dataset.go)showTab(t.dataset.go);
+  if(t.dataset.nav){const key=t.dataset.nav;S.idx[key]=(S.idx[key]||0)+ +t.dataset.dir;renderAll();}
+  if(t.dataset.jump){S.idx[t.dataset.jump]=+t.dataset.i;S.all[t.dataset.jump]=false;renderAll();}
+  if(t.dataset.reveal){S.revealed.add(t.dataset.reveal);renderAll();}});
+document.addEventListener('change',e=>{const t=e.target;
+  if(t.classList.contains('practice')){S.practice=t.checked;renderAll();}
+  if(t.dataset.all){S.all[t.dataset.all]=t.checked;renderAll();}});
+document.addEventListener('toggle',e=>{if(e.target.tagName==='DETAILS')S.detailsOpen=e.target.open;},true);
+
+origTable();renderAll();
+</script></body></html>
