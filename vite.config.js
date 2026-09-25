@@ -29,9 +29,13 @@ export default defineConfig({
           __dirname,
           'COE526_Data_Privacy/COE526-L04-Privacy-Design-Interactive.html',
         ),
-        coe526L05: path.resolve(
+        coe526L05_I: path.resolve(
           __dirname,
           'COE526_Data_Privacy/COE526-L05-Data-Anonymization-Interactive.html',
+        ),
+        coe526L05_II: path.resolve(
+          __dirname,
+          'COE526_Data_Privacy/COE526-L05-Mondrian-Greedy-Partitioning-Lab.html',
         ),
       },
     },
