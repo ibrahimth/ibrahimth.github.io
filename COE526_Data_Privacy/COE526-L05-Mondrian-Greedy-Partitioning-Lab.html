@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Greedy Partitioning Lab (Mondrian) · COE 526</title>
 <meta name="description" content="Interactive COE 526 lab: Mondrian greedy partitioning, worked iterations, k-anonymity and l-diversity on a 10-record medical table.">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23201a3d'/%3E%3Cpath d='M12 12h40v40H12z' fill='%23a78bfa'/%3E%3Cpath d='M32 12v40M12 30h20M32 40h20' stroke='%23201a3d' stroke-width='3'/%3E%3C/svg%3E">
 <style>
 :root{--bg:#f7f6ff;--ink:#201a3d;--muted:#69627e;--violet:#6d4aff;--violet2:#a78bfa;--soft:#f1effc;--orange:#f97316;--green:#15803d;--greenbg:#e9f8ed;--red:#dc2626;--redbg:#fff0f0;--paper:#fff;--line:#ddd8f0;--shadow:0 18px 45px rgba(52,35,106,.10);--c1:#6d4aff;--c2:#f97316;--c3:#0e9f6e;--c4:#db2777;--c5:#0284c7;--c6:#ca8a04}
 *{box-sizing:border-box}
@@ -134,7 +133,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--violet)}
       <div class="scroll"><table id="origTable"></table></div>
     </div>
     <div class="card">
-  <h3>The algorithm</h3>
+      <h3>The algorithm</h3>
 <pre class="code"><span class="ln"><span class="nm">Anonymize</span>(partition)</span><span class="ln">  <span class="kw">if</span> (no allowable multidimensional cut <span class="kw">for</span> partition)</span><span class="ln">    <span class="kw">return</span> φ : partition → summary</span><span class="ln">  else</span><span class="ln">    dim ← <span class="fn">choose_dimension</span>()</span><span class="ln">    fs  ← <span class="fn">frequency_set</span>(partition, dim)</span><span class="ln">    splitVal ← <span class="fn">find_median</span>(fs)</span><span class="ln">    lhs ← {t ∈ partition : t.dim ≤ splitVal}</span><span class="ln">    rhs ← {t ∈ partition : t.dim &gt; splitVal}</span><span class="ln">    <span class="kw">return</span> <span class="nm">Anonymize</span>(rhs) ∪ <span class="nm">Anonymize</span>(lhs)</span></pre>
     </div>
   </div>
@@ -144,7 +143,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--violet)}
     <ol class="rules">
       <li><b>choose_dimension</b>: the quasi-identifier with the widest normalized range. Age: (max − min) / 12. Sex and City use the order Female &lt; Male and Rotterdam &lt; Utrecht &lt; Zwolle. Ties go to Age, then Sex, then City.</li>
       <li><b>frequency_set</b>: each value of the dimension in the partition with its count.</li>
-      <li><b>find_median</b>: the median of the partition on that dimension, counting every record: record ⌊(n − 1)/2⌋ + 1 in sorted order.</li>
+      <li><b>find_median(fs)</b>: the median of the partition on that dimension, where every record counts. Using the frequency set: (1) add all counts to get n; (2) the median is record p = ⌊(n − 1)/2⌋ + 1; (3) go through the values in order, adding their counts; the first value whose running count reaches p is the median. Example for Age on the whole table: fs = 16:1, 18:1, 19:1, 22:2, 23:1, 24:1, 25:1, 26:1, 28:1, so n = 10 and p = 5. Running counts 1, 2, 3, 5 reach 5 at 22, so splitVal = 22.</li>
       <li><b>Allowable cut</b>: lhs and rhs each have at least k records. In the l-diversity tab, each side must also have at least l distinct diseases. If the cut on the chosen dimension is not allowable, the next dimension is tried; if none is allowable, the partition is final.</li>
       <li><b>φ</b>: each final partition is published with the min–max range of each quasi-identifier.</li>
     </ol>
@@ -312,7 +311,8 @@ function candHTML(a,c,k,l){
    <div class="verdict ${c.allowed?'ok':'bad'}">${c.allowed?`Allowable: Count(≤ ${esc(c.split)}) ≥ ${k} and Count(&gt; ${esc(c.split)}) ≥ ${k}${l?`, and both sides have ≥ ${l} distinct diseases`:''}.`:`Not allowable: ${c.why.join('; ')}.`}</div>`;}
 function attemptHTML(a,k,l){
   if(a.skip)return `<div class="attempt skip"><b>${a.dim}</b>: skipped, ${a.why}.</div>`;
-  const how=`${a.n} records, the median is record ⌊(${a.n} − 1)/2⌋ + 1 = ${a.mi+1}, so splitVal = <b>${esc(a.median)}</b>.`;
+  const cum=[];let c=0;a.fs.forEach(([v,n])=>{c+=n;cum.push(c);});
+  const how=`n = ${a.fs.map(([,n])=>n).join(' + ')} = ${a.n} records, so the median is record p = ⌊(${a.n} − 1)/2⌋ + 1 = ${a.mi+1}. Add the counts in order: ${a.fs.map(([v],i)=>`${esc(v)} → ${cum[i]}`).join(', ')}. The first value whose running count reaches ${a.mi+1} is <b>${esc(a.median)}</b>, so splitVal = <b>${esc(a.median)}</b>.`;
   return `<div class="attempt ${a.allowed?'ok':'bad'}">
    <h4>Try ${a.dim}</h4>
    <div class="small">frequency_set (value : count), median highlighted</div>
