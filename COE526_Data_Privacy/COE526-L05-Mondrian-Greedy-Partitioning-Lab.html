@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -99,11 +100,28 @@ tr.grp td:first-child{border-left:5px solid var(--cc)}
 .matrix td,.matrix th{text-align:center}.matrix td:first-child,.matrix th:first-child{text-align:left}
 .matrix td.cur{outline:3px solid var(--violet2);outline-offset:-3px;border-radius:6px}
 .ref{display:block;margin-top:4px;font-size:13px;color:var(--muted);font-style:italic}
+table.ptab{width:auto;min-width:320px;border:1px solid #9a95ad;font-size:14px}
+table.ptab th{background:#dcdcdc;color:#111;border-bottom:1px solid #9a95ad}
+table.ptab td,table.ptab th{padding:6px 12px}
+table.fst{min-width:0}
+table.fst tr.hl td{background:#fff34d;font-weight:700}
+.ititle{text-decoration:underline;text-underline-offset:4px;font-size:21px;margin-bottom:8px}
+.sideh{margin:12px 0 6px;font-size:15px;font-style:italic;font-weight:600}
+.flow{text-align:center;font-size:22px;margin:16px 0 4px;font-weight:600}
+.flow::before{content:"\2193";display:block;color:var(--violet);font-size:26px;line-height:1}
+.fsbox{display:flex;justify-content:center;align-items:center;gap:12px}
+.fslbl{font-style:italic;font-size:20px}
+.sides2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tag{margin-top:8px;padding:9px 12px;border-radius:10px;font-weight:700;font-size:14px}
+.tag.go{background:#eaf1ff;color:#1d4ed8;border:1px solid #bfd3ff}
+.tag.stop{background:#e9f8ed;color:#15803d;border:1px solid #86efac}
+ul.fails{margin:14px 0 0;padding:10px 14px 10px 30px;background:var(--redbg);border:1px solid #fecaca;border-radius:12px;font-size:14px}
+ul.fails li+li{margin-top:4px}
 .small{font-size:13.5px;color:var(--muted)}
 .qa{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .qa .card p{margin:.4em 0}
 details summary{cursor:pointer;font-weight:700;color:var(--violet)}
-@media (max-width:900px){.split,.grid2,.qa{grid-template-columns:1fr}.top{flex-wrap:wrap}.back{margin-left:0}.sides{grid-template-columns:1fr}}
+@media (max-width:900px){.split,.grid2,.qa,.sides2{grid-template-columns:1fr}.top{flex-wrap:wrap}.back{margin-left:0}.sides{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
@@ -145,6 +163,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--violet)}
       <li><b>frequency_set</b>: each value of the dimension in the partition with its count.</li>
       <li><b>find_median(fs)</b>: the median of the partition on that dimension, where every record counts. Using the frequency set: (1) add all counts to get n; (2) the median is record p = ⌊(n − 1)/2⌋ + 1; (3) go through the values in order, adding their counts; the first value whose running count reaches p is the median. Example for Age on the whole table: fs = 16:1, 18:1, 19:1, 22:2, 23:1, 24:1, 25:1, 26:1, 28:1, so n = 10 and p = 5. Running counts 1, 2, 3, 5 reach 5 at 22, so splitVal = 22.</li>
       <li><b>Allowable cut</b>: lhs and rhs each have at least k records. In the l-diversity tab, each side must also have at least l distinct diseases. If the cut on the chosen dimension is not allowable, the next dimension is tried; if none is allowable, the partition is final.</li>
+      <li><b>Recursion</b>: the LHS is processed first, then the RHS, so iteration numbers follow the partition tree from left to right.</li>
       <li><b>φ</b>: each final partition is published with the min–max range of each quasi-identifier.</li>
     </ol>
   </div>
@@ -177,6 +196,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--violet)}
     <h3>The k-anonymous release</h3>
     <p class="small" style="margin-top:0">Each final partition is published with min–max ranges on the QIs. "*" means the range covers the whole domain.</p>
     <div class="scroll"><table id="kFinal"></table></div>
+    <div id="kWorks" style="margin-top:14px"></div>
   </div>
   <p><button class="btn primary" data-go="lpanel">Continue to l-diversity</button></p>
 </section>
@@ -256,7 +276,7 @@ function run(k,l){
    const why=[];if(lhs.length<k)why.push(`lhs has ${lhs.length} < k`);if(rhs.length<k)why.push(`rhs has ${rhs.length} < k`);
    if(l){const a=distinctDis(lhs),b=distinctDis(rhs);if(a<l)why.push(`lhs has ${a} distinct disease${a===1?'':'s'} < l`);if(b<l)why.push(`rhs has ${b} distinct disease${b===1?'':'s'} < l`);}
    return{split,lhs,rhs,allowed:!why.length,why};}
- function rec(p,path,depth){const id='P'+(++idc);
+ function rec(p,path,depth,parent,side){const id='P'+(++idc);
   const spans=DIMS.map(d=>({d,...spanOf(d,p)}));
   const order=spans.map((s,i)=>({...s,i})).sort((a,b)=>b.norm-a.norm||a.i-b.i);
   const attempts=[];let cut=null;
@@ -267,12 +287,12 @@ function run(k,l){
    const chosen=cands.find(c=>c.allowed)||null;
    const att={dim:d.label,fs,median,mi,n:p.length,cands,allowed:!!chosen,chosen};
    attempts.push(att);if(chosen){cut={dim:d.label,split:chosen.split,lhs:chosen.lhs,rhs:chosen.rhs};break;}}
-  const step={id,path,depth,p,spans,attempts,cut};steps.push(step);
-  if(cut){step.rhsId=rec(cut.rhs,path+'R',depth+1);step.lhsId=rec(cut.lhs,path+'L',depth+1);} // paper order: Anonymize(rhs) then Anonymize(lhs)
+  const step={id,path,depth,p,spans,attempts,cut,parent,side};steps.push(step);
+  if(cut){step.lhsId=rec(cut.lhs,path+'L',depth+1,id,'LHS');step.rhsId=rec(cut.rhs,path+'R',depth+1,id,'RHS');} // LHS first, as in the lecture slides; the union is the same
   else leaves.push({id,p});
   return id;}
  if(!ok(DATA))return{applicable:false,steps,leaves};
- rec(DATA,'',0);return{applicable:true,steps,leaves};}
+ rec(DATA,'',0,null,null);return{applicable:true,steps,leaves};}
 const S={k:2,l:2,practice:false,revealed:new Set(),idx:{},all:{}};
 const COLORS=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
 const cache={};
@@ -300,44 +320,36 @@ function segs(){document.querySelectorAll('.seg').forEach(el=>{const p=el.datase
 
 /* ---------- iteration view ---------- */
 function leafColorMap(run){const m={};run.leaves.forEach((lf,i)=>m[lf.id]=COLORS[i%COLORS.length]);return m;}
-function recChip(r,showDis){return `<span class="rec"><b>#${r.nr}</b> ${r.age}, ${r.sex[0]}, ${r.city}${showDis?` <small>· ${r.dis}</small>`:''}</span>`;}
-
-function candHTML(a,c,k,l){
-  const sideInfo=(p)=>`${p.length} record${p.length===1?'':'s'}${l?`, ${disSet(p).length} distinct disease${disSet(p).length===1?'':'s'} · ${disSet(p).join(', ')}`:''}`;
-  return `<div class="sides">
-     <div class="side"><b>lhs</b> (${a.dim} ≤ ${esc(c.split)}): ${nrs(c.lhs)}<br><span class="small">${sideInfo(c.lhs)}</span></div>
-     <div class="side"><b>rhs</b> (${a.dim} &gt; ${esc(c.split)}): ${nrs(c.rhs)}<br><span class="small">${sideInfo(c.rhs)}</span></div>
-   </div>
-   <div class="verdict ${c.allowed?'ok':'bad'}">${c.allowed?`Allowable: Count(≤ ${esc(c.split)}) ≥ ${k} and Count(&gt; ${esc(c.split)}) ≥ ${k}${l?`, and both sides have ≥ ${l} distinct diseases`:''}.`:`Not allowable: ${c.why.join('; ')}.`}</div>`;}
-function attemptHTML(a,k,l){
-  if(a.skip)return `<div class="attempt skip"><b>${a.dim}</b>: skipped, ${a.why}.</div>`;
-  const cum=[];let c=0;a.fs.forEach(([v,n])=>{c+=n;cum.push(c);});
-  const how=`n = ${a.fs.map(([,n])=>n).join(' + ')} = ${a.n} records, so the median is record p = ⌊(${a.n} − 1)/2⌋ + 1 = ${a.mi+1}. Add the counts in order: ${a.fs.map(([v],i)=>`${esc(v)} → ${cum[i]}`).join(', ')}. The first value whose running count reaches ${a.mi+1} is <b>${esc(a.median)}</b>, so splitVal = <b>${esc(a.median)}</b>.`;
-  return `<div class="attempt ${a.allowed?'ok':'bad'}">
-   <h4>Try ${a.dim}</h4>
-   <div class="small">frequency_set (value : count), median highlighted</div>
-   <div class="fs">${a.fs.map(([v,n])=>`<span class="${v===a.median?'med':''}">${esc(v)} : ${n}</span>`).join('')}</div>
-   <p style="margin:8px 0 0">find_median: ${how}</p>
-   ${a.cands.map(cd=>candHTML(a,cd,k,l)).join('')}
-  </div>`;}
-
+function partTable(p,cls=''){return `<div class="scroll"><table class="ptab ${cls}"><thead><tr><th>ID</th><th>Age</th><th>Sex</th><th>City</th><th>Disease</th></tr></thead><tbody>${p.map(r=>`<tr><td>${r.nr}</td><td>${r.age}</td><td>${r.sex}</td><td>${r.city}</td><td>${r.dis}</td></tr>`).join('')}</tbody></table></div>`;}
+function summary(p){return DIMS.map(d=>`${d.label} = ${gen(d,p).replace(/^(?![\[*])(.*)$/,'[$1]')}`).join(', ');}
+function rangeLine(s){return s.spans.map(x=>`${x.d.label} ${fmt(x.norm)}`).join(' · ');}
+function sideCard(label,p,childStep,k,l){
+  const status=childStep&&childStep.cut?`<div class="tag go">Recurse: another allowable cut exists</div>`:`<div class="tag stop">Stop and summarize<br>${summary(p)}</div>`;
+  return `<div><h4 class="sideh">${label}</h4>${partTable(p)}${status}</div>`;}
+function failLine(a,k,l){
+  if(a.skip)return `<li>${a.dim}: only one value here, no cut possible.</li>`;
+  const c=a.cands[0];return `<li>dim = ${a.dim}: fs ${a.fs.map(([v,n])=>`${esc(v)}:${n}`).join(', ')} → splitVal = ${esc(a.median)} → LHS ${c.lhs.length}, RHS ${c.rhs.length}. Not allowable (${c.why.join('; ')}).</li>`;}
 function stepHTML(run,i,k,l,key){
-  const s=run.steps[i];const n=s.p.length;
-  const order=s.spans.map((x,j)=>({...x,j})).sort((a,b)=>b.norm-a.norm||a.j-b.j).map(x=>x.d.label);
+  const s=run.steps[i];const idx={};run.steps.forEach((x,j)=>idx[x.id]=j+1);const byId={};run.steps.forEach(x=>byId[x.id]=x);
+  const title=s.parent?`Iteration #${i+1} (${s.side} from iteration #${idx[s.parent]})`:`Iteration #${i+1} (full table)`;
   const rk=`${key}${k}${l}:${s.id}`;const hide=S.practice&&!S.revealed.has(rk);
-  let dec;
-  if(s.cut)dec=`<div class="decision">Cut ${s.id} on <b>${s.cut.dim} ≤ ${esc(s.cut.split)}</b>. rhs becomes <b>${s.rhsId}</b> and lhs becomes <b>${s.lhsId}</b>. As in the paper, Anonymize(rhs) runs first, then Anonymize(lhs).</div>`;
-  else dec=`<div class="decision">No allowable multidimensional cut. <b>${s.id}</b> is final and becomes an equivalence class of ${n} records: Age <b>${gen(DIMS[0],s.p)}</b>, Sex <b>${gen(DIMS[1],s.p)}</b>, City <b>${gen(DIMS[2],s.p)}</b>.</div>`;
-  return `<article class="iter">
-   <div class="it-head"><h3>Iteration ${i+1}: partition ${s.id}</h3><span class="meta">${n} records${s.depth?` · depth ${s.depth}`:' · the whole table'}</span></div>
-   <div class="chips">${s.p.map(r=>recChip(r,!!l)).join('')}</div>
-   <div class="scroll" style="margin-top:10px"><table><thead><tr><th>Dimension</th><th>Values here</th><th>Normalized range</th></tr></thead><tbody>
-   ${s.spans.map(x=>`<tr><td>${x.d.label}</td><td>${esc(x.raw)}</td><td>${x.num} / ${x.den} = <b>${fmt(x.norm)}</b></td></tr>`).join('')}
-   </tbody></table></div>
-   <p style="margin:10px 0 0">choose_dimension order: <b>${order.join(' → ')}</b></p>
-   ${hide?`<div class="reveal"><p><b>Your turn.</b> Which dimension is tried first, what is splitVal, and is the cut allowable for k = ${k}${l?` and l = ${l}`:''}? If not, which dimension is tried next?</p><button class="btn primary" data-reveal="${rk}">Reveal the decision</button></div>`:
-   s.attempts.map(a=>attemptHTML(a,k,l)).join('')+dec}
-  </article>`;}
+  let body;
+  if(hide)body=`<div class="reveal"><p><b>Your turn.</b> Which dim is chosen, what is splitVal, and is the cut allowable for k = ${k}${l?` and l = ${l}`:''}?</p><button class="btn primary" data-reveal="${rk}">Reveal</button></div>`;
+  else if(!s.cut){
+    const tried=s.attempts.filter(a=>!a.skip);
+    body=`${tried.length?`<ul class="fails">${s.attempts.map(a=>failLine(a,k,l)).join('')}</ul>`:''}
+     <div class="flow">No Allowable Cut</div><div class="decision">Summary: ${summary(s.p)}</div>`;
+  } else {
+    const fails=s.attempts.slice(0,-1);const a=s.attempts[s.attempts.length-1];
+    body=`${fails.length?`<ul class="fails">${fails.map(x=>failLine(x,k,l)).join('')}</ul>`:''}
+     <div class="flow">dim = ${a.dim}</div>
+     <p class="small" style="text-align:center;margin:2px 0 10px">Widest normalized range: ${rangeLine(s)}${fails.length?' (next widest after the failed cut)':''}</p>
+     <div class="fsbox"><span class="fslbl">fs</span><table class="ptab fst"><thead><tr><th>${a.dim}</th><th>Count</th></tr></thead><tbody>${a.fs.map(([v,n])=>`<tr class="${v===a.median?'hl':''}"><td>${esc(v)}</td><td>${n}</td></tr>`).join('')}</tbody></table></div>
+     <div class="flow">splitVal = ${esc(a.median)}</div>
+     <p class="small" style="text-align:center;margin:2px 0 12px">n = ${a.n}, median = record ⌊(${a.n} − 1)/2⌋ + 1 = ${a.mi+1} in sorted order</p>
+     <div class="sides2">${sideCard('Left-Hand Side (LHS)',s.cut.lhs,byId[s.lhsId],k,l)}${sideCard('Right-Hand Side (RHS)',s.cut.rhs,byId[s.rhsId],k,l)}</div>`;
+  }
+  return `<article class="iter"><h3 class="ititle">${title}</h3><h4 class="sideh">partition</h4>${partTable(s.p)}${body}</article>`;}
 
 function treeHTML(run,cur,key,colors,rp){
   const byId={};run.steps.forEach((s,i)=>byId[s.id]={s,i});
@@ -347,14 +359,14 @@ function treeHTML(run,cur,key,colors,rp){
     const lbl=!known?'decision hidden':s.cut?`cut: ${s.cut.dim} ≤ ${esc(s.cut.split)}`:'final class';
     const leaf=!s.cut&&known;
     let h=`<li><button class="node ${i===cur&&!S.all[key]?'cur':''} ${leaf?'leaf':''}" style="${leaf?`--cc:${colors[s.id]}`:''}" data-jump="${key}" data-i="${i}">${s.id} ${nrs(s.p)}<span class="cut">${lbl}</span></button>`;
-    if(s.cut&&known){const kids=node(s.rhsId)+node(s.lhsId);if(kids)h+=`<ul>${kids}</ul>`;}
+    if(s.cut&&known){const kids=node(s.lhsId)+node(s.rhsId);if(kids)h+=`<ul>${kids}</ul>`;}
     return h+'</li>';}
   return `<ul>${node(run.steps[0].id)}</ul>`;}
 
 function finalTable(run,colors,l){
   const rows=run.leaves.map((lf,ci)=>{const c=colors[lf.id];const d=disSet(lf.p);
     return lf.p.map((r,j)=>`<tr class="grp" style="--cc:${c}"><td>${j===0?`<span class="ecTag" style="background:${c}"></span>${lf.id}`:''}</td><td>${r.nr}</td><td>${gen(DIMS[0],lf.p)}</td><td>${gen(DIMS[1],lf.p)}</td><td>${gen(DIMS[2],lf.p)}</td><td>${r.dis}</td>${j===0?`<td rowspan="${lf.p.length}">${lf.p.length}</td><td rowspan="${lf.p.length}">${d.length}${l?(d.length>=l?' <span class="yes">✓</span>':' <span class="no">✗</span>'):''}</td>`:''}</tr>`).join('');}).join('');
-  return `<thead><tr><th>Class</th><th>Nr</th><th>Age</th><th>Sex</th><th>City</th><th>Disease</th><th>Size</th><th>Distinct diseases</th></tr></thead><tbody>${rows}</tbody>`;}
+  return `<thead><tr><th>Class</th><th>ID</th><th>Age</th><th>Sex</th><th>City</th><th>Disease</th><th>Size</th><th>Distinct diseases</th></tr></thead><tbody>${rows}</tbody>`;}
 
 function stepperHTML(key){
   return `<div class="split" style="margin-top:18px">
@@ -392,7 +404,9 @@ function renderK(){
   if(!run.applicable){b.innerHTML=`<div class="banner bad">Not applicable: the table has only ${DATA.length} records, fewer than k = ${k}.</div>`;return;}
   b.innerHTML=`<div class="banner ok">k = ${k} works. Mondrian ends with ${run.leaves.length} equivalence classes of sizes ${sizes(run)}; the smallest has ${Math.min(...run.leaves.map(x=>x.p.length))} ≥ ${k} records, after ${run.steps.length} iterations.</div>`;
   const colors=fillStepper('k',run,k,0);
-  document.getElementById('kFinal').innerHTML=finalTable(run,colors,0);}
+  document.getElementById('kFinal').innerHTML=finalTable(run,colors,0);
+  const mn=Math.min(...run.leaves.map(x=>x.p.length));
+  document.getElementById('kWorks').innerHTML=[2,3,4].map(kk=>`<p><b>Does it work with k = ${kk}?</b> ${mn>=kk?`<span class="yes">Yes.</span> Each released pattern occurs at least ${kk} times.`:`<span class="no">No.</span> ${run.leaves.filter(x=>x.p.length<kk).map(x=>`${x.id} occurs only ${x.p.length===2?'twice':x.p.length+' times'}`).join(', ')}.`}</p>`).join('');}
 
 function renderL(){
   const {k,l}=S;const a=analyse(k,l);
