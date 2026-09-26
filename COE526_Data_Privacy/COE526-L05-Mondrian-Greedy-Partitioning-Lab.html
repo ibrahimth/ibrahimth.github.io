@@ -134,7 +134,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--violet)}
       <div class="scroll"><table id="origTable"></table></div>
     </div>
     <div class="card">
-      <h3>The algorithm</h3>
+  <h3>The algorithm</h3>
 <pre class="code"><span class="ln"><span class="nm">Anonymize</span>(partition)</span><span class="ln">  <span class="kw">if</span> (no allowable multidimensional cut <span class="kw">for</span> partition)</span><span class="ln">    <span class="kw">return</span> φ : partition → summary</span><span class="ln">  else</span><span class="ln">    dim ← <span class="fn">choose_dimension</span>()</span><span class="ln">    fs  ← <span class="fn">frequency_set</span>(partition, dim)</span><span class="ln">    splitVal ← <span class="fn">find_median</span>(fs)</span><span class="ln">    lhs ← {t ∈ partition : t.dim ≤ splitVal}</span><span class="ln">    rhs ← {t ∈ partition : t.dim &gt; splitVal}</span><span class="ln">    <span class="kw">return</span> <span class="nm">Anonymize</span>(rhs) ∪ <span class="nm">Anonymize</span>(lhs)</span></pre>
     </div>
   </div>
