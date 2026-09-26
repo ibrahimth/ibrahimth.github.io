@@ -1,342 +1,478 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>COE 526 — Privacy Design & Engineering Lab</title>
-  <meta name="description" content="Interactive COE 526 learning lab for Privacy by Design, GDPR Article 25, and privacy engineering.">
-  <style>
-    :root{--navy:#1b365d;--green:#00843d;--teal:#007e7a;--gold:#c9a227;--ink:#20262e;--muted:#5b6573;--line:#d6dde5;--blue:#e8eef5;--mint:#eaf4ee;--sand:#f7f1db;--white:#fff;--shadow:0 16px 42px rgba(27, 54, 93, .12)}
-    *{box-sizing:border-box} 
-    body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:#f5f7fa;line-height:1.45}
-    header{background:var(--white);border-top:6px solid var(--green);border-bottom:1px solid var(--line);padding:18px clamp(20px,5vw,70px);display:flex;gap:24px;align-items:center;justify-content:space-between}
-    .brand{display:flex;gap:14px;align-items:center}
-    .seal{width:56px;height:46px;min-width:56px;border:2.5px solid var(--green);border-radius:12px;background:var(--mint);display:grid;place-items:center;color:var(--green);font-weight:900;font-size:.82rem;line-height:1.1;text-align:center}
-    header strong{color:var(--navy);font-size:.98rem;display:block;font-weight:800}
-    header small{display:block;color:var(--muted);font-size:.78rem;font-weight:600}
-    .course{font-size:.76rem;letter-spacing:.09em;font-weight:800;color:var(--navy);text-align:right}
-    main{max-width:1240px;margin:auto;padding:36px 24px 60px}
-    .eyebrow{color:var(--green);font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
-    h1{color:var(--navy);font-size:clamp(2rem,4.5vw,3.2rem);line-height:1.05;margin:.35rem 0 .8rem}
-    h2{color:var(--navy);font-size:1.2rem;margin:1.5rem 0 1rem}
-    .lede{font-size:1.05rem;color:var(--muted);max-width:780px;margin:0 0 32px}
-    .intro{font-size:1rem;color:var(--muted);margin:0 0 24px}
-    .tabs{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px}
-    .tab{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;padding:11px 16px;font-weight:750;cursor:pointer;transition:.2s}
-    .tab[aria-pressed="true"]{background:var(--navy);color:#fff}
-    .grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:24px}
-    .panel{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
-    .panel h2{margin:0;padding:22px 24px 0;color:var(--navy)}
-    .detail{padding:22px}
-    .term{font-size:1.7rem;color:var(--navy);font-weight:850;margin:0 0 7px}
-    .definition{font-size:1rem;margin:0 0 18px;color:var(--ink)}
-    .principle-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0}
-    .principle{border:1px solid var(--line);background:#fff;border-radius:14px;padding:14px;cursor:pointer;transition:.2s;text-align:left}
-    .principle:hover{border-color:var(--green)}
-    .principle.active{border-color:var(--green);background:var(--mint)}
-    .principle strong{display:block;color:var(--navy);margin-top:8px;font-size:.95rem}
-    .principle span{font-size:.75rem;color:var(--green);font-weight:800}
-    .principle-detail{margin-top:24px;padding:22px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
-    .principle-detail h3{margin:0 0 12px;color:var(--navy)}
-    .principle-detail p{margin:0 0 12px;color:var(--ink)}
-    .principle-detail .muted{color:var(--muted)}
-    .lifecycle-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:16px 0}
-    .lifecycle-card{padding:16px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:var(--shadow)}
-    .lifecycle-card strong{display:block;color:var(--navy);margin-bottom:8px;font-size:.9rem}
-    .lifecycle-card p{margin:0;font-size:.85rem;color:var(--muted)}
-    .pet-group{margin:24px 0;padding:20px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
-    .pet-group p{color:var(--ink)}
-    .pet-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:12px 0}
-    .pet{border:1px solid var(--line);padding:12px;border-radius:10px;cursor:pointer;transition:.2s;background:#fff;text-align:center;font-size:.9rem;color:var(--navy);font-weight:600}
-    .pet:hover{border-color:var(--green)}
-    .pet.selected{border-color:var(--green);background:var(--mint);font-weight:700}
-    .pet-reveal{margin-top:12px;padding:12px;background:var(--sand);border-radius:10px;display:none;color:#5e5323;font-size:.95rem}
-    .pet-reveal.show{display:block}
-    .billing-group{margin:24px 0;padding:20px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
-    .billing-group p{color:var(--ink)}
-    .billing-options{display:flex;flex-direction:column;gap:10px}
-    .billing{text-align:left;padding:14px;border:1px solid var(--line);border-radius:10px;cursor:pointer;transition:.2s;background:#fff;color:var(--navy);font-weight:600}
-    .billing:hover{border-color:var(--green)}
-    .billing.correct{border-color:var(--green);background:var(--mint)}
-    .billing.wrong{border-color:#fb7185;background:#fce7f3}
-    .billing-feedback{margin-top:16px;padding:14px;background:var(--sand);border-radius:10px;display:none;color:#5e5323;font-size:.95rem}
-    .billing-feedback.show{display:block}
-    .quiz-mount{margin:24px 0}
-    .quizItem{margin:20px 0;padding:20px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
-    .quizItem p{margin:0 0 16px;color:var(--navy);font-weight:700}
-    .quizOpt{display:block;width:100%;text-align:left;padding:12px;margin:8px 0;border:1px solid var(--line);border-radius:10px;cursor:pointer;transition:.2s;background:#fff;color:var(--navy);font-weight:600}
-    .quizOpt:hover{border-color:var(--green)}
-    .quizOpt.selected{border-color:var(--green);background:var(--mint);font-weight:700}
-    .quizOpt.correct{border-color:var(--green);background:var(--mint)}
-    .quizOpt.wrong{border-color:#fb7185;background:#fce7f3}
-    .feedback{margin-top:12px;padding:12px;border-radius:10px;display:none;font-size:.95rem;color:#5e5323;background:var(--sand)}
-    .feedback.show{display:block}
-    .note{margin-top:18px;padding:14px 16px;background:var(--sand);border:1px solid #e7d99c;border-radius:12px;font-size:.9rem;color:#5e5323}
-    footer{max-width:1240px;margin:auto;padding:0 24px 28px;color:var(--muted);font-size:.78rem}
-    .section-nav{position:sticky;top:0;z-index:20;display:flex;gap:9px;overflow-x:auto;margin:0 0 28px;padding:11px 0;background:rgba(245,247,250,.95);backdrop-filter:blur(8px)}
-    .section-nav a{white-space:nowrap;color:var(--navy);text-decoration:none;font-size:.85rem;font-weight:700;padding:7px 11px;border-bottom:2px solid transparent;transition:.2s}
-    .section-nav a:hover{border-color:var(--green);color:var(--green)}
-    .topbar{background:var(--navy);color:#fff;padding:12px clamp(20px,5vw,70px);font-size:.88rem;display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:3px solid var(--green)}
-    .topbar a{color:#fff;text-decoration:none;display:flex;align-items:center;gap:8px}
-    .badge{background:rgba(255,255,255,.2);padding:4px 8px;border-radius:6px;font-size:.75rem;font-weight:700}
-    .topbar .term{opacity:.85;font-size:.82rem;font-weight:600}
-    section{margin-bottom:28px}
-    @media(max-width:850px){.grid{grid-template-columns:1fr}.principle-grid{grid-template-columns:1fr}.lifecycle-grid{grid-template-columns:1fr}.pet-options{grid-template-columns:1fr}}
-    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Greedy Partitioning Lab (Mondrian) · COE 526</title>
+<meta name="description" content="Interactive COE 526 lab: Mondrian greedy partitioning, worked iterations, k-anonymity and l-diversity on a 10-record medical table.">
+<style>
+:root{--bg:#f7f6ff;--ink:#201a3d;--muted:#69627e;--violet:#6d4aff;--violet2:#a78bfa;--soft:#f1effc;--orange:#f97316;--green:#15803d;--greenbg:#e9f8ed;--red:#dc2626;--redbg:#fff0f0;--paper:#fff;--line:#ddd8f0;--shadow:0 18px 45px rgba(52,35,106,.10);--c1:#6d4aff;--c2:#f97316;--c3:#0e9f6e;--c4:#db2777;--c5:#0284c7;--c6:#ca8a04}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:linear-gradient(135deg,#f8f7ff,#fff9f3);color:var(--ink);font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;display:flex;align-items:center;gap:18px;padding:12px max(20px,calc((100vw - 1180px)/2));background:rgba(247,246,255,.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.brand{font-weight:900;white-space:nowrap}.brand i{font-style:normal;color:var(--violet)}
+nav{display:flex;gap:4px;overflow-x:auto}
+nav button{border:0;background:transparent;color:var(--muted);padding:8px 12px;border-radius:9px;white-space:nowrap;cursor:pointer;font:inherit;font-size:15px}
+nav button:hover{background:#ece9ff;color:var(--violet)}
+nav button[aria-selected=true]{background:var(--violet);color:#fff;font-weight:700}
+.back{margin-left:auto;color:var(--muted);font-size:14px;white-space:nowrap;text-decoration:none}.back:hover{color:var(--violet)}
+main{max-width:1180px;margin:auto;padding:40px 24px 100px}
+.kicker{color:var(--violet);font-size:14px;font-weight:800}
+h1{font-size:clamp(34px,5.5vw,60px);line-height:1;letter-spacing:-.05em;margin:10px 0 16px}
+h2{font-size:clamp(26px,3.4vw,38px);letter-spacing:-.035em;line-height:1.08;margin:6px 0 10px}
+h3{margin:0 0 10px;font-size:19px;letter-spacing:-.01em}
+.intro{color:var(--muted);max-width:760px;margin:0 0 22px}
+.panel{display:none}.panel.on{display:block}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.split{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+.stack>*+*{margin-top:18px}
+.split>*,.grid2>*,.qa>*,.sides>*{min-width:0}
+.chips .rec{max-width:100%}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{color:var(--muted);font-size:13px;font-weight:700}
+.qi{background:#f4f1ff}.sa{background:#fff3ea}
+pre.code{margin:0;background:#1b1733;color:#e8e4ff;border-radius:14px;padding:18px;font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:auto}
+pre.code .kw{color:#fca5a5}.code .fn{color:#c4b5fd}.code .nm{color:#fdba74}
+pre.code .ln{display:block;padding:0 6px;border-radius:5px}
+pre.code .ln.hl{background:rgba(167,139,250,.28)}
+ol.rules{margin:0;padding-left:20px}ol.rules li+li{margin-top:8px}
+.pill{display:inline-block;padding:2px 8px;border-radius:7px;background:var(--soft);font-size:13px;font-weight:600}
+.seg{display:inline-flex;background:var(--soft);border-radius:12px;padding:4px;gap:4px}
+.seg button{border:0;background:transparent;padding:8px 14px;border-radius:9px;font:inherit;font-weight:800;color:var(--muted);cursor:pointer;min-width:44px}
+.seg button[aria-pressed=true]{background:var(--violet);color:#fff}
+.controls{display:flex;gap:18px 26px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.controls .lbl{font-weight:800;margin-right:8px}
+.toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:var(--muted)}
+.toggle input{accent-color:var(--violet);width:18px;height:18px}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:9px 14px;border-radius:11px;font:inherit;font-weight:700;cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--violet);color:var(--violet)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.primary{background:var(--violet);border-color:var(--violet);color:#fff}
+.btn.primary:hover{color:#fff;filter:brightness(1.08)}
+button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--violet2);outline-offset:2px}
+.stepbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.stepbar .count{font-weight:800;margin:0 6px}
+.tree{font-size:14px}
+.tree ul{list-style:none;margin:0;padding-left:16px;border-left:2px solid var(--line)}
+.tree>ul{padding-left:0;border:0}
+.tree li{margin:5px 0}
+.node{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#faf9ff;border-radius:10px;padding:7px 9px;font:inherit;cursor:pointer;color:var(--ink)}
+.node:hover{border-color:var(--violet)}
+.node.cur{border-color:var(--violet);background:#ece9ff;box-shadow:0 0 0 2px var(--violet2)}
+.node .cut{display:block;color:var(--muted);font-size:12.5px}
+.node.leaf{border-left:6px solid var(--cc,var(--violet))}
+.node.hidden{opacity:.35}
+.it-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.it-head .meta{color:var(--muted);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.rec{border:1px solid var(--line);border-radius:9px;padding:5px 8px;font-size:13px;background:#faf9ff}
+.rec b{color:var(--violet)}
+.rec small{color:var(--muted)}
+.attempt{border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
+.attempt.ok{border-color:#86efac;background:#f5fdf7}
+.attempt.bad{border-color:#fecaca;background:#fffafa}
+.attempt.skip{background:#faf9fd;color:var(--muted);padding:10px 14px}
+.attempt h4{margin:0 0 8px;font-size:15.5px}
+.fs{display:flex;flex-wrap:wrap;gap:5px}
+.fs span{background:var(--soft);border-radius:7px;padding:3px 8px;font-size:13px}
+.fs span.med{background:var(--violet);color:#fff;font-weight:700}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.side{border:1px dashed var(--line);border-radius:10px;padding:9px 10px;font-size:13.5px;background:#fff}
+.verdict{margin-top:10px;font-weight:700}
+.verdict.ok{color:var(--green)}.verdict.bad{color:var(--red)}
+.decision{margin-top:14px;padding:13px 15px;border-radius:12px;background:#261f4b;color:#fff}
+.decision b{color:#c4b5fd}
+.reveal{margin-top:14px;padding:14px;border:2px dashed var(--violet2);border-radius:14px;background:#faf9ff}
+.reveal p{margin:0 0 10px}
+.banner{padding:14px 16px;border-radius:14px;font-weight:600;margin-bottom:16px}
+.banner.ok{background:var(--greenbg);color:#14532d;border:1px solid #86efac}
+.banner.bad{background:var(--redbg);color:#7f1d1d;border:1px solid #fecaca}
+.banner.info{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.ecTag{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:7px;vertical-align:-1px}
+tr.grp td:first-child{border-left:5px solid var(--cc)}
+.yes{color:var(--green);font-weight:800}.no{color:var(--red);font-weight:800}
+.matrix td,.matrix th{text-align:center}.matrix td:first-child,.matrix th:first-child{text-align:left}
+.matrix td.cur{outline:3px solid var(--violet2);outline-offset:-3px;border-radius:6px}
+.ref{display:block;margin-top:4px;font-size:13px;color:var(--muted);font-style:italic}
+table.ptab{width:auto;min-width:320px;border:1px solid #9a95ad;font-size:14px}
+table.ptab th{background:#dcdcdc;color:#111;border-bottom:1px solid #9a95ad}
+table.ptab td,table.ptab th{padding:6px 12px}
+table.fst{min-width:0}
+table.fst tr.hl td{background:#fff34d;font-weight:700}
+.ititle{text-decoration:underline;text-underline-offset:4px;font-size:21px;margin-bottom:8px}
+.sideh{margin:12px 0 6px;font-size:15px;font-style:italic;font-weight:600}
+.flow{text-align:center;font-size:22px;margin:16px 0 4px;font-weight:600}
+.flow::before{content:"\2193";display:block;color:var(--violet);font-size:26px;line-height:1}
+.fsbox{display:flex;justify-content:center;align-items:center;gap:12px}
+.fslbl{font-style:italic;font-size:20px}
+.sides2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tag{margin-top:8px;padding:9px 12px;border-radius:10px;font-weight:700;font-size:14px}
+.tag.go{background:#eaf1ff;color:#1d4ed8;border:1px solid #bfd3ff}
+.tag.stop{background:#e9f8ed;color:#15803d;border:1px solid #86efac}
+ul.fails{margin:14px 0 0;padding:10px 14px 10px 30px;background:var(--redbg);border:1px solid #fecaca;border-radius:12px;font-size:14px}
+ul.fails li+li{margin-top:4px}
+.small{font-size:13.5px;color:var(--muted)}
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.qa .card p{margin:.4em 0}
+details summary{cursor:pointer;font-weight:700;color:var(--violet)}
+@media (max-width:900px){.split,.grid2,.qa,.sides2{grid-template-columns:1fr}.top{flex-wrap:wrap}.back{margin-left:0}.sides{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
 </head>
 <body>
+<header class="top">
+  <div class="brand">COE 526 <i>Mondrian lab</i></div>
+  <nav role="tablist" aria-label="Lab sections">
+    <button role="tab" data-tab="setup" aria-selected="true">1. Data and rules</button>
+    <button role="tab" data-tab="kpanel" aria-selected="false">2. k-anonymity</button>
+    <button role="tab" data-tab="lpanel" aria-selected="false">3. l-diversity</button>
+    <button role="tab" data-tab="verdict" aria-selected="false">4. Does it work?</button>
+  </nav>
+  <a class="back" href="./index.html">Course home</a>
+</header>
 
-  <div class="topbar">
-    <a href="index.html"><span class="badge">&larr; ALL LABS</span><span>COE 526 Interactive Privacy Lab Index</span></a>
-    <span class="term">Lecture 04 &bull; Term 261</span>
+<main>
+<!-- ============ TAB 1 ============ -->
+<section class="panel on" id="setup" role="tabpanel">
+  <div class="kicker">COE 526 · Data anonymization lab</div>
+  <h1>Greedy partitioning,<br>one cut at a time</h1>
+  <p class="intro">Mondrian splits a table recursively on the quasi-identifiers until no further cut keeps every part large enough. Walk through every iteration on a 10-patient table, first for k-anonymity, then for l-diversity.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>The table</h3>
+      <p class="small" style="margin-top:0">Shaded purple: quasi-identifiers (QI). Shaded orange: sensitive attribute.</p>
+      <div class="scroll"><table id="origTable"></table></div>
+    </div>
+    <div class="card">
+      <h3>The algorithm</h3>
+<pre class="code"><span class="ln"><span class="nm">Anonymize</span>(partition)</span><span class="ln">  <span class="kw">if</span> (no allowable multidimensional cut <span class="kw">for</span> partition)</span><span class="ln">    <span class="kw">return</span> φ : partition → summary</span><span class="ln">  else</span><span class="ln">    dim ← <span class="fn">choose_dimension</span>()</span><span class="ln">    fs  ← <span class="fn">frequency_set</span>(partition, dim)</span><span class="ln">    splitVal ← <span class="fn">find_median</span>(fs)</span><span class="ln">    lhs ← {t ∈ partition : t.dim ≤ splitVal}</span><span class="ln">    rhs ← {t ∈ partition : t.dim &gt; splitVal}</span><span class="ln">    <span class="kw">return</span> <span class="nm">Anonymize</span>(rhs) ∪ <span class="nm">Anonymize</span>(lhs)</span></pre>
+    </div>
   </div>
 
-  <header>
-    <div class="brand">
-      <div class="seal">COE<br>526</div>
-      <div><strong>COE 526 &mdash; Data Privacy</strong><small>Interactive lab pack</small></div>
+  <div class="card" style="margin-top:18px">
+    <h3>How each line is applied</h3>
+    <ol class="rules">
+      <li><b>choose_dimension</b>: the quasi-identifier with the widest normalized range. Age: (max − min) / 12. Sex and City use the order Female &lt; Male and Rotterdam &lt; Utrecht &lt; Zwolle. Ties go to Age, then Sex, then City.</li>
+      <li><b>frequency_set</b>: each value of the dimension in the partition with its count.</li>
+      <li><b>find_median(fs)</b>: the median of the partition on that dimension, where every record counts. Using the frequency set: (1) add all counts to get n; (2) the median is record p = ⌊(n − 1)/2⌋ + 1; (3) go through the values in order, adding their counts; the first value whose running count reaches p is the median. Example for Age on the whole table: fs = 16:1, 18:1, 19:1, 22:2, 23:1, 24:1, 25:1, 26:1, 28:1, so n = 10 and p = 5. Running counts 1, 2, 3, 5 reach 5 at 22, so splitVal = 22.</li>
+      <li><b>Allowable cut</b>: lhs and rhs each have at least k records. In the l-diversity tab, each side must also have at least l distinct diseases. If the cut on the chosen dimension is not allowable, the next dimension is tried; if none is allowable, the partition is final.</li>
+      <li><b>Recursion</b>: the LHS is processed first, then the RHS, so iteration numbers follow the partition tree from left to right.</li>
+      <li><b>φ</b>: each final partition is published with the min–max range of each quasi-identifier.</li>
+    </ol>
+  </div>
+  <p style="margin:18px 0 0"><button class="btn primary" data-go="kpanel">Start with k-anonymity</button></p>
+</section>
+
+<!-- ============ TAB 2 ============ -->
+<section class="panel" id="kpanel" role="tabpanel">
+  <div class="kicker">Part 1</div>
+  <h2>Make the table k-anonymous</h2>
+  <p class="intro">Pick k, then step through the recursion. Each iteration handles one partition: measure the ranges, pick a dimension, find the median, and test whether the cut is allowable.</p>
+  <div class="controls">
+    <div><span class="lbl">k =</span><span class="seg" data-param="k"></span></div>
+    <label class="toggle"><input type="checkbox" class="practice"> Practice mode: hide each decision until I reveal it</label>
+  </div>
+  <div id="kBanner"></div>
+  <div class="split">
+    <div class="card"><h3>Partition tree</h3><div class="tree" id="kTree"></div><p class="small">Select a partition to jump to its iteration.</p></div>
+    <div class="card">
+      <div class="stepbar">
+        <button class="btn" data-nav="k" data-dir="-1">Previous</button>
+        <span class="count" id="kCount"></span>
+        <button class="btn primary" data-nav="k" data-dir="1">Next iteration</button>
+        <label class="toggle" style="margin-left:auto"><input type="checkbox" data-all="k"> Show all</label>
+      </div>
+      <div id="kIter"></div>
     </div>
-    <div class="course">PRIVACY DESIGN AND ENGINEERING</div>
-  </header>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h3>The k-anonymous release</h3>
+    <p class="small" style="margin-top:0">Each final partition is published with min–max ranges on the QIs. "*" means the range covers the whole domain.</p>
+    <div class="scroll"><table id="kFinal"></table></div>
+    <div id="kWorks" style="margin-top:14px"></div>
+  </div>
+  <p><button class="btn primary" data-go="lpanel">Continue to l-diversity</button></p>
+</section>
 
-  <main>
-    <div class="eyebrow">Interactive 04 • Privacy Design and Engineering</div>
-    <h1>Turn privacy policy into <em>system behavior</em></h1>
-    <p class="lede">Learn how Privacy by Design becomes requirements, controls, tests, and evidence across a system's lifecycle. Select each section to explore GDPR Article 25, the seven PbD principles, engineering patterns, and real architecture challenges.</p>
-    <nav class="section-nav" aria-label="Lecture sections">
-      <a href="#article25">GDPR Article 25</a>
-      <a href="#principles">PbD Principles</a>
-      <a href="#lifecycle">Life Cycle</a>
-      <a href="#pet">PET Selector</a>
-      <a href="#billing">Architecture Challenge</a>
-      <a href="#quiz">Mastery Check</a>
-    </nav>
+<!-- ============ TAB 3 ============ -->
+<section class="panel" id="lpanel" role="tabpanel">
+  <div class="kicker">Part 2</div>
+  <h2>Make it l-diverse</h2>
+  <p class="intro">k-anonymity hides who is who, but a class where everyone has the same disease still leaks it. Distinct l-diversity requires at least l different diseases in every class. First check the k-anonymous table; if it fails, run Mondrian again with l added to the allowable-cut rule.</p>
+  <div class="controls">
+    <div><span class="lbl">k =</span><span class="seg" data-param="k"></span></div>
+    <div><span class="lbl">l =</span><span class="seg" data-param="l"></span></div>
+    <label class="toggle"><input type="checkbox" class="practice"> Practice mode</label>
+  </div>
 
-    <!-- Section 01: GDPR Article 25 -->
-    <section id="article25">
-      <div class="eyebrow">01 · Legal idea → engineering decision</div>
-      <h2>GDPR Article 25: Data Protection by Design and by Default</h2>
-      <p class="intro">Article 25 calls for appropriate technical and organizational measures to implement data-protection principles. This section connects legal language to engineering choices.</p>
-      <div class="panel" style="padding:22px 24px">
-        <h3 style="margin:0 0 16px">What Article 25 requires:</h3>
-        <div class="principle-grid">
-          <div class="principle" style="cursor:default">
-            <strong>1. Implement from the start</strong>
-            <p style="margin:8px 0 0;font-size:.9rem;color:var(--muted)">Privacy is an engineering requirement, not an afterthought. It shapes the system from conception.</p>
-          </div>
-          <div class="principle" style="cursor:default">
-            <strong>2. Make it the default</strong>
-            <p style="margin:8px 0 0;font-size:.9rem;color:var(--muted)">Out-of-the-box settings must reflect the most privacy-protective option. Users should not have to opt in to privacy.</p>
-          </div>
-          <div class="principle" style="cursor:default">
-            <strong>3. Document and verify</strong>
-            <p style="margin:8px 0 0;font-size:.9rem;color:var(--muted)">Record what you did, why you did it, and how you tested it. Evidence matters when regulators review your decisions.</p>
-          </div>
-        </div>
-      </div>
-    </section>
+  <div class="card">
+    <h3>Step A: check the k-anonymous table</h3>
+    <div class="scroll"><table id="lCheck"></table></div>
+  </div>
+  <div id="lBanner" style="margin-top:18px"></div>
+  <div id="lRerun"></div>
+  <p><button class="btn primary" data-go="verdict">See the verdict</button></p>
+</section>
 
-    <!-- Section 02: PbD Principles -->
-    <section id="principles">
-      <div class="eyebrow">02 · Mental model</div>
-      <h2>The Seven Privacy by Design Principles</h2>
-      <p class="intro">Select a principle to see what it means in a system and what evidence would make it concrete.</p>
-      <div class="principle-grid" id="principleCards"></div>
-      <div class="principle-detail" id="principleDetail"></div>
-    </section>
+<!-- ============ TAB 4 ============ -->
+<section class="panel" id="verdict" role="tabpanel">
+  <div class="kicker">Part 3</div>
+  <h2>Does it work?</h2>
+  <p class="intro">Answers for the k and l you picked, then every combination at once.</p>
+  <div class="controls">
+    <div><span class="lbl">k =</span><span class="seg" data-param="k"></span></div>
+    <div><span class="lbl">l =</span><span class="seg" data-param="l"></span></div>
+  </div>
+  <div class="qa" id="qa"></div>
+  <div class="card" style="margin-top:18px">
+    <h3>All combinations</h3>
+    <div class="scroll"><table class="matrix" id="matrix"></table></div>
+    <p class="small">"As is": the k-anonymous table already meets l. "Re-partition": Mondrian must be rerun with l in the cut rule. "Single class": no cut is allowable, so the whole table is one class. "Not applicable": even the whole table can't satisfy the requirement.</p>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h3>What to take away</h3>
+    <ol class="rules" id="takeaways"></ol>
+  </div>
+</section>
+</main>
+<script>
+const DATA=[
+{nr:1,age:16,sex:'Male',city:'Rotterdam',dis:'Viral infection'},
+{nr:2,age:18,sex:'Male',city:'Rotterdam',dis:'Heart-related'},
+{nr:3,age:19,sex:'Male',city:'Rotterdam',dis:'Cancer'},
+{nr:4,age:22,sex:'Female',city:'Rotterdam',dis:'Viral infection'},
+{nr:5,age:22,sex:'Male',city:'Zwolle',dis:'No illness'},
+{nr:6,age:23,sex:'Male',city:'Zwolle',dis:'Tuberculosis'},
+{nr:7,age:24,sex:'Male',city:'Zwolle',dis:'Heart-related'},
+{nr:8,age:25,sex:'Female',city:'Utrecht',dis:'Cancer'},
+{nr:9,age:26,sex:'Female',city:'Rotterdam',dis:'Heart-related'},
+{nr:10,age:28,sex:'Female',city:'Utrecht',dis:'Tuberculosis'}];
+const DIMS=[
+ {key:'age',label:'Age',type:'num',min:16,max:28},
+ {key:'sex',label:'Sex',type:'cat',order:['Female','Male']},
+ {key:'city',label:'City',type:'cat',order:['Rotterdam','Utrecht','Zwolle']}];
+const rank=(d,v)=>d.type==='num'?v:d.order.indexOf(v);
+const distinctDis=p=>new Set(p.map(r=>r.dis)).size;
+function spanOf(d,p){const vals=[...new Set(p.map(r=>r[d.key]))].sort((a,b)=>rank(d,a)-rank(d,b));
+ const lo=rank(d,vals[0]),hi=rank(d,vals[vals.length-1]);
+ if(d.type==='num')return{raw:`${lo}–${hi}`,norm:(hi-lo)/(d.max-d.min),num:hi-lo,den:d.max-d.min};
+ return{raw:`{${vals.join(', ')}} · order positions ${lo}–${hi}`,norm:(hi-lo)/(d.order.length-1),num:hi-lo,den:d.order.length-1};}
+function freqSet(d,p){const m=new Map();[...p].sort((a,b)=>rank(d,a[d.key])-rank(d,b[d.key])).forEach(r=>m.set(r[d.key],(m.get(r[d.key])||0)+1));return[...m.entries()];}
+/* find_median (LeFevre et al., ICDE 2006, Fig. 6 and Sec. 4.2): the median of the partition projected on dim.
+   Every record counts, so the frequency set's counts are accumulated until they reach record
+   position floor((n-1)/2)+1 (the lower median; with t.dim <= splitVal this gives the most balanced cut). */
+function findMedian(fs,n){const pos=Math.floor((n-1)/2)+1;let c=0;for(const [v,cnt] of fs){c+=cnt;if(c>=pos)return{median:v,pos};}}
+function run(k,l){
+ const steps=[],leaves=[];let idc=0;
+ const ok=p=>p.length>=k&&(!l||distinctDis(p)>=l);
+ function test(d,p,split){const lhs=p.filter(r=>rank(d,r[d.key])<=rank(d,split)),rhs=p.filter(r=>rank(d,r[d.key])>rank(d,split));
+   const why=[];if(lhs.length<k)why.push(`lhs has ${lhs.length} < k`);if(rhs.length<k)why.push(`rhs has ${rhs.length} < k`);
+   if(l){const a=distinctDis(lhs),b=distinctDis(rhs);if(a<l)why.push(`lhs has ${a} distinct disease${a===1?'':'s'} < l`);if(b<l)why.push(`rhs has ${b} distinct disease${b===1?'':'s'} < l`);}
+   return{split,lhs,rhs,allowed:!why.length,why};}
+ function rec(p,path,depth,parent,side){const id='P'+(++idc);
+  const spans=DIMS.map(d=>({d,...spanOf(d,p)}));
+  const order=spans.map((s,i)=>({...s,i})).sort((a,b)=>b.norm-a.norm||a.i-b.i);
+  const attempts=[];let cut=null;
+  for(const s of order){const d=s.d;
+   if(s.norm===0){attempts.push({dim:d.label,skip:true,why:`only one ${d.label} value, nothing to split`});continue;}
+   const fs=freqSet(d,p);const dv=fs.map(x=>x[0]);const {median,pos}=findMedian(fs,p.length);const mi=pos-1;
+   const cands=[test(d,p,median)];
+   const chosen=cands.find(c=>c.allowed)||null;
+   const att={dim:d.label,fs,median,mi,n:p.length,cands,allowed:!!chosen,chosen};
+   attempts.push(att);if(chosen){cut={dim:d.label,split:chosen.split,lhs:chosen.lhs,rhs:chosen.rhs};break;}}
+  const step={id,path,depth,p,spans,attempts,cut,parent,side};steps.push(step);
+  if(cut){step.lhsId=rec(cut.lhs,path+'L',depth+1,id,'LHS');step.rhsId=rec(cut.rhs,path+'R',depth+1,id,'RHS');} // LHS first, as in the lecture slides; the union is the same
+  else leaves.push({id,p});
+  return id;}
+ if(!ok(DATA))return{applicable:false,steps,leaves};
+ rec(DATA,'',0,null,null);return{applicable:true,steps,leaves};}
+const S={k:2,l:2,practice:false,revealed:new Set(),idx:{},all:{}};
+const COLORS=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
+const cache={};
+function R(k,l){const key=k+'_'+l;return cache[key]||(cache[key]=run(k,l));}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nrs=p=>'{'+p.map(r=>r.nr).sort((a,b)=>a-b).join(', ')+'}';
+const fmt=x=>x.toFixed(2);
+const disSet=p=>[...new Set(p.map(r=>r.dis))];
 
-    <!-- Section 03: Lifecycle -->
-    <section id="lifecycle">
-      <div class="eyebrow">03 · Operationalizing privacy</div>
-      <h2>Privacy Engineering Across the Life Cycle</h2>
-      <p class="intro">Privacy engineering runs with the system lifecycle. Each phase has distinct privacy responsibilities.</p>
-      <div class="lifecycle-grid">
-        <div class="lifecycle-card">
-          <strong>Conception</strong>
-          <p>Threat model. Define data flows, actors, and what privacy means for this system.</p>
-        </div>
-        <div class="lifecycle-card">
-          <strong>Specification</strong>
-          <p>Write privacy requirements. Name what behavior you expect and how to verify it.</p>
-        </div>
-        <div class="lifecycle-card">
-          <strong>Design</strong>
-          <p>Choose techniques. Encryption, access control, data minimization, retention policies.</p>
-        </div>
-        <div class="lifecycle-card">
-          <strong>Implementation</strong>
-          <p>Code. Translate requirements into architecture, APIs, and configurations.</p>
-        </div>
-        <div class="lifecycle-card">
-          <strong>Testing</strong>
-          <p>Verify compliance. Privacy unit tests, integration tests, and manual security review.</p>
-        </div>
-        <div class="lifecycle-card">
-          <strong>Deployment</strong>
-          <p>Default settings. Make privacy the out-of-box state. Train operators.</p>
-        </div>
-        <div class="lifecycle-card">
-          <strong>Operation</strong>
-          <p>Monitor. Log access, detect anomalies, respond to requests, audit controls.</p>
-        </div>
-      </div>
-    </section>
+function gen(d,p){const vals=[...new Set(p.map(r=>r[d.key]))].sort((a,b)=>rank(d,a)-rank(d,b));
+  const lo=vals[0],hi=vals[vals.length-1];
+  if(d.type==='cat'&&rank(d,lo)===0&&rank(d,hi)===d.order.length-1)return '*';
+  return lo===hi?String(lo):`[${lo}–${hi}]`;}
 
-    <!-- Section 04: PET Selector -->
-    <section id="pet">
-      <div class="eyebrow">04 · Decision practice</div>
-      <h2>Privacy-Enhancing Technology (PET) Selector</h2>
-      <p class="intro">Choose the strongest factor for this case. Good selection connects a technique to a purpose and an asset.</p>
-      <div class="pet-group">
-        <p><strong>Scenario:</strong> A healthcare provider wants to let researchers analyze patterns in patient records without exposing identities.</p>
-        <p><strong>Which technique best protects privacy here?</strong></p>
-        <div class="pet-options">
-          <button class="pet" data-pet="1">Encryption in transit</button>
-          <button class="pet" data-pet="2">Differential privacy on aggregate results</button>
-          <button class="pet" data-pet="3">Access control lists</button>
-          <button class="pet" data-pet="4">HTTPS</button>
-        </div>
-        <div class="pet-reveal" id="petReveal"></div>
-      </div>
-    </section>
+/* ---------- original table ---------- */
+function origTable(){document.getElementById('origTable').innerHTML=
+ '<thead><tr><th>Nr</th><th class="qi">Age</th><th class="qi">Sex</th><th class="qi">City</th><th class="sa">Disease</th></tr></thead><tbody>'+
+ DATA.map(r=>`<tr><td>${r.nr}</td><td class="qi">${r.age}</td><td class="qi">${r.sex}</td><td class="qi">${r.city}</td><td class="sa">${r.dis}</td></tr>`).join('')+'</tbody>';}
 
-    <!-- Section 05: Architecture Challenge -->
-    <section id="billing">
-      <div class="eyebrow">05 · Architecture challenge</div>
-      <h2>The Billing-System Review</h2>
-      <p class="intro">Architecture changes where personal data flows, which teams control it, and how you test privacy. Identify the choice that best reduces privacy risk in this scenario.</p>
-      <div class="billing-group">
-        <p><strong>Situation:</strong> Your payment processor currently receives full customer records (name, email, phone, address, purchase history) for every transaction. This is a privacy risk: more data in the pipeline means more exposure if systems are breached or misused.</p>
-        <p><strong>What's the best privacy fix?</strong></p>
-        <div class="billing-options">
-          <button class="billing" data-bill="a">Add SSL/TLS encryption to the payment API</button>
-          <button class="billing" data-bill="b">Minimize the data: send only a token and amount; keep customer records on your side</button>
-          <button class="billing" data-bill="c">Audit the processor's facilities annually</button>
-          <button class="billing" data-bill="d">Use a more popular payment processor</button>
-        </div>
-        <div class="billing-feedback" id="billingFeedback"></div>
-      </div>
-    </section>
+/* ---------- segmented controls ---------- */
+function segs(){document.querySelectorAll('.seg').forEach(el=>{const p=el.dataset.param;
+  const opts=[[2,'2'],[3,'3'],[4,'4']];
+  el.innerHTML=opts.map(([v,t])=>`<button aria-pressed="${S[p]===v}" data-v="${v}">${t}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{S[p]=+b.dataset.v;S.idx={};renderAll();});});}
 
-    <!-- Section 06: Quiz -->
-    <section id="quiz">
-      <div class="eyebrow">06 · Retrieval practice</div>
-      <h2>Mastery Check</h2>
-      <p class="intro">Answer from memory. Feedback explains the distinction the question tests.</p>
-      <div id="quizMount" class="quiz-mount"></div>
-    </section>
+/* ---------- iteration view ---------- */
+function leafColorMap(run){const m={};run.leaves.forEach((lf,i)=>m[lf.id]=COLORS[i%COLORS.length]);return m;}
+function partTable(p,cls=''){return `<div class="scroll"><table class="ptab ${cls}"><thead><tr><th>ID</th><th>Age</th><th>Sex</th><th>City</th><th>Disease</th></tr></thead><tbody>${p.map(r=>`<tr><td>${r.nr}</td><td>${r.age}</td><td>${r.sex}</td><td>${r.city}</td><td>${r.dis}</td></tr>`).join('')}</tbody></table></div>`;}
+function summary(p){return DIMS.map(d=>`${d.label} = ${gen(d,p).replace(/^(?![\[*])(.*)$/,'[$1]')}`).join(', ');}
+function rangeLine(s){return s.spans.map(x=>`${x.d.label} ${fmt(x.norm)}`).join(' · ');}
+function sideCard(label,p,childStep,k,l){
+  const status=childStep&&childStep.cut?`<div class="tag go">Recurse: another allowable cut exists</div>`:`<div class="tag stop">Stop and summarize<br>${summary(p)}</div>`;
+  return `<div><h4 class="sideh">${label}</h4>${partTable(p)}${status}</div>`;}
+function failLine(a,k,l){
+  if(a.skip)return `<li>${a.dim}: only one value here, no cut possible.</li>`;
+  const c=a.cands[0];return `<li>dim = ${a.dim}: fs ${a.fs.map(([v,n])=>`${esc(v)}:${n}`).join(', ')} → splitVal = ${esc(a.median)} → LHS ${c.lhs.length}, RHS ${c.rhs.length}. Not allowable (${c.why.join('; ')}).</li>`;}
+function stepHTML(run,i,k,l,key){
+  const s=run.steps[i];const idx={};run.steps.forEach((x,j)=>idx[x.id]=j+1);const byId={};run.steps.forEach(x=>byId[x.id]=x);
+  const title=s.parent?`Iteration #${i+1} (${s.side} from iteration #${idx[s.parent]})`:`Iteration #${i+1} (full table)`;
+  const rk=`${key}${k}${l}:${s.id}`;const hide=S.practice&&!S.revealed.has(rk);
+  let body;
+  if(hide)body=`<div class="reveal"><p><b>Your turn.</b> Which dim is chosen, what is splitVal, and is the cut allowable for k = ${k}${l?` and l = ${l}`:''}?</p><button class="btn primary" data-reveal="${rk}">Reveal</button></div>`;
+  else if(!s.cut){
+    const tried=s.attempts.filter(a=>!a.skip);
+    body=`${tried.length?`<ul class="fails">${s.attempts.map(a=>failLine(a,k,l)).join('')}</ul>`:''}
+     <div class="flow">No Allowable Cut</div><div class="decision">Summary: ${summary(s.p)}</div>`;
+  } else {
+    const fails=s.attempts.slice(0,-1);const a=s.attempts[s.attempts.length-1];
+    body=`${fails.length?`<ul class="fails">${fails.map(x=>failLine(x,k,l)).join('')}</ul>`:''}
+     <div class="flow">dim = ${a.dim}</div>
+     <p class="small" style="text-align:center;margin:2px 0 10px">Widest normalized range: ${rangeLine(s)}${fails.length?' (next widest after the failed cut)':''}</p>
+     <div class="fsbox"><span class="fslbl">fs</span><table class="ptab fst"><thead><tr><th>${a.dim}</th><th>Count</th></tr></thead><tbody>${a.fs.map(([v,n])=>`<tr class="${v===a.median?'hl':''}"><td>${esc(v)}</td><td>${n}</td></tr>`).join('')}</tbody></table></div>
+     <div class="flow">splitVal = ${esc(a.median)}</div>
+     <p class="small" style="text-align:center;margin:2px 0 12px">n = ${a.n}, median = record ⌊(${a.n} − 1)/2⌋ + 1 = ${a.mi+1} in sorted order</p>
+     <div class="sides2">${sideCard('Left-Hand Side (LHS)',s.cut.lhs,byId[s.lhsId],k,l)}${sideCard('Right-Hand Side (RHS)',s.cut.rhs,byId[s.rhsId],k,l)}</div>`;
+  }
+  return `<article class="iter"><h3 class="ititle">${title}</h3><h4 class="sideh">partition</h4>${partTable(s.p)}${body}</article>`;}
 
-    <p class="note"><strong>Teaching aid, not legal advice.</strong> Legal content was last reviewed in August 2026. Adequacy decisions and implementing regulations change; verify sources before reusing this material in a later term.</p>
-  </main>
+function treeHTML(run,cur,key,colors,rp){
+  const byId={};run.steps.forEach((s,i)=>byId[s.id]={s,i});
+  const visible=i=>!S.practice||S.all[key]||i<=cur;
+  function node(id){const {s,i}=byId[id];if(!visible(i))return '';
+    const rk=rp+':'+s.id;const known=!S.practice||S.revealed.has(rk);
+    const lbl=!known?'decision hidden':s.cut?`cut: ${s.cut.dim} ≤ ${esc(s.cut.split)}`:'final class';
+    const leaf=!s.cut&&known;
+    let h=`<li><button class="node ${i===cur&&!S.all[key]?'cur':''} ${leaf?'leaf':''}" style="${leaf?`--cc:${colors[s.id]}`:''}" data-jump="${key}" data-i="${i}">${s.id} ${nrs(s.p)}<span class="cut">${lbl}</span></button>`;
+    if(s.cut&&known){const kids=node(s.lhsId)+node(s.rhsId);if(kids)h+=`<ul>${kids}</ul>`;}
+    return h+'</li>';}
+  return `<ul>${node(run.steps[0].id)}</ul>`;}
 
-  <footer>COE 526 • Term 261 (First Semester 2026–27) • Offline teaching artifact • No personal data used</footer>
+function finalTable(run,colors,l){
+  const rows=run.leaves.map((lf,ci)=>{const c=colors[lf.id];const d=disSet(lf.p);
+    return lf.p.map((r,j)=>`<tr class="grp" style="--cc:${c}"><td>${j===0?`<span class="ecTag" style="background:${c}"></span>${lf.id}`:''}</td><td>${r.nr}</td><td>${gen(DIMS[0],lf.p)}</td><td>${gen(DIMS[1],lf.p)}</td><td>${gen(DIMS[2],lf.p)}</td><td>${r.dis}</td>${j===0?`<td rowspan="${lf.p.length}">${lf.p.length}</td><td rowspan="${lf.p.length}">${d.length}${l?(d.length>=l?' <span class="yes">✓</span>':' <span class="no">✗</span>'):''}</td>`:''}</tr>`).join('');}).join('');
+  return `<thead><tr><th>Class</th><th>ID</th><th>Age</th><th>Sex</th><th>City</th><th>Disease</th><th>Size</th><th>Distinct diseases</th></tr></thead><tbody>${rows}</tbody>`;}
 
-  <script>
-    // Progress tracking
-    const state = JSON.parse(localStorage.getItem('privacyLabL4') || '{"done":[]}');
-    const mark = (k) => {
-      if (!state.done.includes(k)) state.done.push(k);
-      localStorage.setItem('privacyLabL4', JSON.stringify(state));
-    };
+function stepperHTML(key){
+  return `<div class="split" style="margin-top:18px">
+   <div class="card"><h3>Partition tree</h3><div class="tree" id="${key}Tree"></div></div>
+   <div class="card"><div class="stepbar">
+     <button class="btn" data-nav="${key}" data-dir="-1">Previous</button><span class="count" id="${key}Count"></span>
+     <button class="btn primary" data-nav="${key}" data-dir="1">Next iteration</button>
+     <label class="toggle" style="margin-left:auto"><input type="checkbox" data-all="${key}" ${S.all[key]?'checked':''}> Show all</label></div>
+     <div id="${key}Iter"></div></div></div>`;}
 
-    // Principles data
-    const principles = [
-      ['Proactive, not reactive', 'Anticipate privacy risks before harm occurs.', 'Threat modeling and misuse cases appear before implementation.'],
-      ['Privacy as the default', 'Give maximum privacy protection with minimum user action.', 'Out-of-box settings are privacy-protective; users opt into collection, not out of it.'],
-      ['Privacy embedded in design', 'Build privacy into every component, not as an add-on.', 'Data flows, retention policies, and access controls are designed in, not bolted on.'],
-      ['Full functionality', 'Achieve privacy without compromising function.', 'Systems don\'t force a choice between privacy and utility—both are possible.'],
-      ['End-to-end protection', 'Secure personal data across its entire lifecycle.', 'Collection, processing, storage, sharing, and deletion all have privacy controls.'],
-      ['Visibility and transparency', 'Be open about how data flows and what controls exist.', 'Privacy policies, data maps, and consent mechanisms are clear and honest.'],
-      ['User respect and choice', 'Respect the rights of data subjects.', 'Users can access, correct, port, and delete their data as rights require.']
-    ];
+function fillStepper(key,run,k,l){
+  const colors=leafColorMap(run);const n=run.steps.length;
+  let i=S.idx[key]??0;if(i>=n)i=n-1;S.idx[key]=i;
+  document.getElementById(key+'Tree').innerHTML=treeHTML(run,i,key,colors,`${key}${k}${l}`);
+  document.getElementById(key+'Count').textContent=S.all[key]?`${n} iterations`:`Iteration ${i+1} of ${n}`;
+  document.getElementById(key+'Iter').innerHTML=S.all[key]?run.steps.map((_,j)=>stepHTML(run,j,k,l,key)).join('<hr style="border:0;border-top:1px solid var(--line);margin:22px 0">'):stepHTML(run,i,k,l,key);
+  document.querySelectorAll(`[data-nav="${key}"]`).forEach(b=>{const d=+b.dataset.dir;b.disabled=S.all[key]||(d<0?i===0:i===n-1);});
+  return colors;}
 
-    // Render principle cards
-    const principleCards = document.getElementById('principleCards');
-    principleCards.innerHTML = principles.map((p, i) => 
-      `<button class="principle ${i === 0 ? 'active' : ''}" data-p="${i}"><span>0${i+1}</span><strong>${p[0]}</strong></button>`
-    ).join('');
+/* ---------- verdict logic ---------- */
+function analyse(k,l){
+  const kr=R(k,0);const out={k,l,kr};
+  if(!kr.applicable){out.kOk=false;return out;}
+  out.kOk=true;out.minSize=Math.min(...kr.leaves.map(x=>x.p.length));
+  out.fails=kr.leaves.filter(x=>disSet(x.p).length<l);
+  out.lDirect=out.fails.length===0;
+  out.lr=R(k,l);out.lOk=out.lr.applicable;
+  return out;}
+const sizes=r=>r.leaves.map(x=>x.p.length).join(' + ');
 
-    function showPrinciple(i) {
-      const p = principles[i];
-      document.getElementById('principleDetail').innerHTML = `<h3>${p[0]}</h3><p>${p[1]}</p><p class="muted"><strong>Evidence:</strong> ${p[2]}</p>`;
-      document.querySelectorAll('.principle').forEach((btn, idx) => btn.classList.toggle('active', idx === i));
-      mark('principle_' + i);
-    }
+/* ---------- panels ---------- */
+function renderK(){
+  const k=S.k,run=R(k,0);
+  const b=document.getElementById('kBanner');
+  if(!run.applicable){b.innerHTML=`<div class="banner bad">Not applicable: the table has only ${DATA.length} records, fewer than k = ${k}.</div>`;return;}
+  b.innerHTML=`<div class="banner ok">k = ${k} works. Mondrian ends with ${run.leaves.length} equivalence classes of sizes ${sizes(run)}; the smallest has ${Math.min(...run.leaves.map(x=>x.p.length))} ≥ ${k} records, after ${run.steps.length} iterations.</div>`;
+  const colors=fillStepper('k',run,k,0);
+  document.getElementById('kFinal').innerHTML=finalTable(run,colors,0);
+  const mn=Math.min(...run.leaves.map(x=>x.p.length));
+  document.getElementById('kWorks').innerHTML=[2,3,4].map(kk=>`<p><b>Does it work with k = ${kk}?</b> ${mn>=kk?`<span class="yes">Yes.</span> Each released pattern occurs at least ${kk} times.`:`<span class="no">No.</span> ${run.leaves.filter(x=>x.p.length<kk).map(x=>`${x.id} occurs only ${x.p.length===2?'twice':x.p.length+' times'}`).join(', ')}.`}</p>`).join('');}
 
-    document.querySelectorAll('.principle').forEach(btn => btn.addEventListener('click', () => showPrinciple(Number(btn.dataset.p))));
-    showPrinciple(0);
+function renderL(){
+  const {k,l}=S;const a=analyse(k,l);
+  const chk=document.getElementById('lCheck'),ban=document.getElementById('lBanner'),rr=document.getElementById('lRerun');
+  if(!a.kOk){chk.innerHTML='';ban.innerHTML=`<div class="banner bad">Not applicable: k = ${k} can't be met, so there is no k-anonymous table to check.</div>`;rr.innerHTML='';return;}
+  const colors=leafColorMap(a.kr);
+  chk.innerHTML=`<thead><tr><th>Class (k = ${k})</th><th>Records</th><th>Diseases</th><th>Distinct</th><th>≥ l = ${l}?</th></tr></thead><tbody>`+
+   a.kr.leaves.map(x=>{const d=disSet(x.p);return `<tr><td><span class="ecTag" style="background:${colors[x.id]}"></span>${x.id}</td><td>${nrs(x.p)}</td><td style="white-space:normal">${d.join(', ')}</td><td>${d.length}</td><td>${d.length>=l?'<span class="yes">Yes</span>':'<span class="no">No</span>'}</td></tr>`;}).join('')+'</tbody>';
+  const key='l';
+  if(a.lDirect){
+    ban.innerHTML=`<div class="banner ok">l = ${l} works as is. Every class of the k = ${k} table already contains at least ${l} distinct diseases, so no extra partitioning is needed.</div>`;
+    rr.innerHTML=`<details class="card" ${S.detailsOpen?'open':''}><summary>Compare: run Mondrian with l = ${l} in the cut rule anyway</summary>${stepperHTML(key)}<div class="card" style="margin-top:18px"><h3>k = ${k}, l = ${l} release</h3><div class="scroll"><table id="lFinal"></table></div></div></details>`;
+  } else {
+    ban.innerHTML=`<div class="banner bad">The k = ${k} table is not ${l}-diverse: ${a.fails.map(x=>`${x.id} has only ${disSet(x.p).length}`).join(', ')} distinct disease${a.fails.length>1||disSet(a.fails[0].p).length>1?'s':''}. ${a.lOk?'Step B reruns Mondrian with l in the allowable-cut rule.':''}</div>`;
+    if(!a.lOk){rr.innerHTML=`<div class="banner bad">Not applicable: even the whole table has only ${disSet(DATA).length} distinct diseases, fewer than l = ${l}. No partitioning can fix that.</div>`;return;}
+    rr.innerHTML=`<div class="card"><h3>Step B: rerun Mondrian with k = ${k} and l = ${l}</h3><p class="small" style="margin:0">A cut is allowable only if both sides have ≥ ${k} records <b>and</b> ≥ ${l} distinct diseases.</p></div>${stepperHTML(key)}
+      <div class="card" style="margin-top:18px"><h3>The k = ${k}, l = ${l} release</h3><div class="scroll"><table id="lFinal"></table></div></div>
+      <div class="banner ok" style="margin-top:18px">${a.lr.leaves.length===1?`l = ${l} works only as a single class: no median cut is allowable, so all ${DATA.length} records are published together with ${disSet(DATA).length} distinct diseases.`:`l = ${l} works after re-partitioning: ${a.lr.leaves.length} classes of sizes ${sizes(a.lr)}, each with ≥ ${k} records and ≥ ${l} distinct diseases.`}</div>`;
+  }
+  if(a.lOk){const c=fillStepper(key,a.lr,k,l);document.getElementById('lFinal').innerHTML=finalTable(a.lr,c,l);}
+}
 
-    // PET Selector
-    document.querySelectorAll('.pet').forEach(btn => btn.addEventListener('click', () => {
-      const petNum = btn.dataset.pet;
-      const isCorrect = petNum === '2';
-      const feedbackText = isCorrect 
-        ? 'Correct. Differential privacy adds statistical noise to aggregate results, preventing re-identification while preserving research value.'
-        : 'Not the best choice here. While encryption protects data in transit and access controls limit who touches it, differential privacy is specifically designed for secure data sharing and aggregation.';
-      document.getElementById('petReveal').textContent = feedbackText;
-      document.getElementById('petReveal').classList.add('show');
-      document.querySelectorAll('.pet').forEach(b => b.classList.toggle('selected', b === btn));
-      mark('pet');
-    }));
+function renderVerdict(){
+  const {k,l}=S;const a=analyse(k,l);
+  const kq=a.kOk?`<p class="yes">Yes.</p><p>With k = ${k}, Mondrian produces ${a.kr.leaves.length} classes (sizes ${sizes(a.kr)}). The smallest has ${a.minSize} records, so every person is hidden among at least ${k}.</p>`
+     :`<p class="no">Not applicable.</p><p>The table has fewer than ${k} records.</p>`;
+  let lq;
+  if(!a.kOk)lq=`<p class="no">Not applicable.</p><p>There is no k-anonymous table to build on.</p>`;
+  else if(a.lDirect)lq=`<p class="yes">Yes, directly.</p><p>Every class of the k = ${k} table already has at least ${l} distinct diseases.</p>`;
+  else if(a.lOk&&a.lr.leaves.length===1)lq=`<p class="yes">Yes, but only as a single class.</p><p>The k = ${k} table fails (${a.fails.map(x=>x.id).join(', ')}). With l = ${l} in the cut rule, no median cut is allowable, so the whole table is one class with ${disSet(DATA).length} distinct diseases.</p>`;
+  else if(a.lOk)lq=`<p class="yes">Yes, but only after re-partitioning.</p><p>The k = ${k} table fails (${a.fails.map(x=>x.id).join(', ')}). Adding l = ${l} to the cut rule gives ${a.lr.leaves.length} classes (sizes ${sizes(a.lr)}), each with ≥ ${l} distinct diseases.</p>`;
+  else lq=`<p class="no">Not applicable.</p><p>The whole table has only ${disSet(DATA).length} distinct diseases, fewer than ${l}.</p>`;
+  document.getElementById('qa').innerHTML=`<div class="card"><h3>Does it work with k = ${k}?</h3>${kq}</div><div class="card"><h3>Does it work with l = ${l}?</h3>${lq}</div>`;
+  let m='<thead><tr><th></th><th>k-anonymous?</th><th>l = 2</th><th>l = 3</th><th>l = 4</th></tr></thead><tbody>';
+  for(const kk of [2,3,4]){const base=analyse(kk,2);
+    m+=`<tr><th>k = ${kk}</th><td>${base.kOk?`<span class="yes">Yes</span><br><span class="small">${sizes(base.kr)}</span>`:'<span class="no">Not applicable</span>'}</td>`;
+    for(const ll of [2,3,4]){const x=analyse(kk,ll);let c;
+      if(!x.kOk||!x.lOk)c='<span class="no">Not applicable</span>';
+      else if(x.lDirect)c='<span class="yes">Yes, as is</span>';
+      else if(x.lr.leaves.length===1)c=`<span class="yes">Yes</span>, single class<br><span class="small">${sizes(x.lr)}</span>`;
+      else c=`<span class="yes">Yes</span>, re-partition<br><span class="small">${sizes(x.lr)}</span>`;
+      m+=`<td class="${kk===k&&ll===l?'cur':''}">${c}</td>`;}
+    m+='</tr>';}
+  document.getElementById('matrix').innerHTML=m+'</tbody>';
+  const root=R(2,0).steps[0].cut;const k2=analyse(2,3);const l4=R(2,4);
+  document.getElementById('takeaways').innerHTML=`
+   <li>Every k from 2 to 4 works. The first cut is ${root.dim} ≤ ${root.split} (${root.lhs.length} + ${root.rhs.length}). Larger k stops the recursion earlier, so the classes are larger.</li>
+   ${k2.lDirect?'':`<li>k-anonymity does not imply l-diversity: the k = 2 table is 2-diverse, but ${k2.fails.map(x=>x.id).join(' and ')} ${k2.fails.length>1?'have':'has'} only 2 distinct diseases, so it is not 3-diverse.</li>`}
+   ${l4.leaves.length===1?`<li>For l = 4, no median cut is allowable on any dimension, so the whole table is published as a single class.</li>`:''}`;}
 
-    // Billing scenario
-    document.querySelectorAll('.billing').forEach(btn => btn.addEventListener('click', () => {
-      const isCorrect = btn.dataset.bill === 'b';
-      const text = isCorrect 
-        ? 'Correct. Data minimization is the strongest privacy control. By sending only a token and the amount to the processor, you reduce exposure: the processor never sees the full customer record, so even if that system is breached, the attacker gets less.'
-        : 'Not the best privacy fix. Encryption protects in transit, but the processor still sees all the data. Audits and processor reputation are good practices, but they don\'t reduce the amount of personal data at risk.';
-      document.getElementById('billingFeedback').textContent = text;
-      document.getElementById('billingFeedback').classList.add('show');
-      document.querySelectorAll('.billing').forEach(b => {
-        b.classList.remove('correct', 'wrong');
-        if (b === btn) b.classList.add(isCorrect ? 'correct' : 'wrong');
-      });
-      mark('billing');
-    }));
+function renderAll(){segs();document.querySelectorAll('.practice').forEach(c=>c.checked=S.practice);
+  document.querySelectorAll('[data-all="k"]').forEach(c=>c.checked=!!S.all.k);
+  renderK();renderL();renderVerdict();}
 
-    // Quiz
-    const quiz = [
-      {q: 'What makes a privacy requirement engineering-ready?', o: ['It repeats the privacy policy', 'It names an implementable behavior and a way to verify it', 'It uses a sophisticated PET', 'It references the GDPR'], a: 1},
-      {q: 'Which is NOT a Privacy by Design principle?', o: ['Proactive, not reactive', 'Privacy as default', 'Maximum data collection', 'End-to-end protection'], a: 2},
-      {q: 'When should privacy engineering start in the lifecycle?', o: ['After deployment', 'At conception and design', 'Only during testing', 'When a breach occurs'], a: 1},
-      {q: 'What is data minimization?', o: ['Encrypting all data', 'Collecting only necessary data and retaining only as long as needed', 'Using anonymization on everything', 'Deleting data immediately'], a: 1},
-      {q: 'Which technique is best for allowing secure aggregate research on sensitive data?', o: ['Hashing', 'Differential privacy', 'Tokenization', 'Access logs'], a: 1}
-    ];
+/* ---------- events ---------- */
+function showTab(id){document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===id));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id===id));window.scrollTo(0,0);}
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.tab)showTab(t.dataset.tab);
+  if(t.dataset.go)showTab(t.dataset.go);
+  if(t.dataset.nav){const key=t.dataset.nav;S.idx[key]=(S.idx[key]||0)+ +t.dataset.dir;renderAll();}
+  if(t.dataset.jump){S.idx[t.dataset.jump]=+t.dataset.i;S.all[t.dataset.jump]=false;renderAll();}
+  if(t.dataset.reveal){S.revealed.add(t.dataset.reveal);renderAll();}});
+document.addEventListener('change',e=>{const t=e.target;
+  if(t.classList.contains('practice')){S.practice=t.checked;renderAll();}
+  if(t.dataset.all){S.all[t.dataset.all]=t.checked;renderAll();}});
+document.addEventListener('toggle',e=>{if(e.target.tagName==='DETAILS')S.detailsOpen=e.target.open;},true);
 
-    const quizMount = document.getElementById('quizMount');
-    quizMount.innerHTML = quiz.map((x, i) => 
-      `<div class="quizItem"><p>${i+1}. ${x.q}</p>${x.o.map((o, j) => `<button class="quizOpt" data-q="${i}" data-a="${j}">${o}</button>`).join('')}<div class="feedback" id="feedback_${i}"></div></div>`
-    ).join('');
-
-    document.querySelectorAll('.quizOpt').forEach(btn => btn.addEventListener('click', () => {
-      const qIdx = Number(btn.dataset.q);
-      const aIdx = Number(btn.dataset.a);
-      const isCorrect = aIdx === quiz[qIdx].a;
-      document.querySelectorAll(`[data-q="${qIdx}"]`).forEach(b => {
-        b.classList.remove('selected', 'correct', 'wrong');
-      });
-      btn.classList.add('selected', isCorrect ? 'correct' : 'wrong');
-      const feedback = document.getElementById(`feedback_${qIdx}`);
-      const messages = [
-        'A privacy requirement must be testable.',
-        'Maximum data collection is a security risk, not a principle.',
-        'Privacy planning starts early, not late.',
-        'Minimization balances retention; it\'s not immediate deletion.',
-        'Differential privacy is designed for this exact use case.'
-      ];
-      feedback.textContent = (isCorrect ? '✓ Correct. ' : '✗ Incorrect. ') + messages[qIdx];
-      feedback.classList.add('show');
-      mark('quiz_' + qIdx);
-    }));
-
-    // Keyboard shortcut to reset
-    addEventListener('keydown', e => {
-      if (e.key.toLowerCase() === 'r' && confirm('Reset saved progress?')) {
-        localStorage.removeItem('privacyLabL4');
-        location.reload();
-      }
-    });
-  </script>
-</body>
-</html>
+origTable();renderAll();
+</script></body></html>
