@@ -260,11 +260,11 @@
     function showPrinciple(i) {
       const p = principles[i];
       document.getElementById('principleDetail').innerHTML = `<h3>${p[0]}</h3><p>${p[1]}</p><p class="muted"><strong>Evidence:</strong> ${p[2]}</p>`;
-      document.querySelectorAll('.principle').forEach((btn, idx) => btn.classList.toggle('active', idx === i));
+      principleCards.querySelectorAll('.principle').forEach((btn, idx) => btn.classList.toggle('active', idx === i));
       mark('principle_' + i);
     }
 
-    document.querySelectorAll('.principle').forEach(btn => btn.addEventListener('click', () => showPrinciple(Number(btn.dataset.p))));
+    principleCards.querySelectorAll('.principle').forEach(btn => btn.addEventListener('click', () => showPrinciple(Number(btn.dataset.p))));
     showPrinciple(0);
 
     // PET Selector
