@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Randomized Response - Guided Flow & Statistics Lab</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card: #162036;
+      --border: #293859;
+      --accent: #38bdf8;
+      --gold: #facc15;
+      --green: #22c55e;
+      --red: #ef4444;
+      --purple: #c084fc;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px 14px; min-height: 100vh; }
+    .wrap { max-width: 960px; margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 20px; }
+    header h1 { font-size: 1.8rem; color: var(--accent); margin-bottom: 4px; }
+    header p { color: var(--muted); font-size: 0.9rem; }
+
+    /* Room Bar */
+    .room-bar {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 16px; display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 20px;
+    }
+    .room-input {
+      background: #0b1120; border: 1px solid var(--border); color: #fff;
+      padding: 6px 12px; border-radius: 6px; font-weight: bold; width: 130px;
+    }
+    .badge { font-size: 0.8rem; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+    .badge-on { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+    .badge-off { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+    /* Step Headers */
+    .step-title { font-size: 1.1rem; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+    .station-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .station-card {
+      background: var(--card); border: 2px solid var(--border); border-radius: 12px;
+      padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;
+    }
+    .station-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .station-card.active { border-color: var(--accent); background: #1c2b4a; box-shadow: 0 0 15px rgba(56, 189, 248, 0.25); }
+    .station-card h3 { font-size: 1.05rem; margin-bottom: 4px; }
+    .station-card p { font-size: 0.8rem; color: var(--muted); }
+
+    /* Workspace */
+    .work-panel {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; margin-bottom: 24px; display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* Device Visuals */
+    .device-row { display: flex; gap: 24px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+    .device-box {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      background: rgba(0,0,0,0.25); padding: 16px; border-radius: 12px; border: 1px solid var(--border); min-width: 160px;
+    }
+    .coin {
+      width: 80px; height: 80px; border-radius: 50%; background: #111;
+      border: 5px solid var(--gold); display: flex; align-items: center; justify-content: center;
+      font-size: 34px; color: var(--gold); box-shadow: 0 0 14px rgba(250, 204, 21, 0.3);
+    }
+    .flipping { animation: flip 0.5s infinite linear; }
+    @keyframes flip { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
+
+    .die {
+      width: 74px; height: 74px; background: #fff; border-radius: 12px;
+      display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+      padding: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    }
+    .pip { background: #111; border-radius: 50%; margin: 2px; visibility: hidden; }
+
+    .spinner-wheel {
+      width: 90px; height: 90px; border-radius: 50%;
+      background: conic-gradient(var(--green) 0% 75%, var(--red) 75% 100%);
+      transition: transform 1.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+    }
+
+    .btn {
+      background: var(--accent); color: #000; border: none; font-weight: 700;
+      padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+    }
+    .btn:hover { filter: brightness(1.1); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .msg-banner {
+      width: 100%; padding: 12px; border-radius: 8px; background: #0c1220;
+      border-left: 4px solid var(--accent); font-size: 0.9rem; margin-top: 12px; line-height: 1.4;
+    }
+
+    /* Question & Answer Box */
+    .question-reveal {
+      width: 100%; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px; margin-top: 20px; display: none;
+    }
+    .question-reveal.show { display: block; animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* PROTOCOL COMPLIANCE INDICATOR BANNER */
+    .protocol-verdict-box {
+      border-radius: 8px; padding: 14px; margin-bottom: 16px;
+      display: flex; flex-direction: column; gap: 6px; border: 1px solid;
+    }
+    .verdict-truth { background: rgba(34, 197, 94, 0.12); border-color: var(--green); color: var(--green); }
+    .verdict-noise { background: rgba(250, 204, 21, 0.12); border-color: var(--gold); color: var(--gold); }
+    .verdict-negate { background: rgba(192, 132, 252, 0.12); border-color: var(--purple); color: var(--purple); }
+
+    /* Dashboard & Statistics Panel */
+    .dashboard { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85rem; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--accent); }
+    .hl { font-weight: 700; font-size: 1rem; color: var(--accent); }
+
+    /* Live Math Derivation Box */
+    .stats-breakdown {
+      margin-top: 18px; padding: 14px; background: #0c1220; border-radius: 10px; border: 1px dashed var(--border);
+    }
+    .stats-breakdown h4 { font-size: 0.95rem; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 10px; }
+    .stat-card { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border-left: 3px solid var(--accent); }
+    .stat-card strong { display: block; font-size: 0.85rem; margin-bottom: 4px; color: #fff; }
+    .stat-card code { font-size: 0.78rem; color: var(--muted); display: block; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Local Differential Privacy Lab</h1>
+      <p>Decentralized Randomized Response & Live Reconstruction Statistics</p>
+    </header>
+
+    <!-- Room Bar -->
+    <div class="room-bar">
+      <div>
+        <label style="font-size:0.85rem; color:var(--muted); margin-right:6px;">Classroom Code:</label>
+        <input type="text" id="roomInput" class="room-input" value="class-lab" onchange="joinRoom()" />
+        <button class="btn" onclick="joinRoom()" style="padding:6px 12px;">Join</button>
+      </div>
+      <div id="statusBadge" class="badge badge-off">&#9679; Connecting...</div>
+    </div>
+
+    <!-- STEP 1: SELECT STATION -->
+    <div class="step-title"><span>Step 1:</span> Choose Your Randomization Device</div>
+    <div class="station-grid">
+      <div class="station-card active" id="card-s1" onclick="selectStation(1)">
+        <h3>Station 1: Fair Coin</h3>
+        <p>Warner's Forced Choice (&epsilon; &asymp; 1.10)</p>
+      </div>
+      <div class="station-card" id="card-s2" onclick="selectStation(2)">
+        <h3>Station 2: 6-Sided Die</h3>
+        <p>Asymmetric Noise (&epsilon; &asymp; 1.61)</p>
+      </div>
+      <div class="station-card" id="card-s3" onclick="selectStation(3)">
+        <h3>Station 3: Spinner</h3>
+        <p>Warner's Complement (&epsilon; &asymp; 1.10)</p>
+      </div>
+    </div>
+
+    <!-- STEP 2: INTERACTIVE EXECUTION -->
+    <div class="step-title"><span>Step 2:</span> Private Local Execution</div>
+    <div class="work-panel">
+      
+      <!-- STATION 1: TWO-COIN FLOW -->
+      <div id="flow-s1" style="width:100%; text-align:center;">
+        <div class="device-row">
+          <div class="device-box">
+            <span style="font-size:0.85rem; font-weight:600;">1st Coin (Pathfinder)</span>
+            <div id="coin1" class="coin">&#9733;</div>
+            <button id="btnCoin1" class="btn" onclick="flipCoin1()">Flip First Coin</button>
+          </div>
+          <div class="device-box" id="coin2Box" style="display:none;">
+            <span style="font-size:0.85rem; font-weight:600; color:var(--gold);">2nd Coin (Noise Generator)</span>
+            <div id="coin2" class="coin">&#9733;</div>
+            <button id="btnCoin2" class="btn" onclick="flipCoin2()">Flip Second Coin</button>
+          </div>
+        </div>
+        <div id="coin1Msg" class="msg-banner">
+          Flip the first coin in private. If Heads, answer truthfully. If Tails, flip the second coin to inject noise.
+        </div>
+      </div>
+
+      <!-- STATION 2: DIE FLOW -->
+      <div id="flow-s2" style="width:100%; text-align:center; display:none;">
+        <div class="device-row">
+          <div class="device-box">
+            <span style="font-size:0.85rem; font-weight:600;">6-Sided Die</span>
+            <div id="die" class="die">
+              <div class="pip" id="p1"></div><div class="pip" id="p2"></div><div class="pip" id="p3"></div>
+              <div class="pip" id="p4"></div><div class="pip" id="p5"></div><div class="pip" id="p6"></div>
+              <div class="pip" id="p7"></div><div class="pip" id="p8"></div><div class="pip" id="p9"></div>
+            </div>
+            <button class="btn" onclick="rollDieAction()">Roll Die</button>
+          </div>
+        </div>
+        <div id="dieMsg" class="msg-banner">
+          Roll the die. 1–4 requires truthful reporting; 5 forces "Yes"; 6 forces "No".
+        </div>
+      </div>
+
+      <!-- STATION 3: SPINNER FLOW -->
+      <div id="flow-s3" style="width:100%; text-align:center; display:none;">
+        <div class="device-row">
+          <div class="device-box">
+            <span style="font-size:0.85rem; font-weight:600;">Spinner (75% Green / 25% Red)</span>
+            <div style="position:relative; width:90px; height:90px; margin: 4px 0;">
+              <div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:14px solid #fff; z-index:5;"></div>
+              <div id="spinner" class="spinner-wheel"></div>
+            </div>
+            <button class="btn" onclick="spinWheelAction()">Spin Wheel</button>
+          </div>
+        </div>
+        <div id="spinMsg" class="msg-banner">
+          Spin the wheel. Green (75%) means truthful reporting; Red (25%) means answering the opposite (negation).
+        </div>
+      </div>
+
+      <!-- QUESTION DISPLAY & PROTOCOL COMPLIANCE INDICATOR -->
+      <div id="questionBox" class="question-reveal">
+        <!-- INDICATOR: WHICH ANSWER IS PROTOCOL-CORRECT -->
+        <div id="protocolVerdict" class="protocol-verdict-box verdict-truth">
+          <strong id="verdictTitle" style="font-size:0.95rem;">&#10003; Protocol Compliance Rule:</strong>
+          <span id="verdictDetail" style="font-size:0.85rem;"></span>
+        </div>
+
+        <h4 style="color:#fff; margin-bottom:6px;" id="qTitle">Sample Question</h4>
+        <p style="font-size:0.95rem; margin-bottom:14px; color:var(--accent);" id="qText"></p>
+
+        <div style="display:flex; gap:20px; justify-content:center; margin-bottom:16px;">
+          <label style="cursor:pointer; display:flex; align-items:center; gap:6px; font-size:1rem;">
+            <input type="radio" name="ans" value="Yes" id="radioYes" /> <strong>Yes</strong>
+          </label>
+          <label style="cursor:pointer; display:flex; align-items:center; gap:6px; font-size:1rem;">
+            <input type="radio" name="ans" value="No" id="radioNo" /> <strong>No</strong>
+          </label>
+        </div>
+
+        <button class="btn" style="width:100%; padding:10px;" onclick="submitAnswer()">
+          Transmit Perturbed Response to Class Dashboard
+        </button>
+        <div id="submitFeedback" style="text-align:center; margin-top:8px; font-size:0.85rem; font-weight:600;"></div>
+      </div>
+    </div>
+
+    <!-- LIVE CLASS RECONSTRUCTION BOARD & STATISTICAL PROOFS -->
+    <div class="dashboard">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2 style="font-size:1.15rem; color:#fff;">Classroom Aggregator & Statistics</h2>
+          <span style="font-size:0.8rem; color:var(--muted);">Total Submissions: <strong id="totalSubs" style="color:var(--accent)">0</strong></span>
+        </div>
+        <button class="btn" style="background:transparent; border:1px solid var(--red); color:var(--red);" onclick="resetData()">
+          Reset Data
+        </button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Station</th>
+            <th>Observed Yes</th>
+            <th>Observed Proportion (P&#770;<sub>Y</sub>)</th>
+            <th>Live Inversion Formula</th>
+            <th>Reconstructed True Rate (&pi;&#770;)</th>
+            <th>Privacy (&epsilon;)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Station 1: Coin</strong></td>
+            <td id="cnt-s1">0 / 0</td>
+            <td id="obs-s1">0.0%</td>
+            <td id="math-s1" style="font-family:monospace; color:var(--gold);">2 &times; (0.000 - 0.25)</td>
+            <td id="rec-s1" class="hl">0.0%</td>
+            <td><code>&epsilon; &asymp; 1.10</code></td>
+          </tr>
+          <tr>
+            <td><strong>Station 2: Die</strong></td>
+            <td id="cnt-s2">0 / 0</td>
+            <td id="obs-s2">0.0%</td>
+            <td id="math-s2" style="font-family:monospace; color:var(--gold);">(6 &times; 0.000 - 1) / 4</td>
+            <td id="rec-s2" class="hl">0.0%</td>
+            <td><code>&epsilon; &asymp; 1.61</code></td>
+          </tr>
+          <tr>
+            <td><strong>Station 3: Spinner</strong></td>
+            <td id="cnt-s3">0 / 0</td>
+            <td id="obs-s3">0.0%</td>
+            <td id="math-s3" style="font-family:monospace; color:var(--gold);">2 &times; (0.000 - 0.25)</td>
+            <td id="rec-s3" class="hl">0.0%</td>
+            <td><code>&epsilon; &asymp; 1.10</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- DETAILED STATISTICAL DERIVATION BREAKDOWN -->
+      <div class="stats-breakdown">
+        <h4><span>&#128200;</span> Mathematical Proofs of Reconstruction</h4>
+        <div class="stat-row">
+          <div class="stat-card">
+            <strong>Station 1 (Coin: Warner's Forced Choice)</strong>
+            <code>P(Y=Yes) = 0.5&pi; + 0.25</code>
+            <code>Inversion: &pi;&#770; = 2 &times; (P&#770; - 0.25)</code>
+            <code>Privacy: &epsilon; = ln(0.75 / 0.25) = ln(3) &asymp; 1.10</code>
+          </div>
+          <div class="stat-card">
+            <strong>Station 2 (Die: Asymmetric Perturbation)</strong>
+            <code>P(Y=Yes) = (4/6)&pi; + 1/6</code>
+            <code>Inversion: &pi;&#770; = (6P&#770; - 1) / 4</code>
+            <code>Privacy: &epsilon; = ln((5/6) / (1/6)) = ln(5) &asymp; 1.61</code>
+          </div>
+          <div class="stat-card">
+            <strong>Station 3 (Spinner: Complementary Inversion)</strong>
+            <code>P(Y=Yes) = 0.75&pi; + 0.25(1-&pi;) = 0.5&pi; + 0.25</code>
+            <code>Inversion: &pi;&#770; = 2 &times; (P&#770; - 0.25)</code>
+            <code>Privacy: &epsilon; = ln(0.75 / 0.25) = ln(3) &asymp; 1.10</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentStation = 1;
+    const questions = {
+      1: "Do you prefer working entirely alone on your research rather than in a collaborative team?",
+      2: "Should the development of advanced artificial intelligence models be permanently halted?",
+      3: "Have you ever worked through the entire night without sleeping to meet an academic deadline?"
+    };
+
+    // 1. SELECT STATION
+    function selectStation(n) {
+      currentStation = n;
+      document.querySelectorAll('.station-card').forEach((c, i) => {
+        c.classList.toggle('active', i + 1 === n);
+      });
+      document.getElementById('flow-s1').style.display = n === 1 ? 'block' : 'none';
+      document.getElementById('flow-s2').style.display = n === 2 ? 'block' : 'none';
+      document.getElementById('flow-s3').style.display = n === 3 ? 'block' : 'none';
+      resetWorkpanel();
+    }
+
+    function resetWorkpanel() {
+      document.getElementById('questionBox').classList.remove('show');
+      document.getElementById('coin2Box').style.display = 'none';
+      document.getElementById('btnCoin1').disabled = false;
+      document.getElementById('btnCoin2').disabled = false;
+      document.getElementById('submitFeedback').innerText = '';
+      document.getElementById('radioYes').checked = false;
+      document.getElementById('radioNo').checked = false;
+      document.getElementById('radioYes').disabled = false;
+      document.getElementById('radioNo').disabled = false;
+    }
+
+    // 2. STATION 1: COIN FLOW
+    function flipCoin1() {
+      const c1 = document.getElementById('coin1');
+      const msg = document.getElementById('coin1Msg');
+      const btn = document.getElementById('btnCoin1');
+      btn.disabled = true;
+      c1.classList.add('flipping');
+      msg.innerHTML = "Flipping first coin...";
+
+      setTimeout(() => {
+        c1.classList.remove('flipping');
+        const isHeads = Math.random() < 0.5;
+
+        if (isHeads) {
+          msg.innerHTML = `<strong>First flip: HEADS!</strong><br><span style="color:var(--green)">No second coin needed.</span> You are on the truthful path.`;
+          document.getElementById('coin2Box').style.display = 'none';
+          showQuestionWithCompliance(
+            1,
+            "truth",
+            "Protocol-Compliant Answer: Your Honest Truth",
+            "Coin 1 landed HEADS. The protocol requires you to answer TRUTHFULLY (either 'Yes' or 'No' according to your genuine belief)."
+          );
+        } else {
+          msg.innerHTML = `<strong>First flip: TAILS!</strong><br><span style="color:var(--gold)">Second coin required.</span> Flip Coin 2 to generate noise.`;
+          document.getElementById('coin2Box').style.display = 'flex';
+          document.getElementById('questionBox').classList.remove('show');
+        }
+      }, 500);
+    }
+
+    function flipCoin2() {
+      const c2 = document.getElementById('coin2');
+      const msg = document.getElementById('coin1Msg');
+      const btn = document.getElementById('btnCoin2');
+      btn.disabled = true;
+      c2.classList.add('flipping');
+
+      setTimeout(() => {
+        c2.classList.remove('flipping');
+        const isHeads = Math.random() < 0.5;
+        const forced = isHeads ? 'Yes' : 'No';
+
+        msg.innerHTML = `<strong>Second flip: ${isHeads ? 'HEADS' : 'TAILS'}!</strong><br>Instruction: Submit forced <strong style="color:var(--accent)">"${forced}"</strong> for plausible deniability.`;
+        showQuestionWithCompliance(
+          1,
+          "noise",
+          `Protocol-Compliant Answer: MUST SUBMIT "${forced.toUpperCase()}"`,
+          `Coin 1 was TAILS, and Coin 2 was ${isHeads ? 'HEADS' : 'TAILS'}. To protect your privacy, you MUST submit "${forced}", regardless of your real opinion.`,
+          forced
+        );
+      }, 500);
+    }
+
+    // 3. STATION 2: DIE FLOW
+    const pips = { 1:[5], 2:[1,9], 3:[1,5,9], 4:[1,3,7,9], 5:[1,3,5,7,9], 6:[1,3,4,6,7,9] };
+    function renderDie(val) {
+      for (let i = 1; i <= 9; i++) document.getElementById('p' + i).style.visibility = 'hidden';
+      pips[val].forEach(p => document.getElementById('p' + p).style.visibility = 'visible');
+    }
+    renderDie(1);
+
+    function rollDieAction() {
+      const msg = document.getElementById('dieMsg');
+      const roll = Math.floor(Math.random() * 6) + 1;
+      renderDie(roll);
+
+      if (roll <= 4) {
+        msg.innerHTML = `<strong>Rolled ${roll} (1–4):</strong> Answer truthfully.`;
+        showQuestionWithCompliance(
+          2,
+          "truth",
+          "Protocol-Compliant Answer: Your Honest Truth",
+          `You rolled ${roll} (range 1–4). The protocol mandates answering TRUTHFULLY ('Yes' or 'No').`
+        );
+      } else if (roll === 5) {
+        msg.innerHTML = `<strong>Rolled 5:</strong> Forced to answer <strong>YES</strong>.`;
+        showQuestionWithCompliance(
+          2,
+          "noise",
+          'Protocol-Compliant Answer: MUST SUBMIT "YES"',
+          'You rolled a 5. The protocol mandates transmitting "Yes" as noise injection.',
+          "Yes"
+        );
+      } else {
+        msg.innerHTML = `<strong>Rolled 6:</strong> Forced to answer <strong>NO</strong>.`;
+        showQuestionWithCompliance(
+          2,
+          "noise",
+          'Protocol-Compliant Answer: MUST SUBMIT "NO"',
+          'You rolled a 6. The protocol mandates transmitting "No" as noise injection.',
+          "No"
+        );
+      }
+    }
+
+    // 4. STATION 3: SPINNER FLOW
+    let spinDeg = 0;
+    function spinWheelAction() {
+      const msg = document.getElementById('spinMsg');
+      const wheel = document.getElementById('spinner');
+      spinDeg += 1080 + Math.floor(Math.random() * 360);
+      wheel.style.transform = `rotate(${spinDeg}deg)`;
+
+      setTimeout(() => {
+        const effective = (360 - (spinDeg % 360)) % 360;
+        const isGreen = effective < 270;
+
+        if (isGreen) {
+          msg.innerHTML = `<strong>Landed on GREEN (75%):</strong> Answer truthfully.`;
+          showQuestionWithCompliance(
+            3,
+            "truth",
+            "Protocol-Compliant Answer: Your Honest Truth",
+            "Arrow landed on Green. The protocol mandates reporting your HONEST opinion."
+          );
+        } else {
+          msg.innerHTML = `<strong>Landed on RED (25%):</strong> Answer the OPPOSITE (negated).`;
+          showQuestionWithCompliance(
+            3,
+            "negate",
+            "Protocol-Compliant Answer: INVERTED (OPPOSITE OF TRUTH)",
+            "Arrow landed on Red. If your real answer is Yes, select NO. If your real answer is No, select YES."
+          );
+        }
+      }, 1300);
+    }
+
+    // PROTOCOL COMPLIANCE HELPER
+    function showQuestionWithCompliance(stId, mode, title, detail, forceVal = null) {
+      const box = document.getElementById('questionBox');
+      const verdict = document.getElementById('protocolVerdict');
+      const vTitle = document.getElementById('verdictTitle');
+      const vDetail = document.getElementById('verdictDetail');
+
+      verdict.className = "protocol-verdict-box verdict-" + mode;
+      vTitle.innerText = title;
+      vDetail.innerText = detail;
+
+      document.getElementById('qTitle').innerText = `Question for Station ${stId}`;
+      document.getElementById('qText').innerText = `"${questions[stId]}"`;
+
+      const rY = document.getElementById('radioYes');
+      const rN = document.getElementById('radioNo');
+
+      if (forceVal) {
+        rY.checked = (forceVal === 'Yes');
+        rN.checked = (forceVal === 'No');
+        rY.disabled = true;
+        rN.disabled = true;
+      } else {
+        rY.checked = false;
+        rN.checked = false;
+        rY.disabled = false;
+        rN.disabled = false;
+      }
+
+      box.classList.add('show');
+    }
+
+    // 5. LIVE WEBSOCKET AGGREGATOR
+    let client = null;
+    let room = "class-lab";
+    let data = {
+      s1: { n: 0, yes: 0 },
+      s2: { n: 0, yes: 0 },
+      s3: { n: 0, yes: 0 }
+    };
+
+    function connectBroker() {
+      const badge = document.getElementById('statusBadge');
+      client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+        clientId: 'ldp_' + Math.random().toString(16).substr(2, 8),
+        clean: true
+      });
+
+      client.on('connect', () => {
+        badge.className = 'badge badge-on';
+        badge.innerHTML = '&#9679; Connected to Room';
+        client.subscribe(`ldp_lab/${room}/feed`);
+      });
+
+      client.on('message', (t, payload) => {
+        try {
+          const msg = JSON.parse(payload.toString());
+          if (msg.type === 'vote') {
+            data[`s${msg.station}`].n++;
+            if (msg.answer === 'Yes') data[`s${msg.station}`].yes++;
+            updateUI();
+          } else if (msg.type === 'reset') {
+            data = { s1: { n: 0, yes: 0 }, s2: { n: 0, yes: 0 }, s3: { n: 0, yes: 0 } };
+            updateUI();
+          }
+        } catch(e) {}
+      });
+
+      client.on('offline', () => {
+        badge.className = 'badge badge-off';
+        badge.innerHTML = '&#9679; Disconnected';
+      });
+    }
+
+    function joinRoom() {
+      const newRoom = document.getElementById('roomInput').value.trim() || 'class-lab';
+      if (client && client.connected) {
+        client.unsubscribe(`ldp_lab/${room}/feed`);
+      }
+      room = newRoom;
+      data = { s1: { n: 0, yes: 0 }, s2: { n: 0, yes: 0 }, s3: { n: 0, yes: 0 } };
+      updateUI();
+      if (client && client.connected) client.subscribe(`ldp_lab/${room}/feed`);
+    }
+
+    function submitAnswer() {
+      const selected = document.querySelector('input[name="ans"]:checked');
+      if (!selected) {
+        alert("Please select Yes or No.");
+        return;
+      }
+      const ans = selected.value;
+      const feedback = document.getElementById('submitFeedback');
+
+      const payload = JSON.stringify({ type: 'vote', station: currentStation, answer: ans });
+      if (client && client.connected) {
+        client.publish(`ldp_lab/${room}/feed`, payload);
+        feedback.style.color = "var(--green)";
+        feedback.innerText = "Transmitted! Your protocol-compliant response has been recorded.";
+      }
+    }
+
+    function resetData() {
+      if (!confirm("Reset all classroom submissions?")) return;
+      if (client && client.connected) {
+        client.publish(`ldp_lab/${room}/feed`, JSON.stringify({ type: 'reset' }));
+      }
+    }
+
+    // STATISTICAL INVERSION & LIVE STEP-BY-STEP ARITHMETIC
+    function updateUI() {
+      const total = data.s1.n + data.s2.n + data.s3.n;
+      document.getElementById('totalSubs').innerText = total;
+
+      // Station 1: Coin -> pi = 2 * (P(Y) - 0.25)
+      const p1 = data.s1.n > 0 ? data.s1.yes / data.s1.n : 0;
+      const pi1 = Math.max(0, Math.min(1, 2 * (p1 - 0.25)));
+      document.getElementById('cnt-s1').innerText = `${data.s1.yes} / ${data.s1.n}`;
+      document.getElementById('obs-s1').innerText = (p1 * 100).toFixed(1) + '%';
+      document.getElementById('math-s1').innerText = `2 × (${p1.toFixed(3)} - 0.25)`;
+      document.getElementById('rec-s1').innerText = (pi1 * 100).toFixed(1) + '%';
+
+      // Station 2: Die -> pi = (6 * P(Y) - 1) / 4
+      const p2 = data.s2.n > 0 ? data.s2.yes / data.s2.n : 0;
+      const pi2 = Math.max(0, Math.min(1, (6 * p2 - 1) / 4));
+      document.getElementById('cnt-s2').innerText = `${data.s2.yes} / ${data.s2.n}`;
+      document.getElementById('obs-s2').innerText = (p2 * 100).toFixed(1) + '%';
+      document.getElementById('math-s2').innerText = `(6 × ${p2.toFixed(3)} - 1) / 4`;
+      document.getElementById('rec-s2').innerText = (pi2 * 100).toFixed(1) + '%';
+
+      // Station 3: Spinner -> pi = 2 * (P(Y) - 0.25)
+      const p3 = data.s3.n > 0 ? data.s3.yes / data.s3.n : 0;
+      const pi3 = Math.max(0, Math.min(1, 2 * (p3 - 0.25)));
+      document.getElementById('cnt-s3').innerText = `${data.s3.yes} / ${data.s3.n}`;
+      document.getElementById('obs-s3').innerText = (p3 * 100).toFixed(1) + '%';
+      document.getElementById('math-s3').innerText = `2 × (${p3.toFixed(3)} - 0.25)`;
+      document.getElementById('rec-s3').innerText = (pi3 * 100).toFixed(1) + '%';
+    }
+
+    window.onload = connectBroker;
+  </script>
+</body>
+</html>
