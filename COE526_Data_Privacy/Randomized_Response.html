@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Randomized Response - Guided Flow & Statistics Lab</title>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     :root {
       --bg: #0b1120;
@@ -39,6 +38,13 @@
     .badge { font-size: 0.8rem; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
     .badge-on { background: rgba(34, 197, 94, 0.15); color: var(--green); }
     .badge-off { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .badge-local { background: rgba(56, 189, 248, 0.15); color: var(--accent); }
+    .privacy-notice {
+      background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 8px; padding: 10px 12px; margin: -10px 0 20px;
+      color: var(--muted); font-size: 0.8rem; line-height: 1.45;
+    }
+    .privacy-notice strong { color: var(--text); }
 
     /* Step Headers */
     .step-title { font-size: 1.1rem; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
@@ -46,11 +52,12 @@
     .station-card {
       background: var(--card); border: 2px solid var(--border); border-radius: 12px;
       padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;
+      color: var(--text); width: 100%; font: inherit;
     }
     .station-card:hover { border-color: var(--accent); transform: translateY(-2px); }
     .station-card.active { border-color: var(--accent); background: #1c2b4a; box-shadow: 0 0 15px rgba(56, 189, 248, 0.25); }
-    .station-card h3 { font-size: 1.05rem; margin-bottom: 4px; }
-    .station-card p { font-size: 0.8rem; color: var(--muted); }
+    .station-heading { display: block; font-size: 1.05rem; margin-bottom: 4px; font-weight: 700; }
+    .station-description { display: block; font-size: 0.8rem; color: var(--muted); }
 
     /* Workspace */
     .work-panel {
@@ -91,6 +98,10 @@
     }
     .btn:hover { filter: brightness(1.1); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn:focus-visible, .station-card:focus-visible, .room-input:focus-visible, input[type="radio"]:focus-visible {
+      outline: 3px solid var(--gold); outline-offset: 2px;
+    }
 
     .msg-banner {
       width: 100%; padding: 12px; border-radius: 8px; background: #0c1220;
@@ -116,10 +127,23 @@
 
     /* Dashboard & Statistics Panel */
     .dashboard { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 24px; }
+    .table-scroll { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85rem; }
     th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
     th { color: var(--accent); }
     .hl { font-weight: 700; font-size: 1rem; color: var(--accent); }
+    .estimate-note { display: block; margin-top: 3px; color: var(--muted); font-size: 0.72rem; font-weight: 500; }
+    .method-note {
+      margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+      background: rgba(250, 204, 21, 0.08); border-left: 3px solid var(--gold);
+      color: var(--muted); font-size: 0.8rem; line-height: 1.45;
+    }
+    .comparison-note {
+      margin-top: 18px; padding: 12px; border-radius: 8px;
+      background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.35);
+      color: var(--muted); font-size: 0.84rem; line-height: 1.5;
+    }
+    .comparison-note strong { color: var(--green); }
 
     /* Live Math Derivation Box */
     .stats-breakdown {
@@ -142,28 +166,34 @@
     <!-- Room Bar -->
     <div class="room-bar">
       <div>
-        <label style="font-size:0.85rem; color:var(--muted); margin-right:6px;">Classroom Code:</label>
-        <input type="text" id="roomInput" class="room-input" value="class-lab" onchange="joinRoom()" />
-        <button class="btn" onclick="joinRoom()" style="padding:6px 12px;">Join</button>
+        <label for="roomInput" style="font-size:0.85rem; color:var(--muted); margin-right:6px;">Optional Shared Classroom Code:</label>
+        <input type="text" id="roomInput" class="room-input" maxlength="32" placeholder="e.g., coe526-a1" autocomplete="off" />
+        <button type="button" class="btn" onclick="joinRoom()" style="padding:6px 12px;">Join Shared Room</button>
+        <button type="button" class="btn btn-secondary" onclick="useLocalMode()" style="padding:6px 12px;">Use Local Only</button>
       </div>
-      <div id="statusBadge" class="badge badge-off">&#9679; Connecting...</div>
+      <div id="statusBadge" class="badge badge-local" role="status" aria-live="polite">&#9679; Local-only mode</div>
+    </div>
+    <div class="privacy-notice">
+      <strong>Privacy and classroom notice:</strong> Randomization occurs in this browser. In local-only mode, no response is transmitted.
+      Joining a shared room loads MQTT.js and sends only the station number and randomized Yes/No output through a public demonstration broker.
+      Use a unique classroom code, never enter personal information, and have every device join before collection because earlier submissions are not stored or replayed.
     </div>
 
     <!-- STEP 1: SELECT STATION -->
     <div class="step-title"><span>Step 1:</span> Choose Your Randomization Device</div>
     <div class="station-grid">
-      <div class="station-card active" id="card-s1" onclick="selectStation(1)">
-        <h3>Station 1: Fair Coin</h3>
-        <p>Warner's Forced Choice (&epsilon; &asymp; 1.10)</p>
-      </div>
-      <div class="station-card" id="card-s2" onclick="selectStation(2)">
-        <h3>Station 2: 6-Sided Die</h3>
-        <p>Asymmetric Noise (&epsilon; &asymp; 1.61)</p>
-      </div>
-      <div class="station-card" id="card-s3" onclick="selectStation(3)">
-        <h3>Station 3: Spinner</h3>
-        <p>Warner's Complement (&epsilon; &asymp; 1.10)</p>
-      </div>
+      <button type="button" class="station-card active" id="card-s1" onclick="selectStation(1)" aria-pressed="true">
+        <span class="station-heading">Station 1: Fair Coin</span>
+        <span class="station-description">Two-Coin Forced Response (&epsilon; &asymp; 1.10)</span>
+      </button>
+      <button type="button" class="station-card" id="card-s2" onclick="selectStation(2)" aria-pressed="false">
+        <span class="station-heading">Station 2: 6-Sided Die</span>
+        <span class="station-description">Die-Based Forced Response (&epsilon; &asymp; 1.61)</span>
+      </button>
+      <button type="button" class="station-card" id="card-s3" onclick="selectStation(3)" aria-pressed="false">
+        <span class="station-heading">Station 3: Spinner</span>
+        <span class="station-description">Warner Complementary Question (&epsilon; &asymp; 1.10)</span>
+      </button>
     </div>
 
     <!-- STEP 2: INTERACTIVE EXECUTION -->
@@ -176,12 +206,12 @@
           <div class="device-box">
             <span style="font-size:0.85rem; font-weight:600;">1st Coin (Pathfinder)</span>
             <div id="coin1" class="coin">&#9733;</div>
-            <button id="btnCoin1" class="btn" onclick="flipCoin1()">Flip First Coin</button>
+            <button type="button" id="btnCoin1" class="btn" onclick="flipCoin1()">Flip First Coin</button>
           </div>
           <div class="device-box" id="coin2Box" style="display:none;">
             <span style="font-size:0.85rem; font-weight:600; color:var(--gold);">2nd Coin (Noise Generator)</span>
             <div id="coin2" class="coin">&#9733;</div>
-            <button id="btnCoin2" class="btn" onclick="flipCoin2()">Flip Second Coin</button>
+            <button type="button" id="btnCoin2" class="btn" onclick="flipCoin2()">Flip Second Coin</button>
           </div>
         </div>
         <div id="coin1Msg" class="msg-banner">
@@ -199,7 +229,7 @@
               <div class="pip" id="p4"></div><div class="pip" id="p5"></div><div class="pip" id="p6"></div>
               <div class="pip" id="p7"></div><div class="pip" id="p8"></div><div class="pip" id="p9"></div>
             </div>
-            <button class="btn" onclick="rollDieAction()">Roll Die</button>
+            <button type="button" id="btnDie" class="btn" onclick="rollDieAction()">Roll Die</button>
           </div>
         </div>
         <div id="dieMsg" class="msg-banner">
@@ -216,7 +246,7 @@
               <div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:14px solid #fff; z-index:5;"></div>
               <div id="spinner" class="spinner-wheel"></div>
             </div>
-            <button class="btn" onclick="spinWheelAction()">Spin Wheel</button>
+            <button type="button" id="btnSpinner" class="btn" onclick="spinWheelAction()">Spin Wheel</button>
           </div>
         </div>
         <div id="spinMsg" class="msg-banner">
@@ -244,10 +274,10 @@
           </label>
         </div>
 
-        <button class="btn" style="width:100%; padding:10px;" onclick="submitAnswer()">
-          Transmit Perturbed Response to Class Dashboard
+        <button type="button" id="submitButton" class="btn" style="width:100%; padding:10px;" onclick="submitAnswer()">
+          Record Randomized Response
         </button>
-        <div id="submitFeedback" style="text-align:center; margin-top:8px; font-size:0.85rem; font-weight:600;"></div>
+        <div id="submitFeedback" role="status" aria-live="polite" style="text-align:center; margin-top:8px; font-size:0.85rem; font-weight:600;"></div>
       </div>
     </div>
 
@@ -255,14 +285,15 @@
     <div class="dashboard">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div>
-          <h2 style="font-size:1.15rem; color:#fff;">Classroom Aggregator & Statistics</h2>
+          <h2 style="font-size:1.15rem; color:#fff;">Response Aggregator & Statistics</h2>
           <span style="font-size:0.8rem; color:var(--muted);">Total Submissions: <strong id="totalSubs" style="color:var(--accent)">0</strong></span>
         </div>
-        <button class="btn" style="background:transparent; border:1px solid var(--red); color:var(--red);" onclick="resetData()">
-          Reset Data
+        <button type="button" class="btn" style="background:transparent; border:1px solid var(--red); color:var(--red);" onclick="resetData()">
+          Reset This Dashboard
         </button>
       </div>
 
+      <div class="table-scroll">
       <table>
         <thead>
           <tr>
@@ -270,7 +301,7 @@
             <th>Observed Yes</th>
             <th>Observed Proportion (P&#770;<sub>Y</sub>)</th>
             <th>Live Inversion Formula</th>
-            <th>Reconstructed True Rate (&pi;&#770;)</th>
+            <th>Raw Reconstruction and Feasible Summary (&pi;&#770;)</th>
             <th>Privacy (&epsilon;)</th>
           </tr>
         </thead>
@@ -278,48 +309,64 @@
           <tr>
             <td><strong>Station 1: Coin</strong></td>
             <td id="cnt-s1">0 / 0</td>
-            <td id="obs-s1">0.0%</td>
-            <td id="math-s1" style="font-family:monospace; color:var(--gold);">2 &times; (0.000 - 0.25)</td>
-            <td id="rec-s1" class="hl">0.0%</td>
+            <td id="obs-s1">&mdash;</td>
+            <td id="math-s1" style="font-family:monospace; color:var(--gold);">Waiting for submissions</td>
+            <td id="rec-s1" class="hl">&mdash;<span class="estimate-note">Estimate undefined when n = 0</span></td>
             <td><code>&epsilon; &asymp; 1.10</code></td>
           </tr>
           <tr>
             <td><strong>Station 2: Die</strong></td>
             <td id="cnt-s2">0 / 0</td>
-            <td id="obs-s2">0.0%</td>
-            <td id="math-s2" style="font-family:monospace; color:var(--gold);">(6 &times; 0.000 - 1) / 4</td>
-            <td id="rec-s2" class="hl">0.0%</td>
+            <td id="obs-s2">&mdash;</td>
+            <td id="math-s2" style="font-family:monospace; color:var(--gold);">Waiting for submissions</td>
+            <td id="rec-s2" class="hl">&mdash;<span class="estimate-note">Estimate undefined when n = 0</span></td>
             <td><code>&epsilon; &asymp; 1.61</code></td>
           </tr>
           <tr>
             <td><strong>Station 3: Spinner</strong></td>
             <td id="cnt-s3">0 / 0</td>
-            <td id="obs-s3">0.0%</td>
-            <td id="math-s3" style="font-family:monospace; color:var(--gold);">2 &times; (0.000 - 0.25)</td>
-            <td id="rec-s3" class="hl">0.0%</td>
+            <td id="obs-s3">&mdash;</td>
+            <td id="math-s3" style="font-family:monospace; color:var(--gold);">Waiting for submissions</td>
+            <td id="rec-s3" class="hl">&mdash;<span class="estimate-note">Estimate undefined when n = 0</span></td>
             <td><code>&epsilon; &asymp; 1.10</code></td>
           </tr>
         </tbody>
       </table>
+      </div>
+
+      <div class="method-note">
+        The raw inversion is an unbiased estimate and may fall below 0% or above 100% in a small sample. The feasible value is clipped only for display.
+        The 95% interval transforms a Wilson interval for the observed Yes proportion and then clips its endpoints to the feasible 0%&ndash;100% range.
+      </div>
+
+      <div class="comparison-note">
+        <strong>Key comparison:</strong> Stations 1 and 3 use different procedures but produce the same channel:
+        P(report Yes | true Yes) = 0.75 and P(report Yes | true No) = 0.25. They therefore have the same reconstruction formula and &epsilon;.
+        The die reports the truthful value with probability 5/6, so it provides more statistical signal but weaker privacy because ln(5) &gt; ln(3).
+        All stations use the same question so their results can be compared without changing the underlying survey item.
+      </div>
 
       <!-- DETAILED STATISTICAL DERIVATION BREAKDOWN -->
       <div class="stats-breakdown">
         <h4><span>&#128200;</span> Mathematical Proofs of Reconstruction</h4>
         <div class="stat-row">
           <div class="stat-card">
-            <strong>Station 1 (Coin: Warner's Forced Choice)</strong>
+            <strong>Station 1 (Coin: Two-Coin Forced Response)</strong>
+            <code>P(Y=Yes | X=Yes)=0.75; P(Y=Yes | X=No)=0.25</code>
             <code>P(Y=Yes) = 0.5&pi; + 0.25</code>
             <code>Inversion: &pi;&#770; = 2 &times; (P&#770; - 0.25)</code>
             <code>Privacy: &epsilon; = ln(0.75 / 0.25) = ln(3) &asymp; 1.10</code>
           </div>
           <div class="stat-card">
-            <strong>Station 2 (Die: Asymmetric Perturbation)</strong>
+            <strong>Station 2 (Die: Die-Based Forced Response)</strong>
+            <code>P(Y=Yes | X=Yes)=5/6; P(Y=Yes | X=No)=1/6</code>
             <code>P(Y=Yes) = (4/6)&pi; + 1/6</code>
             <code>Inversion: &pi;&#770; = (6P&#770; - 1) / 4</code>
             <code>Privacy: &epsilon; = ln((5/6) / (1/6)) = ln(5) &asymp; 1.61</code>
           </div>
           <div class="stat-card">
-            <strong>Station 3 (Spinner: Complementary Inversion)</strong>
+            <strong>Station 3 (Spinner: Warner Complementary Question)</strong>
+            <code>P(Y=Yes | X=Yes)=0.75; P(Y=Yes | X=No)=0.25</code>
             <code>P(Y=Yes) = 0.75&pi; + 0.25(1-&pi;) = 0.5&pi; + 0.25</code>
             <code>Inversion: &pi;&#770; = 2 &times; (P&#770; - 0.25)</code>
             <code>Privacy: &epsilon; = ln(0.75 / 0.25) = ln(3) &asymp; 1.10</code>
@@ -330,31 +377,84 @@
   </div>
 
   <script>
+    const MQTT_SCRIPT_URL = 'https://unpkg.com/mqtt@5.15.2/dist/mqtt.min.js';
+    const MQTT_BROKER_URL = 'wss://broker.emqx.io:8084/mqtt';
     let currentStation = 1;
+    let interactionToken = 0;
+    let submissionLocked = false;
+    const comparisonQuestion = 'Have you ever worked through the entire night without sleeping to meet an academic deadline?';
     const questions = {
-      1: "Do you prefer working entirely alone on your research rather than in a collaborative team?",
-      2: "Should the development of advanced artificial intelligence models be permanently halted?",
-      3: "Have you ever worked through the entire night without sleeping to meet an academic deadline?"
+      1: comparisonQuestion,
+      2: comparisonQuestion,
+      3: comparisonQuestion
     };
 
+    function emptyData() {
+      return {
+        s1: { n: 0, yes: 0 },
+        s2: { n: 0, yes: 0 },
+        s3: { n: 0, yes: 0 }
+      };
+    }
+
+    function secureRandomUint32() {
+      if (!window.crypto || !window.crypto.getRandomValues) {
+        throw new Error('This browser does not provide a secure random-number generator.');
+      }
+      const values = new Uint32Array(1);
+      window.crypto.getRandomValues(values);
+      return values[0];
+    }
+
+    function randomInt(maxExclusive) {
+      if (!Number.isInteger(maxExclusive) || maxExclusive <= 0) {
+        throw new RangeError('maxExclusive must be a positive integer.');
+      }
+      const range = 0x100000000;
+      const limit = Math.floor(range / maxExclusive) * maxExclusive;
+      let value;
+      do {
+        value = secureRandomUint32();
+      } while (value >= limit);
+      return value % maxExclusive;
+    }
+
+    function randomBoolean() {
+      return randomInt(2) === 0;
+    }
+
+    function secureClientId() {
+      const bytes = new Uint8Array(8);
+      window.crypto.getRandomValues(bytes);
+      return 'ldp_' + Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+
     // 1. SELECT STATION
-    function selectStation(n) {
-      currentStation = n;
-      document.querySelectorAll('.station-card').forEach((c, i) => {
-        c.classList.toggle('active', i + 1 === n);
+    function selectStation(station) {
+      if (![1, 2, 3].includes(station)) return;
+      currentStation = station;
+      document.querySelectorAll('.station-card').forEach((card, index) => {
+        const isActive = index + 1 === station;
+        card.classList.toggle('active', isActive);
+        card.setAttribute('aria-pressed', String(isActive));
       });
-      document.getElementById('flow-s1').style.display = n === 1 ? 'block' : 'none';
-      document.getElementById('flow-s2').style.display = n === 2 ? 'block' : 'none';
-      document.getElementById('flow-s3').style.display = n === 3 ? 'block' : 'none';
+      document.getElementById('flow-s1').style.display = station === 1 ? 'block' : 'none';
+      document.getElementById('flow-s2').style.display = station === 2 ? 'block' : 'none';
+      document.getElementById('flow-s3').style.display = station === 3 ? 'block' : 'none';
       resetWorkpanel();
     }
 
     function resetWorkpanel() {
+      interactionToken += 1;
+      submissionLocked = false;
       document.getElementById('questionBox').classList.remove('show');
       document.getElementById('coin2Box').style.display = 'none';
       document.getElementById('btnCoin1').disabled = false;
       document.getElementById('btnCoin2').disabled = false;
-      document.getElementById('submitFeedback').innerText = '';
+      document.getElementById('btnDie').disabled = false;
+      document.getElementById('btnSpinner').disabled = false;
+      document.getElementById('submitButton').disabled = false;
+      document.getElementById('submitFeedback').textContent = '';
       document.getElementById('radioYes').checked = false;
       document.getElementById('radioNo').checked = false;
       document.getElementById('radioYes').disabled = false;
@@ -363,28 +463,30 @@
 
     // 2. STATION 1: COIN FLOW
     function flipCoin1() {
-      const c1 = document.getElementById('coin1');
-      const msg = document.getElementById('coin1Msg');
-      const btn = document.getElementById('btnCoin1');
-      btn.disabled = true;
-      c1.classList.add('flipping');
-      msg.innerHTML = "Flipping first coin...";
+      const token = interactionToken;
+      const coin = document.getElementById('coin1');
+      const message = document.getElementById('coin1Msg');
+      const button = document.getElementById('btnCoin1');
+      button.disabled = true;
+      coin.classList.add('flipping');
+      message.textContent = 'Flipping first coin...';
 
       setTimeout(() => {
-        c1.classList.remove('flipping');
-        const isHeads = Math.random() < 0.5;
+        if (token !== interactionToken || currentStation !== 1) return;
+        coin.classList.remove('flipping');
+        const isHeads = randomBoolean();
 
         if (isHeads) {
-          msg.innerHTML = `<strong>First flip: HEADS!</strong><br><span style="color:var(--green)">No second coin needed.</span> You are on the truthful path.`;
+          message.innerHTML = '<strong>First flip: HEADS!</strong><br><span style="color:var(--green)">No second coin needed.</span> You are on the truthful path.';
           document.getElementById('coin2Box').style.display = 'none';
           showQuestionWithCompliance(
             1,
-            "truth",
-            "Protocol-Compliant Answer: Your Honest Truth",
-            "Coin 1 landed HEADS. The protocol requires you to answer TRUTHFULLY (either 'Yes' or 'No' according to your genuine belief)."
+            'truth',
+            'Protocol-Compliant Answer: Your Honest Truth',
+            'Coin 1 landed HEADS. Select Yes or No according to your genuine answer.'
           );
         } else {
-          msg.innerHTML = `<strong>First flip: TAILS!</strong><br><span style="color:var(--gold)">Second coin required.</span> Flip Coin 2 to generate noise.`;
+          message.innerHTML = '<strong>First flip: TAILS!</strong><br><span style="color:var(--gold)">Second coin required.</span> Flip Coin 2 to generate noise.';
           document.getElementById('coin2Box').style.display = 'flex';
           document.getElementById('questionBox').classList.remove('show');
         }
@@ -392,66 +494,71 @@
     }
 
     function flipCoin2() {
-      const c2 = document.getElementById('coin2');
-      const msg = document.getElementById('coin1Msg');
-      const btn = document.getElementById('btnCoin2');
-      btn.disabled = true;
-      c2.classList.add('flipping');
+      const token = interactionToken;
+      const coin = document.getElementById('coin2');
+      const message = document.getElementById('coin1Msg');
+      const button = document.getElementById('btnCoin2');
+      button.disabled = true;
+      coin.classList.add('flipping');
 
       setTimeout(() => {
-        c2.classList.remove('flipping');
-        const isHeads = Math.random() < 0.5;
-        const forced = isHeads ? 'Yes' : 'No';
+        if (token !== interactionToken || currentStation !== 1) return;
+        coin.classList.remove('flipping');
+        const isHeads = randomBoolean();
+        const forcedAnswer = isHeads ? 'Yes' : 'No';
 
-        msg.innerHTML = `<strong>Second flip: ${isHeads ? 'HEADS' : 'TAILS'}!</strong><br>Instruction: Submit forced <strong style="color:var(--accent)">"${forced}"</strong> for plausible deniability.`;
+        message.innerHTML = `<strong>Second flip: ${isHeads ? 'HEADS' : 'TAILS'}!</strong><br>Submit the forced answer <strong style="color:var(--accent)">"${forcedAnswer}"</strong>.`;
         showQuestionWithCompliance(
           1,
-          "noise",
-          `Protocol-Compliant Answer: MUST SUBMIT "${forced.toUpperCase()}"`,
-          `Coin 1 was TAILS, and Coin 2 was ${isHeads ? 'HEADS' : 'TAILS'}. To protect your privacy, you MUST submit "${forced}", regardless of your real opinion.`,
-          forced
+          'noise',
+          `Protocol-Compliant Answer: MUST SUBMIT "${forcedAnswer.toUpperCase()}"`,
+          `Coin 1 was TAILS and Coin 2 was ${isHeads ? 'HEADS' : 'TAILS'}. Submit "${forcedAnswer}" regardless of your true answer.`,
+          forcedAnswer
         );
       }, 500);
     }
 
     // 3. STATION 2: DIE FLOW
     const pips = { 1:[5], 2:[1,9], 3:[1,5,9], 4:[1,3,7,9], 5:[1,3,5,7,9], 6:[1,3,4,6,7,9] };
-    function renderDie(val) {
-      for (let i = 1; i <= 9; i++) document.getElementById('p' + i).style.visibility = 'hidden';
-      pips[val].forEach(p => document.getElementById('p' + p).style.visibility = 'visible');
+    function renderDie(value) {
+      for (let index = 1; index <= 9; index += 1) {
+        document.getElementById('p' + index).style.visibility = 'hidden';
+      }
+      pips[value].forEach(position => {
+        document.getElementById('p' + position).style.visibility = 'visible';
+      });
     }
-    renderDie(1);
 
     function rollDieAction() {
-      const msg = document.getElementById('dieMsg');
-      const roll = Math.floor(Math.random() * 6) + 1;
+      const message = document.getElementById('dieMsg');
+      const roll = randomInt(6) + 1;
       renderDie(roll);
 
       if (roll <= 4) {
-        msg.innerHTML = `<strong>Rolled ${roll} (1–4):</strong> Answer truthfully.`;
+        message.innerHTML = `<strong>Rolled ${roll} (1–4):</strong> Answer truthfully.`;
         showQuestionWithCompliance(
           2,
-          "truth",
-          "Protocol-Compliant Answer: Your Honest Truth",
-          `You rolled ${roll} (range 1–4). The protocol mandates answering TRUTHFULLY ('Yes' or 'No').`
+          'truth',
+          'Protocol-Compliant Answer: Your Honest Truth',
+          `You rolled ${roll}. Select Yes or No according to your genuine answer.`
         );
       } else if (roll === 5) {
-        msg.innerHTML = `<strong>Rolled 5:</strong> Forced to answer <strong>YES</strong>.`;
+        message.innerHTML = '<strong>Rolled 5:</strong> Forced to answer <strong>YES</strong>.';
         showQuestionWithCompliance(
           2,
-          "noise",
+          'noise',
           'Protocol-Compliant Answer: MUST SUBMIT "YES"',
-          'You rolled a 5. The protocol mandates transmitting "Yes" as noise injection.',
-          "Yes"
+          'You rolled 5. Submit "Yes" regardless of your true answer.',
+          'Yes'
         );
       } else {
-        msg.innerHTML = `<strong>Rolled 6:</strong> Forced to answer <strong>NO</strong>.`;
+        message.innerHTML = '<strong>Rolled 6:</strong> Forced to answer <strong>NO</strong>.';
         showQuestionWithCompliance(
           2,
-          "noise",
+          'noise',
           'Protocol-Compliant Answer: MUST SUBMIT "NO"',
-          'You rolled a 6. The protocol mandates transmitting "No" as noise injection.',
-          "No"
+          'You rolled 6. Submit "No" regardless of your true answer.',
+          'No'
         );
       }
     }
@@ -459,62 +566,70 @@
     // 4. STATION 3: SPINNER FLOW
     let spinDeg = 0;
     function spinWheelAction() {
-      const msg = document.getElementById('spinMsg');
+      const token = interactionToken;
+      const message = document.getElementById('spinMsg');
       const wheel = document.getElementById('spinner');
-      spinDeg += 1080 + Math.floor(Math.random() * 360);
+      const button = document.getElementById('btnSpinner');
+      const landingAngle = randomInt(360);
+      const targetRemainder = (360 - landingAngle) % 360;
+      const currentRemainder = ((spinDeg % 360) + 360) % 360;
+      const adjustment = (targetRemainder - currentRemainder + 360) % 360;
+      const isGreen = landingAngle < 270;
+
+      button.disabled = true;
+      spinDeg += 1080 + adjustment;
       wheel.style.transform = `rotate(${spinDeg}deg)`;
 
       setTimeout(() => {
-        const effective = (360 - (spinDeg % 360)) % 360;
-        const isGreen = effective < 270;
+        if (token !== interactionToken || currentStation !== 3) return;
+        button.disabled = false;
 
         if (isGreen) {
-          msg.innerHTML = `<strong>Landed on GREEN (75%):</strong> Answer truthfully.`;
+          message.innerHTML = '<strong>Landed on GREEN (75%):</strong> Answer truthfully.';
           showQuestionWithCompliance(
             3,
-            "truth",
-            "Protocol-Compliant Answer: Your Honest Truth",
-            "Arrow landed on Green. The protocol mandates reporting your HONEST opinion."
+            'truth',
+            'Protocol-Compliant Answer: Your Honest Truth',
+            'The arrow landed on Green. Select Yes or No according to your genuine answer.'
           );
         } else {
-          msg.innerHTML = `<strong>Landed on RED (25%):</strong> Answer the OPPOSITE (negated).`;
+          message.innerHTML = '<strong>Landed on RED (25%):</strong> Answer the OPPOSITE of your true answer.';
           showQuestionWithCompliance(
             3,
-            "negate",
-            "Protocol-Compliant Answer: INVERTED (OPPOSITE OF TRUTH)",
-            "Arrow landed on Red. If your real answer is Yes, select NO. If your real answer is No, select YES."
+            'negate',
+            'Protocol-Compliant Answer: OPPOSITE OF YOUR TRUE ANSWER',
+            'The arrow landed on Red. If your true answer is Yes, select No; if it is No, select Yes.'
           );
         }
       }, 1300);
     }
 
     // PROTOCOL COMPLIANCE HELPER
-    function showQuestionWithCompliance(stId, mode, title, detail, forceVal = null) {
+    function showQuestionWithCompliance(station, mode, title, detail, forcedAnswer = null) {
       const box = document.getElementById('questionBox');
       const verdict = document.getElementById('protocolVerdict');
-      const vTitle = document.getElementById('verdictTitle');
-      const vDetail = document.getElementById('verdictDetail');
+      const yesRadio = document.getElementById('radioYes');
+      const noRadio = document.getElementById('radioNo');
 
-      verdict.className = "protocol-verdict-box verdict-" + mode;
-      vTitle.innerText = title;
-      vDetail.innerText = detail;
+      submissionLocked = false;
+      verdict.className = 'protocol-verdict-box verdict-' + mode;
+      document.getElementById('verdictTitle').textContent = title;
+      document.getElementById('verdictDetail').textContent = detail;
+      document.getElementById('qTitle').textContent = `Question for Station ${station}`;
+      document.getElementById('qText').textContent = `"${questions[station]}"`;
+      document.getElementById('submitButton').disabled = false;
+      document.getElementById('submitFeedback').textContent = '';
 
-      document.getElementById('qTitle').innerText = `Question for Station ${stId}`;
-      document.getElementById('qText').innerText = `"${questions[stId]}"`;
-
-      const rY = document.getElementById('radioYes');
-      const rN = document.getElementById('radioNo');
-
-      if (forceVal) {
-        rY.checked = (forceVal === 'Yes');
-        rN.checked = (forceVal === 'No');
-        rY.disabled = true;
-        rN.disabled = true;
+      if (forcedAnswer) {
+        yesRadio.checked = forcedAnswer === 'Yes';
+        noRadio.checked = forcedAnswer === 'No';
+        yesRadio.disabled = true;
+        noRadio.disabled = true;
       } else {
-        rY.checked = false;
-        rN.checked = false;
-        rY.disabled = false;
-        rN.disabled = false;
+        yesRadio.checked = false;
+        noRadio.checked = false;
+        yesRadio.disabled = false;
+        noRadio.disabled = false;
       }
 
       box.classList.add('show');
@@ -522,112 +637,262 @@
 
     // 5. LIVE WEBSOCKET AGGREGATOR
     let client = null;
-    let room = "class-lab";
-    let data = {
-      s1: { n: 0, yes: 0 },
-      s2: { n: 0, yes: 0 },
-      s3: { n: 0, yes: 0 }
-    };
+    let room = '';
+    let sharedMode = false;
+    let mqttLoadPromise = null;
+    let data = emptyData();
 
-    function connectBroker() {
+    function setStatus(message, kind) {
       const badge = document.getElementById('statusBadge');
-      client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
-        clientId: 'ldp_' + Math.random().toString(16).substr(2, 8),
-        clean: true
+      badge.className = `badge badge-${kind}`;
+      badge.textContent = `● ${message}`;
+    }
+
+    function loadMqttLibrary() {
+      if (window.mqtt) return Promise.resolve(window.mqtt);
+      if (mqttLoadPromise) return mqttLoadPromise;
+
+      mqttLoadPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = MQTT_SCRIPT_URL;
+        script.async = true;
+        script.onload = () => resolve(window.mqtt);
+        script.onerror = () => reject(new Error('Could not load the shared-room library.'));
+        document.head.appendChild(script);
+      }).catch(error => {
+        mqttLoadPromise = null;
+        throw error;
       });
 
-      client.on('connect', () => {
-        badge.className = 'badge badge-on';
-        badge.innerHTML = '&#9679; Connected to Room';
-        client.subscribe(`ldp_lab/${room}/feed`);
-      });
+      return mqttLoadPromise;
+    }
 
-      client.on('message', (t, payload) => {
-        try {
-          const msg = JSON.parse(payload.toString());
-          if (msg.type === 'vote') {
-            data[`s${msg.station}`].n++;
-            if (msg.answer === 'Yes') data[`s${msg.station}`].yes++;
-            updateUI();
-          } else if (msg.type === 'reset') {
-            data = { s1: { n: 0, yes: 0 }, s2: { n: 0, yes: 0 }, s3: { n: 0, yes: 0 } };
-            updateUI();
+    function isValidRoomCode(value) {
+      return /^[a-z0-9][a-z0-9_-]{2,31}$/.test(value);
+    }
+
+    async function joinRoom() {
+      const input = document.getElementById('roomInput');
+      const requestedRoom = input.value.trim().toLowerCase();
+      if (!isValidRoomCode(requestedRoom)) {
+        alert('Use 3–32 lowercase letters, numbers, hyphens, or underscores. The first character must be a letter or number.');
+        input.focus();
+        return;
+      }
+
+      input.value = requestedRoom;
+      setStatus('Loading shared-room support...', 'local');
+      try {
+        await loadMqttLibrary();
+        connectBroker(requestedRoom);
+      } catch (error) {
+        useLocalMode();
+        alert(`${error.message} The lab remains available in local-only mode.`);
+      }
+    }
+
+    function connectBroker(requestedRoom) {
+      if (client) {
+        client.end(true);
+        client = null;
+      }
+
+      room = requestedRoom;
+      sharedMode = false;
+      data = emptyData();
+      updateUI();
+      setStatus(`Connecting to ${room}...`, 'local');
+
+      const activeClient = window.mqtt.connect(MQTT_BROKER_URL, {
+        clientId: secureClientId(),
+        clean: true,
+        connectTimeout: 8000,
+        reconnectPeriod: 3000
+      });
+      client = activeClient;
+
+      activeClient.on('connect', () => {
+        if (activeClient !== client) return;
+        activeClient.subscribe(`ldp_lab/${room}/feed`, { qos: 0 }, error => {
+          if (activeClient !== client) return;
+          if (error) {
+            sharedMode = false;
+            setStatus('Subscription failed; using local mode', 'off');
+            return;
           }
-        } catch(e) {}
+          sharedMode = true;
+          setStatus(`Connected to ${room}`, 'on');
+        });
       });
 
-      client.on('offline', () => {
-        badge.className = 'badge badge-off';
-        badge.innerHTML = '&#9679; Disconnected';
+      activeClient.on('message', (topic, payload) => {
+        if (activeClient !== client) return;
+        if (topic !== `ldp_lab/${room}/feed`) return;
+        try {
+          const message = JSON.parse(payload.toString());
+          const station = Number(message.station);
+          if (message.type !== 'vote' || ![1, 2, 3].includes(station) || !['Yes', 'No'].includes(message.answer)) return;
+          recordVote(station, message.answer);
+        } catch (error) {
+          console.warn('Ignored malformed classroom message.', error);
+        }
+      });
+
+      activeClient.on('offline', () => {
+        if (activeClient !== client) return;
+        sharedMode = false;
+        setStatus('Connection lost; responses stay local', 'off');
+      });
+
+      activeClient.on('close', () => {
+        if (activeClient !== client) return;
+        if (!sharedMode && room) setStatus(`Reconnecting to ${room}...`, 'off');
+      });
+
+      activeClient.on('error', error => {
+        if (activeClient !== client) return;
+        sharedMode = false;
+        setStatus('Shared-room error; responses stay local', 'off');
+        console.warn('MQTT connection error.', error);
       });
     }
 
-    function joinRoom() {
-      const newRoom = document.getElementById('roomInput').value.trim() || 'class-lab';
-      if (client && client.connected) {
-        client.unsubscribe(`ldp_lab/${room}/feed`);
+    function useLocalMode() {
+      if (client) {
+        client.end(true);
+        client = null;
       }
-      room = newRoom;
-      data = { s1: { n: 0, yes: 0 }, s2: { n: 0, yes: 0 }, s3: { n: 0, yes: 0 } };
+      room = '';
+      sharedMode = false;
+      setStatus('Local-only mode', 'local');
+    }
+
+    function recordVote(station, answer) {
+      const stationData = data[`s${station}`];
+      stationData.n += 1;
+      if (answer === 'Yes') stationData.yes += 1;
       updateUI();
-      if (client && client.connected) client.subscribe(`ldp_lab/${room}/feed`);
     }
 
     function submitAnswer() {
+      if (submissionLocked) return;
       const selected = document.querySelector('input[name="ans"]:checked');
       if (!selected) {
-        alert("Please select Yes or No.");
+        alert('Please select Yes or No.');
         return;
       }
-      const ans = selected.value;
-      const feedback = document.getElementById('submitFeedback');
 
-      const payload = JSON.stringify({ type: 'vote', station: currentStation, answer: ans });
-      if (client && client.connected) {
-        client.publish(`ldp_lab/${room}/feed`, payload);
-        feedback.style.color = "var(--green)";
-        feedback.innerText = "Transmitted! Your protocol-compliant response has been recorded.";
+      const answer = selected.value;
+      const feedback = document.getElementById('submitFeedback');
+      const submitButton = document.getElementById('submitButton');
+      submissionLocked = true;
+      submitButton.disabled = true;
+
+      if (sharedMode && client && client.connected) {
+        const payload = JSON.stringify({ type: 'vote', station: currentStation, answer });
+        client.publish(`ldp_lab/${room}/feed`, payload, { qos: 0 }, error => {
+          if (error) {
+            submissionLocked = false;
+            submitButton.disabled = false;
+            feedback.style.color = 'var(--red)';
+            feedback.textContent = 'Transmission failed. Try again or switch to local-only mode.';
+            return;
+          }
+          feedback.style.color = 'var(--green)';
+          feedback.textContent = 'Randomized response sent to the shared room. Select a station to run the protocol again.';
+        });
+      } else {
+        recordVote(currentStation, answer);
+        feedback.style.color = 'var(--green)';
+        feedback.textContent = 'Randomized response recorded in this browser only. Select a station to run the protocol again.';
       }
+
+      document.getElementById('radioYes').disabled = true;
+      document.getElementById('radioNo').disabled = true;
     }
 
     function resetData() {
-      if (!confirm("Reset all classroom submissions?")) return;
-      if (client && client.connected) {
-        client.publish(`ldp_lab/${room}/feed`, JSON.stringify({ type: 'reset' }));
-      }
+      if (!confirm('Reset the statistics shown in this browser? Other connected dashboards will not be changed.')) return;
+      data = emptyData();
+      updateUI();
+      const feedback = document.getElementById('submitFeedback');
+      feedback.style.color = 'var(--muted)';
+      feedback.textContent = 'This browser’s dashboard has been reset.';
     }
 
     // STATISTICAL INVERSION & LIVE STEP-BY-STEP ARITHMETIC
-    function updateUI() {
-      const total = data.s1.n + data.s2.n + data.s3.n;
-      document.getElementById('totalSubs').innerText = total;
-
-      // Station 1: Coin -> pi = 2 * (P(Y) - 0.25)
-      const p1 = data.s1.n > 0 ? data.s1.yes / data.s1.n : 0;
-      const pi1 = Math.max(0, Math.min(1, 2 * (p1 - 0.25)));
-      document.getElementById('cnt-s1').innerText = `${data.s1.yes} / ${data.s1.n}`;
-      document.getElementById('obs-s1').innerText = (p1 * 100).toFixed(1) + '%';
-      document.getElementById('math-s1').innerText = `2 × (${p1.toFixed(3)} - 0.25)`;
-      document.getElementById('rec-s1').innerText = (pi1 * 100).toFixed(1) + '%';
-
-      // Station 2: Die -> pi = (6 * P(Y) - 1) / 4
-      const p2 = data.s2.n > 0 ? data.s2.yes / data.s2.n : 0;
-      const pi2 = Math.max(0, Math.min(1, (6 * p2 - 1) / 4));
-      document.getElementById('cnt-s2').innerText = `${data.s2.yes} / ${data.s2.n}`;
-      document.getElementById('obs-s2').innerText = (p2 * 100).toFixed(1) + '%';
-      document.getElementById('math-s2').innerText = `(6 × ${p2.toFixed(3)} - 1) / 4`;
-      document.getElementById('rec-s2').innerText = (pi2 * 100).toFixed(1) + '%';
-
-      // Station 3: Spinner -> pi = 2 * (P(Y) - 0.25)
-      const p3 = data.s3.n > 0 ? data.s3.yes / data.s3.n : 0;
-      const pi3 = Math.max(0, Math.min(1, 2 * (p3 - 0.25)));
-      document.getElementById('cnt-s3').innerText = `${data.s3.yes} / ${data.s3.n}`;
-      document.getElementById('obs-s3').innerText = (p3 * 100).toFixed(1) + '%';
-      document.getElementById('math-s3').innerText = `2 × (${p3.toFixed(3)} - 0.25)`;
-      document.getElementById('rec-s3').innerText = (pi3 * 100).toFixed(1) + '%';
+    function clamp(value, minimum, maximum) {
+      return Math.max(minimum, Math.min(maximum, value));
     }
 
-    window.onload = connectBroker;
+    function formatPercent(value) {
+      return `${(value * 100).toFixed(1).replace('-', '−')}%`;
+    }
+
+    function wilsonInterval(successes, trials, z = 1.96) {
+      const proportion = successes / trials;
+      const zSquared = z * z;
+      const denominator = 1 + zSquared / trials;
+      const centre = (proportion + zSquared / (2 * trials)) / denominator;
+      const margin = z * Math.sqrt(
+        (proportion * (1 - proportion) / trials) + (zSquared / (4 * trials * trials))
+      ) / denominator;
+      return [Math.max(0, centre - margin), Math.min(1, centre + margin)];
+    }
+
+    function updateStationUI(station, stationData, transform, formula) {
+      document.getElementById(`cnt-s${station}`).textContent = `${stationData.yes} / ${stationData.n}`;
+      const observedCell = document.getElementById(`obs-s${station}`);
+      const formulaCell = document.getElementById(`math-s${station}`);
+      const reconstructedCell = document.getElementById(`rec-s${station}`);
+
+      if (stationData.n === 0) {
+        observedCell.textContent = '—';
+        formulaCell.textContent = 'Waiting for submissions';
+        reconstructedCell.innerHTML = '—<span class="estimate-note">Estimate undefined when n = 0</span>';
+        return;
+      }
+
+      const observed = stationData.yes / stationData.n;
+      const rawEstimate = transform(observed);
+      const feasibleEstimate = clamp(rawEstimate, 0, 1);
+      const [observedLow, observedHigh] = wilsonInterval(stationData.yes, stationData.n);
+      const intervalLow = clamp(transform(observedLow), 0, 1);
+      const intervalHigh = clamp(transform(observedHigh), 0, 1);
+
+      observedCell.textContent = formatPercent(observed);
+      formulaCell.textContent = formula(observed);
+      reconstructedCell.innerHTML = `${formatPercent(rawEstimate)}<span class="estimate-note">Feasible display: ${formatPercent(feasibleEstimate)} · 95% CI: ${formatPercent(intervalLow)}–${formatPercent(intervalHigh)}</span>`;
+    }
+
+    function updateUI() {
+      const total = data.s1.n + data.s2.n + data.s3.n;
+      document.getElementById('totalSubs').textContent = total;
+
+      updateStationUI(
+        1,
+        data.s1,
+        observed => 2 * (observed - 0.25),
+        observed => `2 × (${observed.toFixed(3)} - 0.25)`
+      );
+      updateStationUI(
+        2,
+        data.s2,
+        observed => (6 * observed - 1) / 4,
+        observed => `(6 × ${observed.toFixed(3)} - 1) / 4`
+      );
+      updateStationUI(
+        3,
+        data.s3,
+        observed => 2 * (observed - 0.25),
+        observed => `2 × (${observed.toFixed(3)} - 0.25)`
+      );
+    }
+
+    window.addEventListener('load', () => {
+      renderDie(1);
+      updateUI();
+    });
   </script>
 </body>
 </html>
