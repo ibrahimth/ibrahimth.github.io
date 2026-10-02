@@ -37,6 +37,10 @@ export default defineConfig({
           __dirname,
           'COE526_Data_Privacy/COE526-L05-Mondrian-Greedy-Partitioning-Lab.html',
         ),
+        coe526L06: path.resolve(
+          __dirname,
+          'COE526_Data_Privacy/Randomized_Response.html',
+        ),
       },
     },
   },
