@@ -58,13 +58,13 @@
     .station-card.active { border-color: var(--accent); background: #1c2b4a; box-shadow: 0 0 15px rgba(56, 189, 248, 0.25); }
     .station-heading { display: block; font-size: 1.05rem; margin-bottom: 4px; font-weight: 700; }
     .station-description { display: block; font-size: 0.8rem; color: var(--muted); }
+    .station-meta { display: block; margin-top: 8px; font-size: 0.72rem; color: var(--accent); }
 
     /* Workspace */
     .work-panel {
       background: var(--card); border: 1px solid var(--border); border-radius: 14px;
       padding: 24px; margin-bottom: 24px; display: flex; flex-direction: column; align-items: center;
     }
-
     /* Device Visuals */
     .device-row { display: flex; gap: 24px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
     .device-box {
@@ -174,7 +174,7 @@
       <div id="statusBadge" class="badge badge-local" role="status" aria-live="polite">&#9679; Local-only mode</div>
     </div>
     <div class="privacy-notice">
-      <strong>Privacy and classroom notice:</strong> Randomization occurs in this browser. In local-only mode, no response is transmitted.
+      <strong>Privacy and classroom notice:</strong> Randomization occurs in this browser using the Web Crypto API. Integer draws use rejection sampling, so no outcome receives extra probability from modulo bias. In local-only mode, no response is transmitted.
       Joining a shared room loads MQTT.js and sends only the station number and randomized Yes/No output through a public demonstration broker.
       Use a unique classroom code, never enter personal information, and have every device join before collection because earlier submissions are not stored or replayed.
     </div>
@@ -185,14 +185,17 @@
       <button type="button" class="station-card active" id="card-s1" onclick="selectStation(1)" aria-pressed="true">
         <span class="station-heading">Station 1: Fair Coin</span>
         <span class="station-description">Two-Coin Forced Response (&epsilon; &asymp; 1.10)</span>
+        <span class="station-meta">Each flip is 50/50; about half of students will need Coin 2</span>
       </button>
       <button type="button" class="station-card" id="card-s2" onclick="selectStation(2)" aria-pressed="false">
         <span class="station-heading">Station 2: 6-Sided Die</span>
         <span class="station-description">Die-Based Forced Response (&epsilon; &asymp; 1.61)</span>
+        <span class="station-meta">Exact draws: each face has probability 1/6</span>
       </button>
       <button type="button" class="station-card" id="card-s3" onclick="selectStation(3)" aria-pressed="false">
         <span class="station-heading">Station 3: Spinner</span>
         <span class="station-description">Warner Complementary Question (&epsilon; &asymp; 1.10)</span>
+        <span class="station-meta">Exact draw: Green 3/4; Red 1/4</span>
       </button>
     </div>
 
@@ -216,6 +219,7 @@
         </div>
         <div id="coin1Msg" class="msg-banner">
           Flip the first coin in private. If Heads, answer truthfully. If Tails, flip the second coin to inject noise.
+          Each student has a 50% chance of needing the second flip, so a small class may not split exactly in half.
         </div>
       </div>
 
@@ -570,11 +574,19 @@
       const message = document.getElementById('spinMsg');
       const wheel = document.getElementById('spinner');
       const button = document.getElementById('btnSpinner');
-      const landingAngle = randomInt(360);
+
+      // Choose among four equally likely protocol outcomes first. Three are
+      // Green and one is Red, making the mechanism exactly 3/4 versus 1/4.
+      const protocolOutcome = randomInt(4);
+      const isGreen = protocolOutcome < 3;
+
+      // Then choose a visual landing point inside the selected color sector.
+      // Keeping protocol selection separate from animation prevents rendering
+      // details or sector boundaries from changing the response probability.
+      const landingAngle = isGreen ? randomInt(270) : 270 + randomInt(90);
       const targetRemainder = (360 - landingAngle) % 360;
       const currentRemainder = ((spinDeg % 360) + 360) % 360;
       const adjustment = (targetRemainder - currentRemainder + 360) % 360;
-      const isGreen = landingAngle < 270;
 
       button.disabled = true;
       spinDeg += 1080 + adjustment;
