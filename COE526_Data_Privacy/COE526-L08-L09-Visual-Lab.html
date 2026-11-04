@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COE 526 · Differential Privacy, Step by Step</title>
+<meta name="description" content="Short visual walkthroughs of differential privacy for COE 526 Lectures 8 and 9. Play, pause, and change one thing.">
+<style>
+:root{--navy:#1b365d;--green:#00843d;--ink:#172b43;--muted:#60718a;--line:#dce4ec;--bg:#f4f7fa;--mint:#e8f5ed;--gold:#fff3d5;--red:#e56865;--teal:#0c9f9b;--blue:#617de1}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select{font:inherit}button,select{cursor:pointer}button{border:1px solid var(--line);border-radius:9px;background:white;color:var(--navy);font-weight:650;padding:10px 16px;transition:background .15s}button:hover:not(:disabled){background:#edf3f8}button:disabled{opacity:.35;cursor:default}button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #64a5df;outline-offset:3px}a{color:var(--navy)}.topbar{background:var(--navy);border-bottom:3px solid var(--green);color:#fff;padding:12px max(24px,calc((100vw - 1280px)/2));display:flex;gap:15px;align-items:center;justify-content:space-between;font-size:13px}.topbar a{color:#fff;text-decoration:none}.brand{font-weight:750;letter-spacing:.025em}.wrap{max-width:1280px;margin:auto;padding:28px 28px 24px}.lessonbar{display:flex;align-items:center;gap:14px;margin-bottom:27px}.lessonbar label{font-size:12px;font-weight:750;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}.lessonbar select{min-width:320px;border:1px solid #cbd7e2;background:white;padding:10px 35px 10px 13px;border-radius:9px;color:var(--navy);font-weight:650}.lessonbar .lesson-count{margin-left:auto;color:var(--muted);font-size:13px}.heading{display:flex;align-items:flex-start;gap:20px;justify-content:space-between;margin-bottom:23px}.eyebrow{text-transform:uppercase;font-size:11px;letter-spacing:.13em;color:var(--green);font-weight:800;margin-bottom:6px}h1{font-size:clamp(25px,3.2vw,38px);line-height:1.16;letter-spacing:-.025em;margin:0 0 9px}#subtitle{margin:0;color:var(--muted);font-size:15px}.badge{white-space:nowrap;border-radius:8px;background:#e7eef9;padding:10px 15px;color:var(--navy);font-size:13px;font-weight:700;margin-top:17px}.demo{border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 5px 24px #1b365d05}.viewbar{display:flex;align-items:center;min-height:62px;padding:11px 22px;border-bottom:1px solid var(--line);gap:12px}.view-label{font-size:12px;color:var(--muted)}.viewbar select{border:1px solid var(--line);padding:6px 10px;border-radius:7px;font-size:13px;color:var(--navy);background:white}.toggle{display:flex;gap:0}.toggle button{font-size:12px;padding:6px 12px;border-radius:0}.toggle button:first-child{border-radius:7px 0 0 7px}.toggle button:last-child{border-radius:0 7px 7px 0}.toggle button.active{background:var(--navy);color:#fff;border-color:var(--navy)}.viewbar .view-label:last-child{margin-left:auto}.scene{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(275px,1fr);min-height:426px}.plot{padding:12px 15px 0;display:flex;align-items:center;position:relative;min-width:0}.plot svg{width:100%;height:auto;display:block;overflow:visible}.aside{border-left:1px solid var(--line);padding:34px 30px 25px;display:flex;flex-direction:column;align-items:flex-start}.stepnum{font-size:11px;letter-spacing:.14em;font-weight:750;color:var(--green);margin-bottom:9px}.aside h2{font-size:25px;letter-spacing:-.025em;line-height:1.2;margin:0 0 15px}.caption{font-size:18px;line-height:1.55;margin:0;max-width:330px;min-height:84px}.result{font-size:25px;font-weight:700;color:var(--navy);margin:22px 0 9px;line-height:1.35;font-variant-numeric:tabular-nums;min-height:36px}.takeaway{font-size:13px;color:var(--muted);margin:0 0 21px;min-height:40px}.parameter{width:100%;margin-top:auto;border-top:1px solid var(--line);padding-top:16px}.parameter label{display:flex;justify-content:space-between;font-size:13px;font-weight:650;gap:10px}.parameter output{font-variant-numeric:tabular-nums;color:var(--green)}input[type=range]{width:100%;accent-color:var(--green);margin:14px 0 5px}.rangeends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.spacer{margin-top:auto}.steps{display:flex;padding:15px 20px;gap:6px;border-top:1px solid var(--line);background:#f9fbfd}.steps button{flex:1;min-width:0;padding:9px 6px;font-size:11px;line-height:1.25;font-weight:700;background:#edf1f6;border-color:transparent;color:var(--muted)}.steps button.current{background:var(--navy);color:white}.steps button.done{background:var(--mint);color:var(--green)}.controls{display:flex;align-items:center;gap:8px;margin:20px 0 18px}.primary{background:var(--navy);color:#fff;border-color:var(--navy);min-width:100px}.primary:hover:not(:disabled){background:#284c7d}.controls button{font-size:13px}.controls .reset{margin-left:5px}.controls .newrun{margin-left:auto}.controls .tip{font-size:12px;color:var(--muted);margin-left:6px}.why{border-top:1px solid var(--line);padding-top:13px;font-size:13px;color:var(--muted)}.why summary{cursor:pointer;color:var(--navy);font-weight:650;width:fit-content}.why[open] summary{margin-bottom:14px}.why-inner{max-width:950px;padding:0 0 8px}.why-inner p{margin:8px 0}.formula{background:#eaf0f6;border-radius:8px;padding:11px 14px;color:var(--navy);font:15px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.why-inner a{font-weight:600}.source{font-size:12px}.footer{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted);padding-top:21px}.mobile-hint{display:none}svg text{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}svg .moving{transition:cx .65s,cy .65s,x .65s,y .65s,fill .35s,opacity .35s}svg .soft{fill:#60718a;font-size:12px}svg .label{fill:#1b365d;font-size:14px;font-weight:650}svg .large{font-size:28px;font-weight:750;fill:#1b365d}svg .tiny{fill:#60718a;font-size:10px}.announce{position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden}.lesson-next{margin-left:auto!important}.no-motion *{transition:none!important;animation:none!important}@media(max-width:780px){.wrap{padding:19px 16px}.topbar{padding:12px 16px;font-size:11px}.lessonbar{flex-wrap:wrap;gap:8px;margin-bottom:20px}.lessonbar label{display:none}.lessonbar select{min-width:0;max-width:100%;flex:1;font-size:13px}.lessonbar .lesson-count{display:none}.heading{margin-bottom:18px}.badge{font-size:10px;padding:8px;margin-top:4px}.scene{grid-template-columns:1fr;min-height:0}.plot{padding:9px 10px 0}.aside{border-top:1px solid var(--line);border-left:0;padding:20px;display:grid;grid-template-columns:1fr auto;column-gap:18px}.stepnum,.aside h2,.caption,.takeaway{grid-column:1/-1}.aside h2{font-size:22px;margin-bottom:8px}.caption{font-size:17px;min-height:0;max-width:100%}.result{font-size:23px;margin:12px 0 7px;min-height:0;grid-column:1/-1}.takeaway{margin-bottom:12px;min-height:0}.parameter{grid-column:1/-1;padding-top:11px}.steps{padding:11px;gap:4px;flex-wrap:wrap}.steps button{min-width:25%;font-size:10px}.controls{gap:6px;flex-wrap:wrap}.controls button{padding:9px 12px}.controls .tip{display:none}.controls .newrun{margin-left:0}.viewbar{padding:9px 13px;min-height:51px}.viewbar .view-label{font-size:10px}.footer{font-size:10px;flex-wrap:wrap}.topbar span:last-child{display:none}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media print{.topbar,.lessonbar,.controls,.steps,.viewbar,.parameter,.footer{display:none}.wrap{padding:0}.demo{box-shadow:none}.why{display:block}.why-inner{display:block!important}}
+
+.calc{border:1px solid var(--line);border-radius:13px;background:white;margin:0 0 20px;overflow:hidden}.calc>summary{padding:13px 18px;color:var(--navy);font-size:14px;font-weight:750;cursor:pointer;background:#f9fbfd}.calc-header{padding:13px 18px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px}.calc-header select{padding:6px 10px;border:1px solid var(--line);border-radius:6px;color:var(--navy);background:#fff;font-size:12px}.calc-body{padding:12px 18px 17px}.calc-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(100px,.7fr);gap:18px;align-items:center;padding:13px 0;border-bottom:1px solid #e8edf3}.calc-row:last-child{border:0}.calc-row .eq-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:5px}.eq{font-family:Cambria,Georgia,serif;font-size:17px;line-height:1.55;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.eq-value{font-size:18px;font-weight:750;color:var(--green);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.calc-note{font-size:12px;color:var(--muted);margin:12px 0 0}.table-scroll{overflow-x:auto;max-height:320px;border:1px solid var(--line);border-radius:8px;margin-top:13px}table{width:100%;border-collapse:collapse;text-align:left;font-size:12px;font-variant-numeric:tabular-nums}th{background:#eef3f8;color:var(--navy);font-weight:700;position:sticky;top:0}td,th{padding:9px 12px;border-bottom:1px solid #e4ebf2;white-space:nowrap}tr:last-child td{border-bottom:0}.calc-detail{margin-top:12px;font-size:12px;color:var(--muted)}.calc-detail summary{cursor:pointer;color:var(--navy);font-weight:600}.calc-detail .formula{font-size:13px;margin-top:9px}.viewbar{flex-wrap:wrap}.viewbar label{font-size:12px;color:var(--muted)}.viewbar .dataset-select{margin-left:auto}.pace{font-size:12px;color:var(--muted);margin-left:5px}.pace select{padding:6px;border:1px solid var(--line);border-radius:6px;color:var(--navy);background:white}.coverage{font-size:12px;color:var(--muted);padding-top:14px}.coverage summary{cursor:pointer;color:var(--navy);font-weight:600}.coverage button{font-size:12px;padding:4px 8px}.topicjump{margin-left:auto;font-size:12px!important;padding:7px 12px!important}.why-inner table{margin:12px 0}.inputs-chips{font-size:13px;color:var(--navy);padding:10px 13px;background:#f2f6f9;border-radius:7px;line-height:1.9;overflow-wrap:anywhere}.calc-status{font-size:11px;color:var(--muted);margin-left:auto}
+@media(max-width:780px){.calc-row{grid-template-columns:1fr;gap:7px;padding:14px 0}.eq{font-size:16px}.eq-value{font-size:18px}.calc-row .eq-label{font-size:9px;margin-bottom:1px}.calc-header,.calc-body{padding-left:13px;padding-right:13px}.viewbar .dataset-select{margin-left:0}.pace{margin-left:auto}.calc-status{margin-left:0}.scene{min-height:0}.caption{min-height:0}.calc>summary{font-size:13px}.controls .lesson-next{margin-left:0!important}}
+
+</style>
+</head>
+<body>
+<div class="topbar"><a class="brand" href="https://ibrahimth.github.io/COE526_Data_Privacy/">COE 526 · DATA PRIVACY</a><span>Lectures 8 &amp; 9 · Visual lab</span><a href="https://ibrahimth.github.io/COE526_Data_Privacy/">← All labs</a></div>
+<main class="wrap">
+<div class="lessonbar"><label for="lesson">Explore</label><select id="lesson" aria-label="Choose a visual walkthrough"><optgroup label="LECTURE 8 · Differential Privacy II"><option value="definition">01 · Neighbors & ε</option><option value="sensitivity">02 · Sensitivity</option><option value="bounds">03 · Clipping, sums & means</option><option value="laplace">04 · Laplace: release, error & proof</option><option value="histogram">05 · Private histograms</option><option value="budget">06 · Composition & budget</option><option value="group">07 · Grouping & group privacy</option></optgroup><optgroup label="LECTURE 9 · Differential Privacy III"><option value="local">08 · Central versus local DP</option><option value="exponential">09 · The exponential mechanism</option><option value="noisymax">10 · Report noisy max</option><option value="kmeans">11 · Ordinary & private k-means</option><option value="recommend">12 · Private recommendations</option><option value="gaussian">13 · Approximate DP & Gaussian noise</option><option value="descent">14 · Gradient descent & SGD</option><option value="dpsgd">15 · DP-SGD</option><option value="audit">16 · Audit a privacy claim</option><option value="guide">17 · Choose a mechanism & research links</option></optgroup></select><span class="lesson-count" id="lessoncount"></span></div>
+<div class="heading"><div><div class="eyebrow" id="lecture"></div><h1 id="title"></h1><p id="subtitle"></p></div><div class="badge" id="badge"></div></div>
+<section class="demo" aria-label="Step-by-step visual walkthrough"><div class="viewbar" id="viewbar"></div><div class="scene"><div class="plot" id="plot"></div><aside class="aside"><div class="stepnum" id="stepnum"></div><h2 id="stagetitle"></h2><p class="caption" id="caption"></p><div class="result" id="result"></div><p class="takeaway" id="takeaway"></p><div class="parameter" id="parameter"></div></aside></div><nav class="steps" id="steps" aria-label="Animation steps"></nav></section>
+<div class="controls"><button class="primary" id="play" aria-label="Play animation">▶ Play</button><button id="prev" aria-label="Previous step">←</button><button id="next">Next →</button><button id="reset" class="reset">↺ Replay</button><label class="pace">Pace <select id="pace" aria-label="Animation pace"><option value="4200">Slow</option><option value="2100">Quick</option></select></label><button id="newrun" class="newrun">New draw</button><button id="nextlesson" class="lesson-next" hidden>Next idea →</button></div>
+<details class="calc" id="calculation" open><summary>Apply the equation · values update with the animation</summary><div class="calc-header" id="calccontext"></div><div class="calc-body" id="calcbody"></div></details>
+<details class="why" id="why"><summary>Why? · Formula and assumptions</summary><div class="why-inner" id="whycontent"></div></details>
+<details class="coverage"><summary>Lecture map · covered topics and slide references</summary><div id="coveragemap"></div></details>
+<div class="footer"><span>Synthetic teaching examples · Runs offline · No accounts or tracking</span><span>COE 526 · Lectures 8 &amp; 9</span></div>
+<p id="announcement" class="announce" aria-live="polite"></p>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), C=['#dd6664','#099d98','#617de1'], ink='#1b365d', muted='#60718a', grid='#e7edf3';
+const book='<a href="https://www.cis.upenn.edu/~aaroth/Papers/privacybook.pdf" target="_blank" rel="noopener">Dwork &amp; Roth (2014)</a>';
+const abadi='<a href="https://arxiv.org/abs/1607.00133" target="_blank" rel="noopener">Abadi et al. (2016), Algorithm 1</a>';
+const lessons={
+sensitivity:{title:'What can one person change?',subtitle:'Remove one person. Watch the answer change.',lecture:'Lecture 8 · Slides 10–15',labels:['Start with D','Remove one','Compare','Worst case'],stages:[['A small class','Count the students whose answer is “yes”.'],['One person leaves','Remove one “yes” record to create the neighboring dataset D′.'],['Compare the answers','The count changes by one.'],['Plan for any person','Calibrate noise to the largest possible change, not just this example.']]},
+laplace:{title:'The same count. A noisy answer.',subtitle:'Smaller ε spreads the possible answers farther apart.',lecture:'Lecture 8 · Slides 16–23',labels:['True answer','Noise scale','Draw noise','Release'],stages:[['Start with the count','The true answer is 3. Publishing it exactly can reveal one person.'],['Spread out the answers','Set the noise scale using sensitivity and ε.'],['Draw one offset','Pick a random value from the Laplace curve.'],['Publish the noisy count','Add the offset to 3. Release only the result.']]},
+budget:{title:'Who can affect each release?',subtitle:'Follow the people to find the privacy cost.',lecture:'Lecture 8 · Slides 25–37',labels:['Same people','Disjoint groups','Reuse output','A group'],stages:[['Same people: add the costs','One student can affect all three releases, so their costs add.'],['Disjoint people: take the largest','Each student belongs to one fixed group and affects one branch.'],['Reuse: no extra cost','Round an existing noisy answer using a public rule.'],['Four people: four times ε','A guarantee for one person becomes weaker for a group.']]},
+exponential:{title:'Favor the best. Leave a chance.',subtitle:'The exponential mechanism releases a choice.',lecture:'Lecture 9 · Slides 7–18',labels:['Count votes','Set chances','Draw','Release'],stages:[['Give each choice a score','Use the nationality counts from the lecture as utility scores.'],['Turn scores into chances','Higher scores get higher probabilities; every candidate keeps a chance.'],['Make one random choice','A random pointer selects one region of the probability strip.'],['Publish one name','The highest-scoring choice is favored, but is not guaranteed.']]},
+noisymax:{title:'Add noise. Report the winner.',subtitle:'A close runner-up can win after noise is added.',lecture:'Lecture 9 · Slides 20–22',labels:['Count votes','Add noise','Find maximum','Release name'],stages:[['Start with the votes','Alice leads Bob by only two votes.'],['Perturb every count','Add independent Laplace noise to each candidate’s count.'],['Compare noisy counts','Choose the candidate with the largest noisy count.'],['Publish one name','Release the winner. Keep the scores and noise internal.']]},
+kmeans:{title:'Watch private k-means',subtitle:'Same points. Same start. See what noise changes.',lecture:'Lecture 9 · Slides 24–28',labels:['Initialize','Assign','Noisy count','Noisy sum','Move centers','Output'],stages:[]},
+gaussian:{title:'Many answers. Two ways to add noise.',subtitle:'When one person affects many numbers, the norm matters.',lecture:'Lecture 9 · Slides 32–33',labels:['100 counts','Measure change','Compare noise','Draw offsets'],stages:[['One person affects 100 counts','Imagine one person adding 1 to every coordinate.'],['Measure the whole change','Laplace uses the L1 norm. Gaussian uses the L2 norm.'],['Calibrate the noise','At these settings, Gaussian noise has a smaller standard deviation.'],['Draw one offset per count','Add independent noise to each coordinate, then release the noisy vector.']]},
+dpsgd:{title:'Watch one private learning step',subtitle:'Limit each example’s influence before adding noise.',lecture:'Lecture 9 · Slides 40–42',labels:['Sample','Gradients','Clip','Add noise','Update'],stages:[['Sample a batch','Randomly select training examples for this step.'],['One arrow per example','Each arrow is one example’s gradient: its suggested change.'],['Limit long arrows','Clip each gradient to length at most C = 1.'],['Noise the sum','Add Gaussian noise to the sum of the clipped arrows.'],['Average and update','Divide by the batch size, then move the model against the noisy gradient.']]}
+};
+
+Object.assign(lessons,{
+definition:{title:'Two neighboring worlds',subtitle:'Change one record. Compare the possible outputs.',lecture:'Lecture 8 · Slides 3–8',labels:['Neighbors','Allowed changes','Privacy bound','Two directions'],stages:[['With and without one person','DP compares datasets that differ in one allowed record.'],['Count the allowed neighbors','The record domain and the adjacency rule determine the neighbors.'],['ε limits a probability ratio','Smaller ε makes the two output distributions harder to distinguish.'],['The bound works both ways','Swap D and D′: neither world may make an event too much more likely.']]},
+bounds:{title:'Bound the contribution first',subtitle:'A public cap makes sums and means analysable.',lecture:'Lecture 8 · Slides 13–14, 21, 23–24',labels:['Clip','Private sum','Private mean','Dataset size'],stages:[['Use a public age cap','Clip every age to [0, 100] before computing a statistic.'],['Noise a bounded sum','One added person can change the sum by at most 100.'],['A mean needs a denominator','For add/remove adjacency, privatize both the sum and count.'],['The same noise can matter less','Large totals make a fixed amount of noise smaller in relative terms.']]},
+histogram:{title:'One student. One bin.',subtitle:'Group records into disjoint bins, then perturb the counts.',lecture:'Lecture 8 · Slides 12–13, 35–36',labels:['Group records','Count bins','Add noise','Post-process'],stages:[['Group by major','Each student contributes to exactly one of three public bins.'],['Count the groups','Removing one student changes exactly one count.'],['Noise all three counts','The whole histogram has L1 sensitivity 1 under add/remove adjacency.'],['Round and clamp','A public rule can turn negative or fractional counts into nonnegative integers.']]},
+group:{title:'What if a whole group changes?',subtitle:'Follow one person at a time to get the group bound.',lecture:'Lecture 8 · Slide 37; Lecture 9 · Slide 14',labels:['One person','Change a group','Chain the bounds','Protect the group'],stages:[['Start with one-person privacy','An ε-DP mechanism bounds the effect of one person.'],['Remove the group','The two datasets now differ in c records.'],['Multiply one-person bounds','Chain c neighboring comparisons to get a cε group bound.'],['Choose a stronger individual guarantee','To give the whole group a target ε of 1, use individual ε = 1/c.']]},
+local:{title:'Where does the randomness happen?',subtitle:'The same ε can give very different errors.',lecture:'Lecture 9 · Slides 3–5; Lecture 8 · Slides 6–7',labels:['Randomize locally','Debias','Derive variance','Compare central'],stages:[['Each student randomizes','At ε = ln 3, a bit is reported truthfully with probability 3/4.'],['Undo the average bias','Subtract the expected false yes answers, then divide by p − q.'],['Add the independent variances','Every student adds randomness, so count error grows with √n.'],['A curator randomizes once','Central DP adds one noise value to the total. Local DP avoids a trusted curator.']]},
+recommend:{title:'From ratings to private statistics',subtitle:'The protected unit and public bounds determine the noise.',lecture:'Lecture 9 · Slides 29–31, 33',labels:['Ratings','Bound the mean','Noise a statistic','Covariance'],stages:[['Start with bounded ratings','Use five ratings between 1 and 5. The public rating count is fixed.'],['Replace one rating','Changing 1 to 5 alters the average by at most 4/n.'],['Privatize the global average','Calibrate Laplace noise to the sensitivity of the mean.'],['Related movies need a matrix','Covariance measures how two movies’ ratings vary together.']]},
+descent:{title:'See a learning update before DP',subtitle:'Predict, measure error, compute a gradient, move.',lecture:'Lecture 9 · Slides 34–39',labels:['Predict','Loss','Gradient','Update'],stages:[['Use a simple linear model','Predict y from one input x using a weight w.'],['Measure the error','Squared error gives the learning algorithm a quantity to reduce.'],['Compute a descent direction','Average gradients over the selected examples.'],['Take a small step','Subtract the learning rate times the gradient.']]},
+audit:{title:'Does the privacy claim fit the attack?',subtitle:'A successful attack can contradict a claimed privacy bound.',lecture:'Lecture 9 · Slide 43',labels:['Canaries','Attack rates','Lower bound','Check the claim'],stages:[['Insert secret canaries','In the lecture’s audit design, include each canary independently with probability 1/2.'],['Measure membership inference','An attack predicts which records were used in training.'],['Turn rates into a bound','The DP inequality limits how far TPR can exceed FPR.'],['Compare with the claim','A contradiction can reveal a broken implementation; passing cannot prove privacy.']]},
+guide:{title:'Choose by what you release',subtitle:'Connect the mechanisms to the final task.',lecture:'Lecture 9 · Slides 42, 44–47',labels:['Mechanism guide','Practical trade-offs','Research connections'],stages:[['Match output to mechanism','A number, a choice, and a model need different constructions.'],['Spend a finite budget carefully','Sensitivity, dataset size, repeated releases, and iteration count affect utility.'],['Connect to the lecture papers','Ask what is protected, where randomness is added, and how privacy is accounted.']]}
+});
+lessons.laplace.labels=['True answer','Noise scale','Draw noise','Release','Error bound','Why DP?'];
+lessons.laplace.stages.push(['Predict the error','With 95% probability, the Laplace error is at most b ln 20.'],['Compare the two densities','The density ratio stays within e^ε for every output, not just this draw.']);
+lessons.exponential.labels=['Score','Probabilities','Draw','Release','Why DP?'];
+lessons.exponential.stages.push(['Two factors make the bound','The score factor and the normalizing factor each cost at most e^(ε/2).']);
+lessons.budget.labels=['Same people','Disjoint groups','Reuse output','Split & repeat'];
+lessons.budget.stages[3]=['Split a total budget','Allocate ε across statistics; fresh repeated releases add their costs.'];
+
+const order=['definition', 'sensitivity', 'bounds', 'laplace', 'histogram', 'budget', 'group', 'local', 'exponential', 'noisymax', 'kmeans', 'recommend', 'gaussian', 'descent', 'dpsgd', 'audit', 'guide'];
+let key='kmeans',step=0,playing=false,timer=null,seed=526,epsilon=6,kPrivate=true,query='count',sigma=1,km=[],kmframes=[],pointSet=[],raf=null;
+let groupC=4,localFraction=.5,localN=10000,kmDataset='small',focusPoint=0,focusCluster=0,expCase='nationality',pace=4200,descentBatch='full',auditEpsilon=1;
+const thetaBefore=[.4,.6],learningRate=.1;
+let lapU=.8161,expU=.74,maxU=[.51,.95,.14,.94],sgU=[.73,.31],gaussU=[.63,.27,.41,.72];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const f=(x,d=1)=>Number(x).toFixed(d).replace(/\.0$/,'');
+const signed=(x,d=1)=>(x>=0?'+':'−')+f(Math.abs(x),d);
+function rng(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return(seed+.5)/4294967296;}
+function lap(b,u){const v=u-.5;return-b*Math.sign(v)*Math.log(1-2*Math.abs(v));}
+function normal(u,v){return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function txt(x,y,s,size=14,color=ink,anchor='start',weight=450){return `<text x="${x}" y="${y}" font-size="${size}" fill="${color}" text-anchor="${anchor}" font-weight="${weight}">${esc(s)}</text>`;}
+function line(x1,y1,x2,y2,color=grid,width=1,dash=''){return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${width}" ${dash?`stroke-dasharray="${dash}"`:''}/>`;}
+function rect(x,y,w,h,fill='#f0f4f8',r=9,stroke='none'){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}" stroke="${stroke}"/>`;}
+function circle(x,y,r,fill,stroke='none',width=1){return `<circle class="moving" cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${width}"/>`;}
+function arrow(x1,y1,x2,y2,color=ink,width=2){return line(x1,y1,x2,y2,color,width)+`<path d="M -7 -4 L 0 0 L -7 4" fill="none" stroke="${color}" stroke-width="${width}" transform="translate(${x2},${y2}) rotate(${Math.atan2(y2-y1,x2-x1)*180/Math.PI})"/>`;}
+function svg(s,description){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 410" role="img" aria-label="${esc(description)}"><title>${esc(description)}</title>${s}</svg>`;}
+function axes(x=55,y=40,w=550,h=290){let s='';for(let i=0;i<=5;i++){s+=line(x+i*w/5,y,x+i*w/5,y+h)+line(x,y+i*h/5,x+w,y+i*h/5);}return s;}
+function person(x,y,color,label,removed=false){return `<g opacity="${removed?.18:1}">${circle(x,y-13,8,color)}<path d="M ${x-12} ${y+14} Q ${x-12} ${y-1} ${x} ${y-1} Q ${x+12} ${y-1} ${x+12} ${y+14} Z" fill="${color}"/>${txt(x,y+38,label,12,color,'middle')}</g>${removed?line(x-15,y-26,x+15,y+17,C[0],2):''}`;}
+function privacybar(spent,total=6){return rect(75,370,510,8,'#eaf0f5',4)+rect(75,370,510*Math.max(0,Math.min(1,spent/total)),8,'#00843d',4)+txt(75,397,`Privacy cost so far: ${f(spent,2)} / ${f(total,2)}`,12,muted);}
+function generatePoints(){
+ if(kmDataset==='small'){
+  pointSet=[[.15,.18],[.2,.28],[.3,.2],[.25,.1],[.7,.15],[.8,.2],[.85,.3],[.7,.35],[.4,.65],[.5,.75],[.6,.7],[.5,.9]];
+ }else{
+  let state=777;const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return(state+.5)/4294967296;};
+  pointSet=[];
+  for(const [x,y] of [[.23,.23],[.76,.24],[.49,.73]])for(let j=0;j<96;j++){
+   const angle=2*Math.PI*random(),radius=.12*Math.sqrt(random());
+   pointSet.push([x+radius*Math.cos(angle),y+radius*Math.sin(angle)]);
+  }
+ }
+ focusPoint=Math.min(focusPoint,pointSet.length-1);
+}
+function buildKmeans(){
+ let state=526+seed;const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return(state+.5)/4294967296;};
+ let centers=[[.11,.44],[.88,.4],[.29,.86]];
+ km=[];kmframes=[{stage:0,iter:0}];
+ for(let t=0;t<3;t++){
+  const assigned=pointSet.map(p=>{
+   const distances=centers.map(c=>(p[0]-c[0])**2+(p[1]-c[1])**2);
+   return distances.indexOf(Math.min(...distances));
+  });
+  const counts=[0,0,0],sums=[[0,0],[0,0],[0,0]];
+  pointSet.forEach((p,i)=>{counts[assigned[i]]++;sums[assigned[i]][0]+=p[0];sums[assigned[i]][1]+=p[1];});
+  const countU=counts.map(()=>random()),sumU=sums.map(()=>[random(),random()]);
+  const noisyCounts=counts.map((v,j)=>v+(kPrivate?lap(6/epsilon,countU[j]):0));
+  const noisySums=sums.map((v,j)=>v.map((q,i)=>q+(kPrivate?lap(12/epsilon,sumU[j][i]):0)));
+  const next=noisySums.map((sum,j)=>noisyCounts[j]<1?[...centers[j]]:sum.map(v=>Math.max(0,Math.min(1,v/noisyCounts[j]))));
+  km.push({centers,assigned,counts,sums,countU,sumU,noisyCounts,noisySums,next});
+  for(let stage=1;stage<=4;stage++)kmframes.push({stage,iter:t});
+  centers=next;
+ }
+ kmframes.push({stage:5,iter:2});
+}
+function countStages(){return key==='kmeans'?kmframes.length:lessons[key].labels.length;}
+function getStage(){return key==='kmeans'?kmframes[step].stage:step;}
+function sensitivityView(){const s=step,vals=query==='sum'?[10,12,8,16,21,14]:[1,1,0,1,0,0],base=query==='sum'?81:3,after=base-(query==='sum'?10:1),sens=query==='sum'?21:1;let g=txt(95,51,'D',20,ink,'middle',700)+txt(95,217,'D′',20,ink,'middle',700);for(let i=0;i<6;i++){const col=query==='hist'?C[i%3]:(vals[i]?C[1]:'#a5b1c1');g+=person(165+i*73,78,col,query==='sum'?vals[i]:query==='hist'?['A','B','C'][i%3]:(vals[i]?'yes':'no'));g+=person(165+i*73,244,col,query==='sum'?vals[i]:query==='hist'?['A','B','C'][i%3]:(vals[i]?'yes':'no'),s>=1&&i===0);}g+=line(60,174,605,174);if(query==='hist'){g+=txt(335,158,'[2, 2, 2]',21,ink,'middle',650);g+=txt(335,324,s>=1?'[1, 2, 2]':'[2, 2, 2]',21,ink,'middle',650);}else{g+=txt(335,158,`${query==='sum'?'Total credits':'Yes count'}: ${base}`,21,ink,'middle',650);g+=txt(335,324,`${query==='sum'?'Total credits':'Yes count'}: ${s>=1?after:base}`,21,ink,'middle',650);}if(s>=2)g+=rect(165,352,375,39,'#e8f5ed')+txt(352,378,s===3?`Largest possible change: ${sens}`:`This pair changes by ${base-after}`,17,'#00843d','middle',650);return svg(g,query==='hist'?`Histogram changes from 2,2,2 to ${s>=1?'1,2,2':'2,2,2'} when one person is removed.`:`${query==='sum'?'Credits sum':'Yes count'} before and after removing one person: ${base} and ${s>=1?after:base}.`);}
+function laplaceView(){
+ const b=1/epsilon,eta=lap(b,lapU),release=3+eta,R=Math.max(12,Math.abs(eta)*1.12),X=v=>58+(v-(3-R))/(2*R)*544,Y=v=>315-v*230;
+ let g='';for(let i=0;i<=4;i++)g+=line(58,315-i*57.5,602,315-i*57.5);
+ g+=line(58,315,602,315,'#bcc9d7');for(let i=-2;i<=2;i++)g+=txt(X(3+i*R/2),340,f(3+i*R/2,1),12,muted,'middle');g+=txt(330,383,'Possible released counts',13,muted,'middle');
+ if(step>=1){
+  const curve=mu=>{let path='';for(let i=0;i<=240;i++){const v=3-R+2*R*i/240;path+=`${i?'L':'M'}${X(v)},${Y(Math.exp(-Math.abs(v-mu)/b))} `;}return path;};
+  const path=curve(3);g+=`<path d="${path} L602 315 L58 315 Z" fill="#e8f5ed"/><path d="${path}" stroke="#00843d" stroke-width="3" fill="none"/>`;
+  g+=txt(72,38,'Relative likelihood',12,muted);
+  if(step===5){g+=`<path d="${curve(2)}" stroke="${C[2]}" stroke-width="2.5" stroke-dasharray="6 4" fill="none"/>`+txt(380,38,'D′: true count 2',12,C[2]);}
+  if(step===4){const radius=b*Math.log(20);g+=line(X(3-radius),260,X(3+radius),260,ink,3)+txt(330,248,`95% error radius ≈ ${f(radius,2)}`,15,ink,'middle',650);}
+  if(step<4)g+=line(X(3-b),285,X(3+b),285,'#00843d',3)+txt(330,275,`scale b = ${f(b,2)}`,12,'#00843d','middle');
+ }
+ g+=line(X(3),72,X(3),315,ink,1,'4 4')+txt(X(3),364,'True count: 3',13,ink,'middle',650);
+ if(step===2||step===3||step===5){g+=line(X(release),110,X(release),315,C[0],2,'5 4')+circle(X(release),315,7,C[0])+txt(X(release),66,step===2?`offset ${signed(eta,2)}`:`release ${f(release,2)}`,16,C[0],'middle',700);if(step<4)g+=arrow(X(3),185,X(release),185,C[0],2);}
+ return svg(g,`Laplace mechanism: epsilon ${epsilon}, scale ${f(b,4)}, sample noise ${f(eta,4)}. ${step===4?'95 percent error bound '+f(b*Math.log(20),4):step===5?'Two neighboring densities for true counts 3 and 2.':''}`);
+}
+function budgetView(){
+ let g='';const eps=step===1?[.3,.2,.5]:[.2,.3,.5];
+ if(step===0){
+  g+=rect(45,133,145,120,'#e8f5ed')+txt(118,172,'Same students',16,ink,'middle',650);for(let i=0;i<3;i++)g+=person(78+i*38,210,C[1],'');
+  for(let i=0;i<3;i++){const y=48+i*112;g+=arrow(191,194,284,y+34,'#a5b4c5')+rect(295,y,285,69,'#eef3f8')+txt(320,y+28,['Department count','Age-band count','Location count'][i],15,ink)+txt(555,y+48,`ε = ${eps[i]}`,16,'#00843d','end',750);}
+  g+=txt(335,391,'0.2 + 0.3 + 0.5 = 1.0',21,ink,'middle',700);
+ }else if(step===1){
+  for(let i=0;i<3;i++){const x=63+i*195;g+=rect(x,50,155,120,'#f0f4f8')+txt(x+77,82,['Engineering','Finance','Operations'][i],13,ink,'middle',650);for(let j=0;j<2;j++)g+=person(x+53+j*48,120,C[i],'');g+=arrow(x+77,175,x+77,217,'#a5b4c5')+rect(x,230,155,67,'#e8f5ed')+txt(x+77,270,`ε = ${eps[i]}`,20,'#00843d','middle',700);}
+  g+=txt(330,370,'max(0.3, 0.2, 0.5) = 0.5',21,ink,'middle',700);
+ }else if(step===2){
+  g+=rect(50,125,185,130,'#e8f5ed')+txt(142,164,'Already released',14,muted,'middle')+txt(142,211,'2.7',37,ink,'middle',750)+arrow(251,190,395,190,'#a5b3c4')+txt(323,167,'round',13,muted,'middle')+rect(410,125,185,130,'#eef3f8')+txt(502,164,'Reuse it',14,muted,'middle')+txt(502,211,'3',37,ink,'middle',750)+txt(330,336,'No new access to private records',17,'#00843d','middle',650);
+ }else{
+  g+=txt(330,46,'Allocate ε = 1 across three releases',19,ink,'middle',700);let x=75;
+  for(let i=0;i<3;i++){g+=rect(x,85,510*eps[i],49,C[i],0)+txt(x+510*eps[i]/2,116,String(eps[i]),17,'white','middle',700);x+=510*eps[i];}
+  for(let i=0;i<5;i++)g+=rect(75+i*102,222,96,48,'#e8f5ed')+txt(123+i*102,253,'ε = 0.2',14,'#00843d','middle',650);
+  g+=txt(330,197,'Or repeat one count five times:',16,ink,'middle',650)+txt(330,316,'5 × 0.2 = 1 total ε',21,ink,'middle',750)+txt(330,366,'Averaging does not refund privacy budget.',15,muted,'middle');
+ }
+ return svg(g,lessons.budget.stages[step][1]);
+}
+function expProb(){
+ const m=expModel(),maximum=Math.max(...m.scores),weights=m.scores.map(v=>Math.exp(epsilon*(v-maximum)/(2*m.sensitivity)));
+ const total=weights.reduce((a,b)=>a+b,0);
+ return weights.map(v=>v/total);
+}
+function choose(p,u){let c=0;for(let i=0;i<p.length;i++){c+=p[i];if(u<c)return i;}return p.length-1;}
+const countries=['Saudi','Egypt','Syria','Sudan'],countryC=['#1b365d','#099d98','#d18f3d','#8290b7','#b46c97'];
+function exponentialView(){
+ const m=expModel(),p=expProb(),winner=choose(p,expU);let g='';
+ if(step===4){
+  g+=rect(65,90,235,172,'#e8f5ed')+rect(354,90,240,172,'#edf1f8')+txt(182,132,'Score factor',18,ink,'middle',650)+txt(475,132,'Normalizer factor',18,ink,'middle',650)+txt(182,200,`≤ ${f(Math.exp(epsilon/2),3)}`,31,'#00843d','middle',750)+txt(475,200,`≤ ${f(Math.exp(epsilon/2),3)}`,31,C[2],'middle',750)+txt(330,194,'×',28,muted,'middle')+txt(330,336,`Together: ≤ e^ε = ${f(Math.exp(epsilon),3)}`,23,ink,'middle',750);
+ }else if(step===3){
+  g+=rect(125,102,410,166,'#e8f5ed')+txt(330,148,'PUBLIC CHOICE',12,'#00843d','middle',750)+txt(330,211,m.names[winner],35,ink,'middle',750)+txt(330,326,`Chosen with probability ${f(100*p[winner],1)}%`,17,muted,'middle');
+ }else{
+  const spacing=Math.min(69,260/m.names.length);for(let i=0;i<m.names.length;i++){const y=45+i*spacing,value=step===0?m.scores[i]/Math.max(...m.scores):p[i]/Math.max(...p);g+=txt(110,y+23,m.names[i],13,ink,'end')+rect(128,y,350*value,31,countryC[i%countryC.length],5)+txt(500,y+23,step===0?String(m.scores[i]):`${f(100*p[i],1)}%`,16,ink,'start',650);}
+  if(step>=1){let x=128;for(let i=0;i<p.length;i++){g+=rect(x,337,400*p[i],26,countryC[i%countryC.length],0);x+=400*p[i];}g+=txt(328,397,'One draw from these probabilities',12,muted,'middle');if(step===2){const xp=128+400*expU;g+=`<path d="M${xp-7} 318 L${xp+7} 318 L${xp} 331 Z" fill="${ink}"/>`+txt(xp,309,`draw ${f(expU,3)}`,12,ink,'middle');}}else g+=txt(330,365,'Utility scores · public candidate set',14,muted,'middle');
+ }
+ return svg(g,`Exponential mechanism, ${expCase}, epsilon ${epsilon}. Probabilities ${p.map(v=>f(v*100,3)).join(', ')} percent. ${step===3?'Choice: '+m.names[winner]:''}`);
+}
+function noisyMaxView(){const votes=[30,28,12,5],noise=maxU.map(u=>lap(1/epsilon,u)),v=votes.map((x,i)=>x+noise[i]),winner=v.indexOf(Math.max(...v));let g='';if(step===3){g+=rect(145,107,370,158,'#e8f5ed')+txt(330,152,'PUBLIC WINNER',12,'#00843d','middle',750)+txt(330,212,['Alice','Bob','Charlie','Dave'][winner],38,ink,'middle',750)+txt(330,328,'No vote totals in the public output',15,muted,'middle');}else{const lo=Math.min(0,...v),hi=Math.max(...votes,...v)*1.12,X=q=>135+(q-lo)/(hi-lo)*405;g+=line(X(0),30,X(0),339,'#b6c5d5');for(let i=0;i<4;i++){const y=50+i*77,show=step>=1?v[i]:votes[i],a=X(Math.min(0,show)),w=Math.abs(X(show)-X(0));g+=txt(112,y+24,['Alice','Bob','Charlie','Dave'][i],14,ink,'end')+rect(a,y,w,36,step>=2&&i===winner?'#00843d':countryC[i],4)+txt(555,y+23,f(show,2),15,ink,'start',650);if(step>=1)g+=txt(135,y+57,`${votes[i]} ${signed(noise[i],2)}`,12,muted);if(step===2&&i===winner)g+=txt(610,y+23,'✓',20,'#00843d','middle',800);}g+=txt(330,389,step?'Noisy counts · internal teaching view':'Exact votes · internal teaching view',12,muted,'middle');}return svg(g,step===3?`Reported winner: ${['Alice','Bob','Charlie','Dave'][winner]}.`:`Votes ${votes.join(', ')}${step>=1?`; noisy counts ${v.map(x=>f(x,2)).join(', ')}`:''}.`);}
+function centroid(x,y,j,opacity=1){return `<g opacity="${opacity}">${circle(x,y,11,'white',C[j],3)}${line(x-6,y,x+6,y,C[j],3)}${line(x,y-6,x,y+6,C[j],3)}${txt(x+16,y-13,`C${j+1}`,13,C[j],'start',750)}</g>`;}
+function kmeansView(progress=1){
+ const frame=kmframes[step],s=frame.stage,t=frame.iter,d=km[t],X=v=>67+v*355,Y=v=>339-v*300;
+ let g=axes(67,39,355,300);for(let i=0;i<=5;i++)g+=txt(X(i/5),359,f(i/5,1),10,muted,'middle')+txt(54,Y(i/5)+4,f(i/5,1),10,muted,'end');
+ g+=txt(244,385,'Feature 1 · public range [0, 1]',11,muted,'middle')+`<text x="20" y="190" transform="rotate(-90 20 190)" text-anchor="middle" font-size="11" fill="${muted}">Feature 2 · public range [0, 1]</text>`;
+ if(s===1){const p=pointSet[focusPoint];d.centers.forEach((c,j)=>{g+=line(X(p[0]),Y(p[1]),X(c[0]),Y(c[1]),C[j],j===d.assigned[focusPoint]?2:1,'4 4');});}
+ if(s!==5||!kPrivate){pointSet.forEach((p,i)=>{const radius=kmDataset==='small'?5.5:3.3;g+=circle(X(p[0]),Y(p[1]),radius,s===0?'#9eafc1':C[d.assigned[i]]);if(kmDataset==='small')g+=txt(X(p[0])+8,Y(p[1])+4,`P${i+1}`,9,muted);});}
+ if(s===1){const p=pointSet[focusPoint];g+=circle(X(p[0]),Y(p[1]),11,'none',ink,2);}
+ const centers=s>=4?d.next:d.centers;
+ for(let j=0;j<3;j++){
+  if(s===4)g+=centroid(X(d.centers[j][0]),Y(d.centers[j][1]),j,.22)+arrow(X(d.centers[j][0]),Y(d.centers[j][1]),X(d.next[j][0]),Y(d.next[j][1]),C[j],1.8);
+  const center=s===4?d.centers[j].map((v,i)=>v+(d.next[j][i]-v)*progress):centers[j];
+  g+=centroid(X(center[0]),Y(center[1]),j);
+ }
+ if(s===2||s===3||s===5){
+  for(let j=0;j<3;j++){const y=80+j*93;g+=rect(452,y-27,178,74,j===focusCluster?'#e8f5ed':'#f3f6fa')+txt(466,y-5,`C${j+1}`,13,C[j],'start',750);
+   g+=s===3?txt(466,y+20,`sum: (${f(d.noisySums[j][0],2)}, ${f(d.noisySums[j][1],2)})`,12,ink):txt(466,y+20,`${kPrivate?'noisy ':''}size: ${f(d.noisyCounts[j],2)}`,14,ink);
+  }
+ }else{
+  g+=txt(454,112,s===0?'3 public centers':s===1?'Nearest center':'New centers',16,ink,'start',650);
+  g+=txt(454,143,s===0?`${pointSet.length} synthetic points`:s===1?`P${focusPoint+1} → C${d.assigned[focusPoint]+1}`:kPrivate?'noisy sum ÷ noisy size':'exact sum ÷ size',13,muted);
+  if(s===4)g+=txt(454,174,'Faint crosses = before',11,muted);
+ }
+ g+=txt(454,365,s===5&&kPrivate?'Only noisy outputs shown':'Internal teaching view',11,muted);
+ return svg(g,`K-means iteration ${t+1}, ${lessons.kmeans.labels[s]}, ${pointSet.length} points. ${s===1?'Point '+(focusPoint+1)+' joins cluster '+(d.assigned[focusPoint]+1)+'. ':''}${s===5&&kPrivate?'Only noisy centers and sizes are output.':''}`);
+}
+function gaussianView(){const sdL=Math.SQRT2*100/epsilon,sdG=10*Math.sqrt(2*Math.log(1.25/1e-5))/epsilon;let g='';if(step===0){for(let i=0;i<100;i++){const x=66+(i%20)*28,y=65+Math.floor(i/20)*47;g+=rect(x,y,22,31,'#e8f5ed',4)+txt(x+11,y+21,'+1',10,'#00843d','middle',600);}g+=txt(330,349,'One added person → 100 changed counts',19,ink,'middle',650);}else if(step===1){g+=rect(65,75,240,210,'#e8f5ed')+rect(335,75,255,210,'#edf0fb')+txt(185,121,'L1 · add magnitudes',16,ink,'middle',650)+txt(185,195,'100',47,'#00843d','middle',750)+txt(185,247,'1 + 1 + … + 1',15,muted,'middle')+txt(462,121,'L2 · Euclidean length',16,ink,'middle',650)+txt(462,195,'10',47,C[2],'middle',750)+txt(462,247,'√(1² + 1² + … + 1²)',15,muted,'middle');}else{const R=4*sdL,X=v=>55+(v+R)/(2*R)*550,peak=1/(Math.sqrt(2*Math.PI)*sdG),Y=v=>316-v/peak*240;g+=line(55,316,605,316,'#bbc8d7');for(const [kind,color] of [['Laplace','#00843d'],['Gaussian',C[2]]]){let path='';for(let i=0;i<=260;i++){const v=-R+2*R*i/260,density=kind==='Laplace'?Math.exp(-Math.abs(v)/(100/epsilon))/(2*100/epsilon):Math.exp(-v*v/(2*sdG**2))/(Math.sqrt(2*Math.PI)*sdG);path+=`${i?'L':'M'}${X(v)},${Y(density)} `;}g+=`<path d="${path}" stroke="${color}" stroke-width="3" fill="none"/>`;}for(let i=-2;i<=2;i++)g+=txt(X(i*R/2),340,f(i*R/2,0),11,muted,'middle');g+=txt(70,49,`Laplace SD ${f(sdL,1)}`,14,'#00843d','start',650)+txt(380,49,`Gaussian SD ${f(sdG,1)}`,14,C[2],'start',650)+txt(330,380,'Offset added to one count',12,muted,'middle');if(step===3){const l=lap(100/epsilon,gaussU[0]),n=normal(gaussU[1],gaussU[2])*sdG;g+=circle(X(l),316,7,'#00843d')+circle(X(n),316,7,C[2])+txt(74,79,`draw: ${signed(l,1)}`,12,'#00843d')+txt(380,79,`draw: ${signed(n,1)}`,12,C[2]);}}return svg(g,`100 count queries affected by one person. L1 sensitivity 100, L2 sensitivity 10. Laplace standard deviation ${f(sdL,1)}. Gaussian standard deviation ${f(sdG,1)} at ε=${epsilon}, δ=0.00001.`);}
+const gradients=[[.4,.25],[.35,-.4],[-.2,.7],[2.6,1.4],[-.5,.1]];
+const trainingExamples=gradients.map(x=>({x,y:x[0]*thetaBefore[0]+x[1]*thetaBefore[1]-1}));
+function clipped(){return gradients.map(v=>{const a=Math.max(1,Math.hypot(...v));return v.map(x=>x/a);});}
+function gradientResult(){
+ const sum=clipped().reduce((a,v)=>a.map((x,i)=>x+v[i]),[0,0]);
+ const standard=normalPair(sgU[0],sgU[1]),z=standard.map(x=>x*sigma);
+ return{sum,standard,z,noisy:sum.map((x,i)=>x+z[i])};
+}
+function dpsgdView(){
+ let g='';
+ if(step===0){
+  for(let i=0;i<24;i++){const selected=[1,5,10,17,20].includes(i),x=95+i%8*67,y=75+Math.floor(i/8)*91;g+=person(x,y,selected?C[1]:'#c1cbd7','');if(selected)g+=circle(x,y-7,26,'none',C[1],2);}
+  g+=txt(330,365,'One illustrated batch of 5 examples',17,ink,'middle',650);
+ }else if(step<=3){
+  const d=gradientResult(),largest=step===3?Math.max(1,...d.sum.map(Math.abs),...d.noisy.map(Math.abs)):1;
+  const scale=step===3?Math.min(88,126/largest):88,ox=256,oy=235,X=v=>ox+v*scale,Y=v=>oy-v*scale;
+  g+=line(65,oy,585,oy,'#ced8e4')+line(ox,47,ox,365,'#ced8e4');
+  if(step>=2)g+=`<circle cx="${ox}" cy="${oy}" r="${scale}" fill="#e8f5ed" stroke="#00843d" stroke-width="1.5" stroke-dasharray="5 5"/>`+txt(ox-scale-6,oy-scale-15,'C = 1',12,'#00843d');
+  if(step<=2){
+   const vectors=step===2?clipped():gradients;vectors.forEach((v,i)=>{if(step===2&&Math.hypot(...gradients[i])>1)g+=arrow(ox,oy,X(gradients[i][0]),Y(gradients[i][1]),'#d6dde7',2);g+=arrow(ox,oy,X(v[0]),Y(v[1]),[ink,C[1],C[2],C[0],'#a47b45'][i],3)+txt(X(v[0])+10,Y(v[1])-7,`g${i+1}`,12,muted);});
+   g+=txt(330,389,step===1?'One long gradient can dominate':'Long arrow shortened; direction unchanged',14,muted,'middle');
+  }else{
+   g+=arrow(ox,oy,X(d.sum[0]),Y(d.sum[1]),'#a5b3c4',3)+arrow(X(d.sum[0]),Y(d.sum[1]),X(d.noisy[0]),Y(d.noisy[1]),C[0],2)+arrow(ox,oy,X(d.noisy[0]),Y(d.noisy[1]),ink,4)+txt(440,65,'gray: clipped sum',12,muted)+txt(440,88,'red: Gaussian noise',12,C[0])+txt(440,111,'navy: noisy sum',12,ink);
+  }
+ }else{
+  const d=gradientResult(),after=thetaBefore.map((v,i)=>v-learningRate*d.noisy[i]/5),radius=Math.max(.12,...after.map((v,i)=>2*Math.abs(v-thetaBefore[i])));
+  const X=v=>330+(v-thetaBefore[0])/radius*215,Y=v=>200-(v-thetaBefore[1])/radius*135;
+  g+=axes(80,45,500,290)+circle(X(thetaBefore[0]),Y(thetaBefore[1]),8,'#9daec0')+arrow(X(thetaBefore[0]),Y(thetaBefore[1]),X(after[0]),Y(after[1]),'#00843d',3)+circle(X(after[0]),Y(after[1]),9,'#00843d');
+  g+=txt(330,48,'Model weights · zoomed view',15,ink,'middle',650)+txt(347,190,'Before (0.4, 0.6)',13,muted)+txt(330,366,`After (${f(after[0],4)}, ${f(after[1],4)})`,21,'#00843d','middle',750);
+ }
+ return svg(g,`${lessons.dpsgd.stages[step][1]} C=1, sigma=${sigma}, batch size 5, learning rate 0.1.`);
+}
+function content(){
+ const lesson=lessons[key],stage=getStage();
+ let title=lesson.stages[step]?.[0]||'',caption=lesson.stages[step]?.[1]||'',result='',note='';
+ if(key==='kmeans'){
+  const frame=kmframes[step],s=frame.stage,t=frame.iter;
+  title=['Choose starting centers','Assign points to groups',kPrivate?'Noise the group sizes':'Count each group',kPrivate?'Noise the coordinate sums':'Sum the coordinates','Move the centers','Release the result'][s];
+  caption=['Place three centers using a public rule. Fix three iterations in advance.',`Check P${focusPoint+1}: the nearest center determines its group.`,kPrivate?'Count each group, then add calibrated noise.':'Count the points assigned to each group.',kPrivate?'Add calibrated noise to each group’s x and y sums.':'Add the x and y coordinates within each group.',kPrivate?'Divide each noisy sum by its noisy size to get the new center.':'Divide each group’s sums by its size to get its mean.',kPrivate?'Publish only noisy centers and noisy sizes.':'The final centers summarize the three groups.'][s];
+  const spent=kPrivate?(s===0?0:s===1?t*epsilon/3:s===2?(t+.5)*epsilon/3:(t+1)*epsilon/3):0;
+  result=kPrivate?`ε used: ${f(spent,2)} / ${f(epsilon,2)}`:s===0?'k = 3 · T = 3':`Iteration ${t+1} of 3`;
+  note=s===0?(kmDataset==='small'?'12 points make the arithmetic easy to check.':'288 points show how dataset size changes utility.'):s===1?'Choose a point in the calculation below.':s===4?'The faint crosses show the old positions.':s===5&&kPrivate?'Individual points are hidden in the output.':!kPrivate?'Ordinary k-means has no DP guarantee.':'Select a group to inspect its calculation.';
+  return{title,caption,result,note};
+ }
+ if(key==='definition'){result=step===1?'7 allowed neighbors':step>=2?`e^ε ≈ ${f(Math.exp(epsilon),3)}`:'One record differs';note=step===1?'Allowed domain: {20, 30, 40, 50}.':'The definition must hold for every allowed pair.';}
+ if(key==='sensitivity'){
+  if(query==='sum')caption=['Add the students’ credit hours. The public cap is 21.','Remove the student taking 10 credits.','The total falls from 81 to 71.','One student could contribute 21 credits; noise must cover that possibility.'][step];
+  if(query==='hist')caption=['Group students by one of three majors: A, B, C.','Remove one student from major A.','Only one bin changes. The L1 difference is 1.','Any student changes only one bin under add/remove adjacency.'][step];
+  result=step>=2?(query==='sum'?(step===3?'Sensitivity = 21':'This change = 10'):'Sensitivity = 1'):'';note='Example change and global sensitivity can differ.';
+ }
+ if(key==='bounds'){
+  const sum=144+lap(200/epsilon,.53),count=4+lap(2/epsilon,.55),mean=Math.max(0,Math.min(100,sum/Math.max(1,count)));
+  result=step===0?'Public cap = 100':step===1?'SUM sensitivity = 100':step===2?`Private mean ≈ ${f(mean,2)}`:`Noise SD ≈ ${f(Math.SQRT2*100/epsilon,2)}`;
+  note=step===2?'SUM and COUNT share one privacy budget.':step===3?'Compare absolute noise with the total’s scale.':'Use public bounds, not the observed maximum.';
+ }
+ if(key==='laplace'){
+  const b=1/epsilon,eta=lap(b,lapU);result=['True count = 3',`b = ${f(b,2)}`,`Noise = ${signed(eta,2)}`,`Released = ${f(3+eta,2)}`,`95% radius ≈ ${f(b*Math.log(20),2)}`,`Ratio bound = ${f(Math.exp(epsilon),3)}`][step];
+  note=step===4?'A probability statement over repeated random draws.':step===5?'The proof covers all possible outputs.':'Smaller ε → a wider noise distribution.';
+ }
+ if(key==='histogram'){result=step<2?'Histogram = [2, 2, 2]':step===2?`Noise scale = ${f(1/epsilon,2)}`:'Same ε after rounding';note=step<2?'Each student belongs to one fixed bin.':'All bins together cost ε in this add/remove model.';}
+ if(key==='budget'){result=['Total ε = 1','Total ε = 0.5','Extra ε = 0','5 × 0.2 = 1'][step];note=['Add costs when the same person affects releases.','Fixed disjoint groups of protected people.','Public rounding uses no new private data.','Averaging fresh releases does not refund budget.'][step];}
+ if(key==='group'){result=step===0?'Individual ε = 1':step===1?`${groupC} changed records`:step===2?`Group bound: ε = ${groupC}`:`Individual ε = ${f(1/groupC,3)}`;note=step===3?`COUNT needs noise scale b = ${groupC}.`:'Group privacy compares one release across datasets.';}
+ if(key==='local'){const m=localModel();result=step===0?'p = 0.75 · q = 0.25':step===1?`Estimated count = ${f(m.truth,0)}`:step===2?`Local SD ≈ ${f(m.localSD,2)}`:`Central SD ≈ ${f(m.centralSD,2)}`;note='Both models use ε = ln 3; their trust assumptions differ.';}
+ if(key==='exponential'){const m=expModel(),p=expProb(),w=choose(p,expU);result=step===0?'Higher score is better':step===1?`${m.names[p.indexOf(Math.max(...p))]}: ${f(100*Math.max(...p),1)}%`:step===4?`Ratio bound = ${f(Math.exp(epsilon),3)}`:`Choice: ${m.names[w]}`;note=step===4?'Sensitivity bounds both factors.':step===1?'Change ε or choose a different example.':'The public output is one choice.';}
+ if(key==='noisymax'){const v=[30,28,12,5].map((q,i)=>q+lap(1/epsilon,maxU[i])),w=v.indexOf(Math.max(...v));result=step===0?'30 vs 28 votes':step===1?`Noise scale = ${f(1/epsilon,2)}`:`Winner: ${['Alice','Bob','Charlie','Dave'][w]}`;note='One person casts one vote into one candidate’s bin.';}
+ if(key==='recommend'){result=['True mean = 3','Sensitivity = 4/5 = 0.8',`Noisy mean ≈ ${f(3+lap(.8/epsilon,.65),3)}`,'Raw covariance = 1.2'][step];note=step===3?'A private matrix needs its own sensitivity analysis.':'This example protects one rating under replacement adjacency.';}
+ if(key==='gaussian'){const m=gaussianModel();result=step===0?'100 changed coordinates':step===1?'Δ₁ = 100 · Δ₂ = 10':`Gaussian SD ≈ ${f(m.sigmaG,2)}`;note=`ε = ${f(epsilon,2)} · δ = 10⁻⁵ · classical calibration`;}
+ if(key==='descent'){const m=descentModel();result=step===0?'Start: w = 1':step===1?`Loss = ${f(m.loss,4)}`:step===2?`Gradient = ${f(m.gradient,4)}`:`New w = ${f(m.next,4)}`;note=descentBatch==='full'?'Full batch: all 3 examples.':descentBatch==='single'?'SGD: 1 selected example.':'Mini-batch: 2 selected examples.';}
+ if(key==='dpsgd'){result=['Batch size = 5','5 separate gradients','Maximum length = 1',`Noise SD = ${f(sigma,1)} × C`,'One noisy model update'][step];note=step===4?'Total ε requires a privacy accountant.':step===1?'The calculation derives gradients from a simple loss.':step===2?'Short arrows stay as they are.':'C = 1 · learning rate = 0.1';}
+ if(key==='audit'){const bound=Math.log((.3-1e-5)/.05);result=step===0?'Include with probability 1/2':step===1?'TPR = 0.30 · FPR = 0.05':step===2?`Lower bound ≈ ${f(bound,3)}`:auditEpsilon<bound?'Claim contradicted':'No contradiction';note='Illustrative exact rates; real audits need confidence bounds.';}
+ if(key==='guide'){result=['Match the public output','Choose bounds and allocation','Read the primary papers'][step];note='The lecture map below links each topic to its slide range.';}
+ return{title,caption,result,note};
+}
+function mathContent(){
+ const notes={
+ definition:'Neighboring datasets are defined by the allowed record domain and adjacency rule. The lab uses add/remove adjacency unless a section explicitly says replacement. DP quantifies over all output events. For discrete outputs, singleton probabilities can be used; continuous outputs are compared using densities or measurable sets.',
+ sensitivity:'A global maximum over all allowed neighbors defines sensitivity. Public caps determine the domain. Observed changes are examples, not sufficient sensitivity proofs. Histogram replacement sensitivity can be 2; add/remove sensitivity is 1. A fixed-size mean in [0,B] has replacement sensitivity B/n.',
+ bounds:'The sum uses public age bounds [0,100]. Under add/remove adjacency, the ratio of a noisy sum to a noisy count uses a sequential budget split. Flooring the noisy count and clipping the resulting mean use public rules and preserve the guarantee. They can introduce bias. Never assume B/n for a variable-denominator add/remove mean without an appropriate domain argument.',
+ laplace:'For Δ₁f and ε>0, the Laplace scale is b=Δ₁f/ε. The density ratio is bounded by exp(|f(D)−f(D′)|/b) ≤ exp(ε), using the triangle inequality. Mean noise is 0, variance is 2b², and Pr(|η|>t)=exp(−t/b). A fresh draw on real private data is another release. The browser uses reproducible synthetic sampling for teaching, not production privacy software.',
+ histogram:'Bin labels and the partition rule are public. One added or removed record belongs to one bin. Independent Laplace noise with scale 1/ε therefore privatizes the entire vector. Rounding and clamping do not restore totals automatically; additional public post-processing can be designed if needed.',
+ budget:'Basic sequential composition adds ε and δ across releases that the same protected unit can influence. Parallel composition requires fixed disjoint protected units, rather than separate files. Public post-processing accesses private outputs and public information only. A correction that consults the true data again is not covered by the post-processing theorem. Repeated independent releases and averaging still compose.',
+ group:'For pure ε-DP, c changed records give a cε group guarantee: multiply c neighboring probability-ratio bounds. This is not the same operation as composing c released answers. To target group ε_g, calibrate the one-person mechanism at ε_g/c. Approximate-DP group bounds require a corresponding δ analysis.',
+ local:'The truth/flip probabilities are p=e^ε/(e^ε+1) and q=1/(e^ε+1). Conditional on fixed private bits, each report has variance pq; each debiased estimator has variance pq/(p−q)². Independent reports give n times this variance. The comparison uses the same one-bit protection level ε=ln3, but local DP removes the need to trust a curator with the original bit.',
+ exponential:'Use a fixed public candidate set and a score with proven sensitivity Δu. Probabilities are proportional to exp(εu/(2Δu)). The score ratio and normalizer ratio each contribute at most exp(ε/2). The implementation subtracts the maximum score for numerical stability. As ε approaches 0 the probabilities become uniform; a large ε concentrates them on score maximizers. A public candidate with score 0 has positive weight. The movie example’s Δu=1 is an illustrative assumption, not a proof for arbitrary ratings-based scores.',
+ noisymax:'The scale 1/ε here follows from releasing a disjoint add/remove vote histogram with sensitivity 1 and then reporting its maximum index. A fixed tie order is public. Generic overlapping scores may need scale 2Δ/ε or a specialized monotonicity analysis. The scale from this example must not be applied to arbitrary score vectors.',
+ kmeans:'Coordinates are bounded in [0,1]²; k=3 and T=3 are fixed. Starting centers are public and independent of private points. Conditional on previous private centers, each point joins one cluster. The vector of sizes has L1 sensitivity 1 and all coordinate sums have L1 sensitivity 2. Each iteration receives ε/3, split equally into sizes and sums: scales 6/ε and 12/ε. Do not spend the sum budget separately on x and y. Ratios, clamping, and keeping a previous center when a noisy size is below 1 are post-processing. Exact assignments and raw points are internal. Ordinary k-means decreases its assignment/update objective; a noisy update need not.',
+ recommend:'Ratings are bounded in [1,5] with a public fixed count n. Replacement of one rating changes the global mean by at most 4/n. A user can contribute many ratings, so rating-level and user-level guarantees are different. A recommender may combine global means, per-movie means, per-user statistics and covariance; each released component needs an appropriate sensitivity and accounting analysis. The displayed covariance is a population-style raw calculation, not a DP matrix release.',
+ gaussian:'For 0<ε<1, the classical sufficient calibration is σ=Δ₂f√(2 ln(1.25/δ))/ε. The lab keeps δ=10⁻⁵ fixed for teaching. This is not a universally suitable δ choice or the tightest possible Gaussian calibration. δ is additive slack in Pr[M(D)∈S]≤exp(ε)Pr[M(D′)∈S]+δ, not a fraction of people exposed. Independent noise coordinates form an isotropic Gaussian vector.',
+ descent:'For prediction ŷ=wx and half squared-error loss, a per-example gradient is (wx−y)x. Full-batch descent averages over all examples, SGD uses a sampled single example, and a mini-batch uses a small sample. The selected examples here are fixed illustrations. No DP mechanism is applied in this section.',
+ dpsgd:'For the squared-loss example, θ=(0.4,0.6), C=1, B=5, and learning rate 0.1. Clip each per-example gradient, add independent-coordinate Gaussian noise to the sum, then average. The Box–Muller cosine/sine pair creates the two standard normal coordinates. A real DP-SGD claim requires a sampling rule, normalization and privacy accountant that agree. Under add/remove adjacency, adding one clipped gradient changes a sum by at most C; replacement can require a 2C bound. The full ε depends on the sampling rate, noise multiplier, number of steps, δ, and analysis. This illustration makes no model-level ε claim.',
+ audit:'The event inequality gives TPR≤exp(ε)FPR+δ for valid neighboring membership experiments. For positive FPR and TPR>δ, rearrange it to ε≥ln((TPR−δ)/FPR). The lab stipulates exact rates for the arithmetic. Finite-sample audits need statistically valid confidence bounds, not a plug-in estimate alone. Failing to contradict a claim does not certify privacy.',
+ guide:'Choose the mechanism for the public output and establish its protected unit, contribution bounds, randomness, and complete accounting. Privacy alone does not guarantee useful answers for every task or arbitrary data. High sensitivity, small groups, repeated access and many training steps can reduce utility. The research links are optional connections to the lecture papers.'
+ };
+ const reference=key==='dpsgd'?abadi:key==='audit'?'<a href="https://arxiv.org/abs/2305.08846" target="_blank" rel="noopener">Steinke, Nasr &amp; Jagielski (2023)</a>':book;
+ return `<p>${esc(notes[key])}</p><p class="source">Lecture alignment: ${esc(lessons[key].lecture)}. Reference: ${reference}${key==='gaussian'?' (Appendix A)':key==='group'?' (Theorem 2.2)':''}.</p>`;
+}
+function configure(){
+ const l=lessons[key];$('lesson').value=key;$('title').textContent=l.title;$('subtitle').textContent=l.subtitle;$('lecture').textContent=l.lecture;$('lessoncount').textContent=`Topic ${order.indexOf(key)+1} of ${order.length}`;
+ $('why').open=false;$('whycontent').innerHTML=mathContent();let controls='';
+ if(key==='kmeans')controls=`<div class="toggle" aria-label="K-means mode"><button data-mode="ordinary" class="${!kPrivate?'active':''}" aria-pressed="${!kPrivate}">Ordinary</button><button data-mode="private" class="${kPrivate?'active':''}" aria-pressed="${kPrivate}">Private</button></div><label class="dataset-select" for="dataset">Dataset</label><select id="dataset"><option value="small">12 points · work it by hand</option><option value="large">288 points · compare noise</option></select>`;
+ else if(key==='sensitivity')controls='<label for="query">Query</label><select id="query"><option value="count">Yes count</option><option value="sum">Total credits</option><option value="hist">Students per major</option></select><span class="view-label">Add/remove adjacency</span>';
+ else if(key==='exponential')controls='<label for="exp-case">Example</label><select id="exp-case"><option value="nationality">Nationalities</option><option value="movies">Movie recommendation</option><option value="activity">Class activity</option><option value="zero">Add public candidate Jordan</option></select><span class="view-label">One private choice</span>';
+ else if(key==='descent')controls='<label for="batch">Gradient uses</label><select id="batch"><option value="full">Full batch · 3 examples</option><option value="single">SGD · 1 example</option><option value="mini">Mini-batch · 2 examples</option></select><span class="view-label">Learning rate = 0.1</span>';
+ else if(key==='local')controls='<label for="true-share">True yes share</label><select id="true-share"><option value="0.25">25%</option><option value="0.5">50% · lecture example</option><option value="0.75">75%</option></select><span class="view-label">Local ε = ln 3</span>';
+ else if(key==='audit')controls='<label for="claim">Claimed ε</label><select id="claim"><option value="1">1</option><option value="8">8</option></select><span class="view-label">δ = 10⁻⁵ · synthetic exact rates</span>';
+ else controls=`<span class="view-label">${key==='group'?'One release · several changed records':key==='budget'?'Follow the protected people':key==='local'?'Local ε = ln 3':key==='dpsgd'?'One illustrated training step':'Synthetic teaching example'}</span><span class="view-label">${key==='dpsgd'?'C = 1 · B = 5':key==='gaussian'?'100 overlapping counts':'Values shown below'}</span>`;
+ $('viewbar').innerHTML=controls;
+ const bindSelect=(id,value,action)=>{const el=$(id);if(el){el.value=value;el.onchange=e=>{pause();action(e.target.value);render();};}};
+ bindSelect('true-share',String(localFraction),v=>{localFraction=Number(v);});
+ bindSelect('query',query,v=>{query=v;});bindSelect('exp-case',expCase,v=>{expCase=v;});bindSelect('batch',descentBatch,v=>{descentBatch=v;});bindSelect('claim',String(auditEpsilon),v=>{auditEpsilon=Number(v);});
+ bindSelect('dataset',kmDataset,v=>{kmDataset=v;focusPoint=0;step=0;generatePoints();buildKmeans();});
+ document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{pause();kPrivate=b.dataset.mode==='private';buildKmeans();configure();render();});
+ let parameter='';
+ const hasEpsilon=['definition','bounds','laplace','histogram','exponential','noisymax','kmeans','recommend','gaussian'].includes(key)&&(key!=='kmeans'||kPrivate);
+ if(hasEpsilon){const low=key==='gaussian'?.1:key==='exponential'?.01:.1,high=key==='gaussian'?.9:key==='exponential'?50:key==='kmeans'?12:4;
+  parameter=`<label for="eps">${key==='definition'?'Privacy parameter':'Privacy budget'} ε <output id="epsout">${f(epsilon,2)}</output></label><input id="eps" type="range" min="${low}" max="${high}" step="0.01" value="${epsilon}"><div class="rangeends"><span>Smaller ε · stronger privacy</span><span>Larger ε</span></div>`;
+ }
+ if(key==='group')parameter=`<label for="group-size">People in the group c <output id="groupout">${groupC}</output></label><input id="group-size" type="range" min="1" max="6" step="1" value="${groupC}"><div class="rangeends"><span>1 person</span><span>6 people</span></div>`;
+ if(key==='local')parameter=`<label for="population">Number of students n <output id="populationout">${localN.toLocaleString()}</output></label><input id="population" type="range" min="100" max="10000" step="100" value="${localN}"><div class="rangeends"><span>100 students</span><span>10,000 students</span></div>`;
+ if(key==='dpsgd')parameter=`<label for="noise">Noise multiplier σ <output id="noiseout">${f(sigma,1)}</output></label><input id="noise" type="range" min="0.5" max="2" step="0.1" value="${sigma}"><div class="rangeends"><span>Less noise</span><span>More noise</span></div>`;
+ $('parameter').innerHTML=parameter;$('parameter').hidden=!parameter;
+ const bindRange=(id,action)=>{const el=$(id);if(el)el.oninput=e=>{pause();action(Number(e.target.value));render();};};
+ bindRange('eps',v=>{epsilon=v;$('epsout').textContent=f(v,2);if(key==='kmeans')buildKmeans();});
+ bindRange('group-size',v=>{groupC=v;$('groupout').textContent=String(v);});
+ bindRange('population',v=>{localN=v;$('populationout').textContent=v.toLocaleString();});
+ bindRange('noise',v=>{sigma=v;$('noiseout').textContent=f(v,1);});
+ $('newrun').hidden=!['laplace','exponential','noisymax','kmeans','gaussian','dpsgd'].includes(key)||key==='kmeans'&&!kPrivate;
+ $('newrun').textContent=key==='kmeans'||key==='dpsgd'?'New noise':'New draw';
+}
+function renderPlot(progress=1){
+ const views={definition:definitionView,sensitivity:sensitivityView,bounds:boundsView,laplace:laplaceView,histogram:histogramView,budget:budgetView,group:groupView,local:localView,exponential:exponentialView,noisymax:noisyMaxView,kmeans:()=>kmeansView(progress),recommend:recommendView,gaussian:gaussianView,descent:descentView,dpsgd:dpsgdView,audit:auditView,guide:guideView};
+ $('plot').innerHTML=views[key]();
+}
+function render(animate=false){
+ if(raf){cancelAnimationFrame(raf);raf=null;}
+ const l=lessons[key],stage=getStage(),c=content();
+ $('title').textContent=key==='kmeans'?(kPrivate?'Watch private k-means':'Watch ordinary k-means'):l.title;
+ $('stepnum').textContent=`STEP ${stage+1} OF ${l.labels.length}`;$('stagetitle').textContent=c.title;$('caption').textContent=c.caption;$('result').textContent=c.result;$('takeaway').textContent=c.note;
+ $('badge').textContent=key==='kmeans'?`Iteration ${kmframes[step].iter+1} / 3`:`${stage+1} / ${l.labels.length}`;
+ $('steps').innerHTML=l.labels.map((label,i)=>`<button data-step="${i}" class="${i===stage?'current':i<stage?'done':''}" ${i===stage?'aria-current="step"':''}>${esc(key==='kmeans'&&!kPrivate?['Initialize','Assign','Count','Sum','Move centers','Output'][i]:label)}</button>`).join('');
+ document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{pause();const n=Number(b.dataset.step);step=key==='kmeans'?(n===0?0:n===5?kmframes.length-1:1+kmframes[step].iter*4+n-1):n;render(true);});
+ $('prev').disabled=step===0;$('next').disabled=step===countStages()-1;$('nextlesson').hidden=step<countStages()-1||order.indexOf(key)===order.length-1;
+ $('announcement').textContent=`${c.title}. ${c.caption} ${c.result}`;
+ renderPlot();renderCalculation();
+ if(animate&&key==='kmeans'&&stage===4&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+  const start=performance.now();
+  const tick=now=>{const t=Math.min(1,(now-start)/700);renderPlot(t*t*(3-2*t));if(t<1)raf=requestAnimationFrame(tick);else raf=null;};
+  raf=requestAnimationFrame(tick);
+ }
+}
+function pause(){playing=false;if(timer)clearTimeout(timer);timer=null;$('play').textContent='▶ Play';$('play').setAttribute('aria-label','Play animation');}
+function play(){
+ if(playing){pause();return;}
+ if(step===countStages()-1)step=0;
+ playing=true;$('play').textContent='Ⅱ Pause';$('play').setAttribute('aria-label','Pause animation');render();
+ const tick=()=>{if(!playing)return;if(step===countStages()-1){pause();return;}step++;render(true);timer=setTimeout(tick,pace);};
+ timer=setTimeout(tick,pace);
+}
+function openLesson(next){
+ if(!lessons[next])next='kmeans';pause();key=next;step=0;
+ epsilon=key==='kmeans'?6:['definition','bounds','laplace','histogram','gaussian'].includes(key)?.5:1;
+ buildKmeans();configure();render();
+ try{history.replaceState(null,'','#'+key);}catch(error){}
+}
+function newDraw(){
+ pause();lapU=rng();expU=rng();maxU=[rng(),rng(),rng(),rng()];sgU=[rng(),rng()];gaussU=[rng(),rng(),rng(),rng()];buildKmeans();render(true);
+}
+function normalPair(u,v){
+ const radius=Math.sqrt(-2*Math.log(u)),angle=2*Math.PI*v;
+ return[radius*Math.cos(angle),radius*Math.sin(angle)];
+}
+
+function descentModel(){
+ const x=[1,2,3],y=[2,3,5],w=1;
+ const ids=descentBatch==='single'?[0]:descentBatch==='mini'?[0,1]:[0,1,2];
+ const residual=x.map((v,i)=>w*v-y[i]),gradients=residual.map((r,i)=>r*x[i]);
+ const gradient=ids.reduce((a,i)=>a+gradients[i],0)/ids.length,next=w-learningRate*gradient;
+ const loss=ids.reduce((a,i)=>a+residual[i]**2,0)/(2*ids.length);
+ const nextLoss=ids.reduce((a,i)=>a+(next*x[i]-y[i])**2,0)/(2*ids.length);
+ return{x,y,w,ids,residual,gradients,gradient,next,loss,nextLoss};
+}
+
+function localModel(){
+ const eps=Math.log(3),p=.75,q=.25,truth=localN*localFraction,expected=localN*q+(p-q)*truth;
+ const variance=localN*p*q/(p-q)**2;
+ return{eps,p,q,truth,expected,variance,localSD:Math.sqrt(variance),centralSD:Math.SQRT2/eps};
+}
+
+function gaussianModel(){
+ const delta=1e-5,b=100/epsilon,sigmaG=10*Math.sqrt(2*Math.log(1.25/delta))/epsilon;
+ return{delta,b,sigmaG,sdL:Math.SQRT2*b};
+}
+
+function expModel(){
+ if(expCase==='movies')return{names:['Movie A','Movie B','Movie C'],scores:[6,9,4],sensitivity:1};
+ if(expCase==='activity')return{names:['Football','Basketball'],scores:[12,11],sensitivity:1};
+ if(expCase==='zero')return{names:[...countries,'Jordan'],scores:[3,2,1,1,0],sensitivity:1};
+ return{names:countries,scores:[3,2,1,1],sensitivity:1};
+}
+
+function histogramModel(){
+ const counts=[2,2,2],u=[.61,.28,.76],b=1/epsilon;
+ const noise=u.map(v=>lap(b,v)),noisy=counts.map((v,i)=>v+noise[i]);
+ return{counts,u,b,noise,noisy,rounded:noisy.map(v=>Math.max(0,Math.round(v)))};
+}
+
+function definitionView(){
+ let g='';
+ if(step===1){
+  g+=txt(330,42,'D = {20, 30, 40}',23,ink,'middle',700);
+  const neighbors=['{30, 40}','{20, 40}','{20, 30}','D + 20','D + 30','D + 40','D + 50'];
+  neighbors.forEach((v,i)=>{const x=i<3?80+i*175:48+(i-3)*145,y=i<3?108:245;g+=rect(x,y,i<3?150:130,56,i<3?'#e8f5ed':'#eef3f8')+txt(x+(i<3?75:65),y+35,v,15,ink,'middle',600);});
+  g+=txt(330,92,'Remove one allowed record',13,muted,'middle')+txt(330,228,'Add one value from public X = {20, 30, 40, 50}',13,muted,'middle')+txt(330,371,'3 removals + 4 additions = 7 neighbors',19,ink,'middle',700);
+ }else if(step===0){
+  g+=txt(95,75,'D',24,ink,'middle',750)+txt(95,242,'D′',24,ink,'middle',750);
+  for(let i=0;i<6;i++){g+=person(171+i*70,91,C[1],'');g+=person(171+i*70,258,C[1],'',i===5);}
+  g+=txt(330,184,'One allowed record is removed',16,muted,'middle')+txt(330,366,'The same mechanism runs in either world',17,ink,'middle',600);
+ }else{
+  const multiplier=Math.exp(epsilon);
+  g+=rect(73,80,224,172,'#e8f5ed')+rect(357,80,224,172,'#edf1f8')+txt(185,120,'World D',17,ink,'middle',650)+txt(469,120,'World D′',17,ink,'middle',650)+txt(185,185,'Pr(S)',29,ink,'middle',750)+txt(469,185,'Pr(S)',29,ink,'middle',750)+txt(330,182,'↔',33,muted,'middle')+txt(330,301,`Allowed multiplier ≤ ${f(multiplier,3)}`,22,'#00843d','middle',700)+txt(330,344,step===2?'Compare the same event S in both worlds':'Also swap the roles of D and D′',15,muted,'middle');
+ }
+ return svg(g,`${lessons.definition.stages[step][1]} Epsilon ${epsilon} permits probability multiplier ${f(Math.exp(epsilon),4)}.`);
+}
+
+function boundsView(){
+ let g='';
+ if(step<=1){
+  const ages=[42,31,28,43];for(let i=0;i<4;i++){const x=100+i*135,h=ages[i]*2.3;g+=rect(x,305-h,65,h,C[1],5)+txt(x+33,330,String(ages[i]),17,ink,'middle',650);}
+  g+=line(60,75,610,75,C[0],1.5,'5 5')+txt(330,54,'Public cap B = 100',15,C[0],'middle',600)+txt(330,374,step===0?'All four ages already lie in [0, 100]':'42 + 31 + 28 + 43 = 144',19,ink,'middle',650);
+ }else if(step===2){
+  g+=rect(65,85,220,105,'#e8f5ed')+txt(175,121,'Noisy SUM',15,ink,'middle',650)+txt(175,163,f(144+lap(200/epsilon,.53),2),29,ink,'middle',700);
+  g+=rect(375,85,220,105,'#eef3f8')+txt(485,121,'Noisy COUNT',15,ink,'middle',650)+txt(485,163,f(4+lap(2/epsilon,.55),2),29,ink,'middle',700);
+  const avg=(144+lap(200/epsilon,.53))/Math.max(1,4+lap(2/epsilon,.55));
+  g+=txt(330,154,'÷',31,muted,'middle')+arrow(330,215,330,258,'#a4b3c5')+txt(330,310,`Private mean ≈ ${f(Math.max(0,Math.min(100,avg)),2)}`,27,'#00843d','middle',750)+txt(330,370,'Split one ε between SUM and COUNT',14,muted,'middle');
+ }else{
+  const sd=Math.SQRT2*100/epsilon;for(const [i,n] of [[0,4],[1,40000]]){const x=63+i*300;g+=rect(x,75,235,234,i?'#e8f5ed':'#fff3d5')+txt(x+118,121,`${n.toLocaleString()} people`,20,ink,'middle',700)+txt(x+118,171,`SUM ${n*36}`,16,ink,'middle')+txt(x+118,215,`Noise SD ≈ ${f(sd,2)}`,16,muted,'middle')+txt(x+118,270,`≈ ${f(100*sd/(n*36),i?4:2)}% of SUM`,18,i?'#00843d':'#8a641b','middle',700);}
+  g+=txt(330,365,`Same cap and ε = ${f(epsilon,2)} in both examples`,14,muted,'middle');
+ }
+ return svg(g,lessons.bounds.stages[step][1]);
+}
+
+function histogramView(){
+ const m=histogramModel();let g='';
+ if(step===0){for(let i=0;i<6;i++)g+=person(115+i*85,90,C[i%3],['A','B','C'][i%3]);for(let j=0;j<3;j++)g+=rect(90+j*185,221,135,83,'#f1f5f9')+txt(158+j*185,267,`Major ${['A','B','C'][j]}`,18,C[j],'middle',700);g+=txt(330,365,'Each student belongs to exactly one bin',16,muted,'middle');}
+ else{
+  const values=step===1?m.counts:step===2?m.noisy:m.rounded,lo=Math.min(0,...values),hi=Math.max(4,...values),Y=v=>320-(v-lo)/(hi-lo)*240,zero=Y(0);
+  g+=line(65,zero,602,zero,'#bbc7d5');for(let j=0;j<3;j++){const x=110+j*185,v=values[j],y=Y(Math.max(v,0)),h=Math.abs(Y(v)-zero);g+=rect(x,y,80,h,C[j],5)+txt(x+40,v>=0?y-12:Y(v)+23,f(v,step===1||step===3?0:2),20,ink,'middle',700)+txt(x+40,365,['Major A','Major B','Major C'][j],14,muted,'middle');}
+  g+=txt(330,35,step===1?'Exact counts':step===2?'Noisy counts':'Rounded and clamped',15,ink,'middle',650);
+ }
+ return svg(g,`Histogram stage ${step+1}: ${step<2?'counts 2,2,2':step===2?m.noisy.map(v=>f(v,3)).join(','):m.rounded.join(',')}.`);
+}
+
+function groupView(){
+ let g='';
+ if(step===2){
+  const gap=270/groupC;for(let i=0;i<=groupC;i++){const y=44+i*gap;g+=rect(76,y-15,160,32,'#eef3f8')+txt(156,y+7,`D${i} · ${8-i} records`,13,ink,'middle',650);if(i<groupC){g+=arrow(251,y+17,251,y+gap-11,'#9eafc2',1.5)+txt(289,y+gap/2+7,'one removal: × e¹',13,muted);}}
+  g+=rect(76,348,500,44,'#e8f5ed')+txt(326,377,`e¹ multiplied ${groupC} times = e${groupC===1?'¹':'^'+groupC} ≈ ${f(Math.exp(groupC),2)}`,18,'#00843d','middle',700);
+ }else if(step===3){
+  g+=rect(73,70,230,207,'#e8f5ed')+rect(354,70,230,207,'#eef3f8')+txt(188,112,'Group target ε',16,ink,'middle')+txt(188,192,'1',51,'#00843d','middle',750)+txt(469,112,'Each person needs ε',16,ink,'middle')+txt(469,192,f(1/groupC,3),44,ink,'middle',750)+txt(330,338,`COUNT noise scale: 1 ÷ (1/${groupC}) = ${groupC}`,20,ink,'middle',700)+txt(330,375,'Larger protected groups require more noise',14,muted,'middle');
+ }else{
+  const c=step===0?1:groupC;g+=txt(75,63,'D',20,ink,'middle',700)+txt(75,230,`D${c}`,20,ink,'middle',700);for(let i=0;i<8;i++){g+=person(130+i*63,77,C[1],'');g+=person(130+i*63,244,i>=8-c?C[0]:C[1],'',i>=8-c);}
+  g+=txt(330,164,`${c} ${c===1?'person':'people'} removed`,17,muted,'middle')+txt(330,370,`COUNT: 8 → ${8-c}`,24,ink,'middle',750);
+ }
+ return svg(g,`${lessons.group.stages[step][1]} The group size is ${groupC}.`);
+}
+
+function localView(){
+ const m=localModel();let g='';
+ if(step===0){g+=person(114,157,C[1],'Private bit')+arrow(150,154,268,154,'#b1bfce')+rect(283,101,145,112,'#eef3f8')+txt(355,145,'Randomize',17,ink,'middle',700)+txt(355,178,'on the device',12,muted,'middle')+arrow(438,154,544,154,'#b1bfce')+txt(560,149,'0 / 1',24,ink,'middle',750)+txt(330,285,'Truthful report: 3/4',23,'#00843d','middle',700)+txt(330,334,'Opposite report: 1/4',18,muted,'middle');}
+ else if(step===1){g+=rect(70,85,520,90,'#eef3f8')+txt(330,122,`Expected reported yes: ${f(m.expected,0)}`,22,ink,'middle',700)+txt(330,152,'Includes false yes reports',13,muted,'middle')+arrow(330,192,330,236,'#b1bfce')+rect(70,254,520,88,'#e8f5ed')+txt(330,308,`Estimated true count: ${f(m.truth,0)}`,26,'#00843d','middle',750);}
+ else{for(const [i,label,value,color] of [[0,'CENTRAL',m.centralSD,C[1]],[1,'LOCAL',m.localSD,C[2]]]){const x=75+i*295;g+=rect(x,70,220,235,'#f2f6fa')+txt(x+110,113,label,15,color,'middle',700)+txt(x+110,187,`±${f(value,2)}`,33,color,'middle',750)+txt(x+110,233,'Count standard error',12,muted,'middle')+txt(x+110,275,i?'Randomize n times':'Add noise once',14,ink,'middle');}g+=txt(330,365,`Same ε = ln 3 · n = ${localN.toLocaleString()}`,16,ink,'middle',650);}
+ return svg(g,`Central versus local differential privacy at ε ln 3 and n ${localN}. Standard errors ${f(m.centralSD,4)} and ${f(m.localSD,4)}.`);
+}
+
+function recommendView(){
+ let g='';const ratings=[1,5,4,3,2];
+ if(step<2){ratings.forEach((v,i)=>{const x=90+i*105;g+=rect(x,307-v*42,60,v*42,C[1],5)+txt(x+30,295-v*42,String(v),20,ink,'middle',750)+txt(x+30,338,`R${i+1}`,12,muted,'middle');});g+=txt(330,49,'Ratings are bounded in [1, 5]',17,ink,'middle',650)+txt(330,382,step===0?'Average = (1 + 5 + 4 + 3 + 2) / 5 = 3':'One rating can change by at most 4',16,ink,'middle',650);}
+ else if(step===2){const value=3+lap(.8/epsilon,.65);g+=rect(110,91,440,193,'#e8f5ed')+txt(330,139,'Private global mean',18,ink,'middle',650)+txt(330,211,f(value,3),44,'#00843d','middle',750)+txt(330,345,'A building block for a recommendation system',15,muted,'middle');}
+ else{g+=txt(330,48,'Movie–movie covariance',21,ink,'middle',750);const cells=[[2,1.2],[1.2,1.2]];for(let r=0;r<2;r++)for(let c=0;c<2;c++)g+=rect(198+c*126,101+r*93,113,81,r===c?'#edf1f8':'#e8f5ed')+txt(254+c*126,151+r*93,f(cells[r][c],1),29,r===c?ink:'#00843d','middle',750);g+=txt(330,329,'Raw covariance is a statistic, not a privacy guarantee.',14,muted,'middle')+txt(330,365,'Bound contributions → calibrate matrix noise → account',13,ink,'middle',600);}
+ return svg(g,lessons.recommend.stages[step][1]);
+}
+
+function descentView(){
+ const m=descentModel(),X=x=>80+x*145,Y=y=>340-y*48;let g=axes(80,52,455,288);
+ for(let i=0;i<3;i++){const active=m.ids.includes(i);g+=circle(X(m.x[i]),Y(m.y[i]),7,active?C[1]:'#bdc8d6')+txt(X(m.x[i])+10,Y(m.y[i])-12,`(${m.x[i]}, ${m.y[i]})`,12,muted);if(step===1)g+=line(X(m.x[i]),Y(m.y[i]),X(m.x[i]),Y(m.w*m.x[i]),C[0],2,'4 4');}
+ g+=line(X(0),Y(0),X(3.2),Y(m.w*3.2),step===3?'#a8b6c6':ink,2);
+ if(step===3)g+=line(X(0),Y(0),X(3.2),Y(m.next*3.2),'#00843d',3);
+ for(let i=0;i<=3;i++)g+=txt(X(i),362,String(i),11,muted,'middle');g+=txt(310,393,'Input x',12,muted,'middle')+txt(57,44,'y',12,muted)+txt(398,81,step===3?`w: 1 → ${f(m.next,2)}`:'Prediction: ŷ = 1 × x',14,ink,'middle',650);
+ if(step===2)g+=rect(97,82,185,57,'#fff3d5')+txt(189,118,`Gradient = ${f(m.gradient,3)}`,18,ink,'middle',700);
+ return svg(g,`Linear regression ${descentBatch} batch. Weight ${step===3?m.next:m.w}, gradient ${m.gradient}, loss ${m.loss}.`);
+}
+
+function auditView(){
+ let g='';const bound=Math.log((.3-1e-5)/.05);
+ if(step===0){for(let i=0;i<12;i++){const included=[0,2,3,7,9,11].includes(i),x=100+i%6*90,y=100+Math.floor(i/6)*130;g+=person(x,y,included?C[1]:'#aab7c7',included?'in':'out');}g+=txt(330,355,'Include each canary with probability 1/2',18,ink,'middle',650);}
+ else if(step===1){const labels=['30 true positives','70 false negatives','5 false positives','95 true negatives'];for(let i=0;i<4;i++){const x=75+i%2*275,y=75+Math.floor(i/2)*125;g+=rect(x,y,245,92,i%2?'#eef3f8':'#e8f5ed')+txt(x+122,y+54,labels[i],17,ink,'middle',650);}g+=txt(330,365,'100 included · 100 excluded · synthetic attack rates',13,muted,'middle');}
+ else if(step===2){g+=rect(95,96,470,166,'#e8f5ed')+txt(330,145,'Rate-based lower bound on ε',18,ink,'middle',650)+txt(330,216,`ε ≥ ${f(bound,3)}`,41,'#00843d','middle',750)+txt(330,339,'A real audit needs statistical confidence bounds.',15,muted,'middle');}
+ else{const fail=.3>Math.exp(auditEpsilon)*.05+1e-5;g+=rect(90,90,480,186,fail?'#fff0ec':'#e8f5ed')+txt(330,136,`Claimed ε = ${auditEpsilon}`,21,ink,'middle',650)+txt(330,196,fail?'Contradiction':'No contradiction',31,fail?C[0]:'#00843d','middle',750)+txt(330,240,`Attack-based lower bound ≈ ${f(bound,2)}`,16,muted,'middle')+txt(330,346,fail?'Rates exceed what this claim permits.':'This result alone does not certify the claim.',15,muted,'middle');}
+ return svg(g,`${lessons.audit.stages[step][1]} TPR .30, FPR .05, delta .00001, claimed epsilon ${auditEpsilon}.`);
+}
+
+function guideView(){
+ let g='';const headings=step===0?['A number','A choice','A model']:step===1?['Contribution','Dataset size','Repeated access']:['DP scaling','Class imbalance','Private prompts'];
+ const text=step===0?['Laplace / Gaussian','Exponential / noisy max','DP-SGD + accountant']:step===1?['Bound each person','Compare error to scale','Track the whole budget']:['Compute, privacy, utility','Rare classes need care','Sample substitute tokens'];
+ for(let i=0;i<3;i++){const y=40+i*116;g+=rect(65,y,530,90,i%2?'#eef3f8':'#e8f5ed')+txt(90,y+35,headings[i],20,ink,'start',750)+txt(90,y+65,text[i],15,muted);}
+ return svg(g,`${headings.join('; ')}. ${text.join('; ')}.`);
+}
+
+function probabilityPercent(p){
+ const percent=100*p;
+ return (percent>0&&percent<.001?percent.toExponential(3):f(percent,3))+'%';
+}
+function tableMarkup(headers,rows){
+ if(!rows.length)return '<p class="calc-note">No points belong to this cluster in this iteration.</p>';
+ return '<div class="table-scroll"><table><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+}
+
+function laplaceSampling(b,u,label='Noise draw'){
+ const offset=u-.5,inside=1-2*Math.abs(offset),value=lap(b,u);
+ return `<details class="calc-detail"><summary>${esc(label)} · how the random value was obtained</summary><div class="formula">U = ${f(u,6)} from Uniform(0, 1)<br>η = −b sign(U − 0.5) ln(1 − 2|U − 0.5|)<br>η = −${f(b,4)} × (${Math.sign(offset)}) × ln(${f(inside,6)}) ≈ ${f(value,4)}</div></details>`;
+}
+
+function calculation(){
+ const rows=[];let table='',detail='',note='Displayed values are rounded; calculations use full precision.';
+ const add=(name,formula,substitute,result)=>rows.push({name,formula,substitute,result:String(result)});
+ const vec=v=>'('+v.map(x=>f(x,4)).join(', ')+')';
+ const sumText=v=>v.length?v.slice(0,6).map(x=>f(x,2)).join(' + ')+(v.length>6?' + …':''):'0';
+ if(key==='definition'){
+  if(step===0)add('One allowed edit','D ∼ D′: one record added or removed','6 records → 5 records','1 record differs');
+  if(step===1){add('Public domain','neighbors = distinct removals + additions','3 + 4','7 neighbors');table=tableMarkup(['Operation','Result'],[['Remove 20','{30, 40}'],['Remove 30','{20, 40}'],['Remove 40','{20, 30}'],['Add 20','{20, 20, 30, 40}'],['Add 30','{20, 30, 30, 40}'],['Add 40','{20, 30, 40, 40}'],['Add 50','{20, 30, 40, 50}']]);note='Duplicates are allowed here. A continuous record domain can give infinitely many added-record neighbors.';}
+  if(step>=2){add('Probability bound','Pr[M(D) ∈ S] ≤ e^ε Pr[M(D′) ∈ S]',`exp(${f(epsilon,2)}) × 0.20`,`≤ ${f(Math.exp(epsilon)*.2,4)}`);if(step===3)add('Reverse direction','Pr[M(D) ∈ S] ≥ e^(−ε) Pr[M(D′) ∈ S]',`exp(−${f(epsilon,2)}) × 0.20`,`≥ ${f(Math.exp(-epsilon)*.2,4)}`);note='The reference probability 0.20 is illustrative. These are bounds for this event; DP must hold for every event and every neighboring pair. ε is not a percentage of people exposed.';}
+ }
+ if(key==='sensitivity'){
+  const isSum=query==='sum',base=isSum?81:3,after=isSum?71:2;
+  if(query==='hist'){
+   add('Histogram query','f(D) = counts in disjoint bins','[A, B, C, A, B, C]','[2, 2, 2]');
+   if(step>=1)add('Neighbor change','‖f(D) − f(D′)‖₁','|2−1| + |2−2| + |2−2|','1');
+   table=tableMarkup(['Major','D','D′ after removing A','Absolute change'],[['A',2,step?1:2,step?1:0],['B',2,2,0],['C',2,2,0]]);
+  }else{
+   if(step===0)add('Evaluate the query',isSum?'SUM(credits)':'COUNT(yes)',isSum?'10 + 12 + 8 + 16 + 21 + 14':'1 + 1 + 0 + 1 + 0 + 0',base);
+   if(step>=1)add('Evaluate the neighbor','f(D′) = f(D) − removed contribution',`${base} − ${isSum?10:1}`,after);
+   if(step>=2)add('This pair’s difference','|f(D) − f(D′)|',`|${base} − ${after}|`,isSum?10:1);
+  }
+  if(step===3){add('Global sensitivity','Δ₁f = max over every allowed D ∼ D′',isSum?'max allowed contribution = 21':'one person changes the count or one bin by 1',isSum?21:1);table+=tableMarkup(['Query / condition','Sensitivity','At ε = 0.5: b = Δ/ε'],[['COUNT',1,2],['SUM, public cap 21',21,42],['Disjoint histogram, add/remove',1,2],['3 overlapping COUNT queries',3,6],['MAX in [0, 100], empty value 0',100,200],['Fixed-n mean in [0, 100], replacement','100/n','200/n']]);}
+ }
+ if(key==='bounds'){
+  const ages=[42,31,28,43];
+  if(step===0){add('Public clipping rule','clip(x) = min(100, max(0, x))','clip(128) = min(100, max(0, 128))','100');table=tableMarkup(['Input age','After clipping to [0,100]'],ages.map(v=>[v,v]));note='The out-of-range value 128 illustrates the rule; the four ages in the plotted dataset already satisfy the cap.';}
+  if(step===1){const b=100/epsilon,noise=lap(b,.53);add('Sensitivity and scale','Δ₁SUM = B; b = B/ε',`100 / ${f(epsilon,2)}`,f(b,4));add('Release the sum','SUM + η',`(42 + 31 + 28 + 43) + (${f(noise,4)})`,`≈ ${f(144+noise,4)}`);detail=laplaceSampling(b,.53);}
+  if(step===2){const each=epsilon/2,bs=100/each,bc=1/each,ns=lap(bs,.53),nc=lap(bc,.55),sum=144+ns,count=4+nc,mean=sum/Math.max(1,count);add('Split the budget','ε_sum = ε_count = ε/2',`${f(epsilon,2)} / 2`,f(each,4));add('Private numerator','S̃ = 144 + Lap(100/ε_sum)',`144 + (${f(ns,4)})`,`≈ ${f(sum,4)}`);add('Private denominator','ñ = 4 + Lap(1/ε_count)',`4 + (${f(nc,4)})`,`≈ ${f(count,4)}`);add('Private mean','clip(S̃ / max(1,ñ), 0, 100)',`${f(sum,4)} / max(1, ${f(count,4)})`,`≈ ${f(Math.max(0,Math.min(100,mean)),4)}`);detail=laplaceSampling(bs,.53,'SUM noise')+laplaceSampling(bc,.55,'COUNT noise')+'<details class="calc-detail"><summary>Compare adjacency and denominator choices</summary>'+tableMarkup(['Query','Condition','Sensitivity'],[['SUM(age)','Add/remove, age in [0,100]','100'],['SUM(age)','Replacement, age in [0,100]','100'],['MEAN(age)','Replacement, public n=4','100/4 = 25'],['SUM(age)/N₀','Add/remove, public fixed N₀=120','100/120 ≈ 0.8333']])+'</details>';note='The noisy denominator is stabilized with a public floor of 1. For replacement adjacency with public n = 4, a direct mean has sensitivity 100/4 = 25 instead. These are separate example mechanisms; repeated releases compose.';}
+  if(step===3){const sd=Math.SQRT2*100/epsilon;add('Absolute error scale','SD(Lap(B/ε)) = √2 B/ε',`√2 × 100 / ${f(epsilon,2)}`,`≈ ${f(sd,4)}`);table=tableMarkup(['Population','Total at mean 36','Same noise SD','SD as % of total'],[4,40000].map(n=>[n,n*36,f(sd,4),f(100*sd/(n*36),4)+'%']));note='A relative standard deviation is an error scale, not a guaranteed relative-error bound. Both populations use the same public cap and ε.';}
+ }
+ if(key==='laplace'){
+  const b=1/epsilon,eta=lap(b,lapU),release=3+eta;
+  if(step===0)add('True query','COUNT(yes)','1 + 1 + 0 + 1 + 0 + 0','3');
+  if(step===1){add('Calibrate','b = Δ₁f / ε',`1 / ${f(epsilon,2)}`,f(b,4));add('Noise variance','Var(η) = 2b²',`2 × (${f(b,4)})²`,f(2*b*b,4));add('Noise standard deviation','SD(η) = √2 b',`√2 × ${f(b,4)}`,`≈ ${f(Math.SQRT2*b,4)}`);}
+  if(step===2){const v=lapU-.5;add('Inverse-CDF sample','η = −b sign(U−0.5) ln(1−2|U−0.5|)',`−${f(b,4)} × (${Math.sign(v)}) × ln(${f(1-2*Math.abs(v),6)})`,`≈ ${f(eta,4)}`);note=`U = ${f(lapU,6)} is the uniform draw. The inverse CDF turns it into Laplace noise.`;}
+  if(step===3){add('Private release','y = f(D) + η',`3 + (${f(eta,4)})`,`≈ ${f(release,4)}`);detail=laplaceSampling(b,lapU);}
+  if(step===4){const radius=b*Math.log(20);add('95% error radius','r = b ln(20)',`${f(b,4)} × ${f(Math.log(20),6)}`,`≈ ${f(radius,4)}`);add('Probability','Pr(|η| ≤ r) = 1 − exp(−r/b)',`1 − exp(−${f(radius,4)}/${f(b,4)})`,'0.95');add('95% interval','[f(D) − r, f(D) + r]',`[3 − ${f(radius,4)}, 3 + ${f(radius,4)}]`,`[${f(3-radius,4)}, ${f(3+radius,4)}]`);}
+  if(step===5){const p=Math.exp(-Math.abs(release-3)/b)/(2*b),q=Math.exp(-Math.abs(release-2)/b)/(2*b),ratio=p/q;add('Two densities','p_μ(y) = exp(−|y−μ|/b)/(2b)',`μ = 3: ${f(p,6)}; μ = 2: ${f(q,6)}`,`ratio ≈ ${f(ratio,4)}`);add('General bound','p_D(y)/p_D′(y) ≤ exp(|f(D)−f(D′)|/b)',`exp(1 / ${f(b,4)}) = exp(${f(epsilon,2)})`,`≤ ${f(Math.exp(epsilon),4)}`);note='For continuous outputs, a single exact value has probability zero, so we compare densities. The triangle inequality establishes the bound for every y; the displayed draw illustrates one case.';}
+ }
+ if(key==='histogram'){
+  const m=histogramModel();
+  if(step===0)add('Group membership','Each record contributes to one public bin','A, B, C, A, B, C','2 in each bin');
+  if(step===1)add('Vector sensitivity','Δ₁hist = max ‖hist(D)−hist(D′)‖₁','[2,2,2] − [1,2,2] → |1|+|0|+|0|','1');
+  if(step>=2){add('One vector release','b per bin = Δ₁hist/ε',`1 / ${f(epsilon,2)}`,f(m.b,4));table=tableMarkup(['Bin','True count','U','Noise η','Count + η',...(step===3?['max(0, round(·))']:[])],m.counts.map((v,i)=>[['A','B','C'][i],v,f(m.u[i],3),f(m.noise[i],4),f(m.noisy[i],4),...(step===3?[m.rounded[i]]:[])]));detail=laplaceSampling(m.b,m.u[0],'Major A noise');note='The whole vector costs ε, since one person affects one bin. Under replacement adjacency, moving between bins can change two counts and give L1 sensitivity 2. Public post-processing adds no cost; rounded counts need not sum to the original total.';}
+ }
+ if(key==='budget'){
+  if(step===0){add('Sequential composition','ε_total = ε₁ + ε₂ + ε₃','0.2 + 0.3 + 0.5','1');add('Approximate-DP extension','δ_total = Σ δᵢ','Example: 10⁻⁵ + 10⁻⁵ + 0','2 × 10⁻⁵');detail='<details class="calc-detail"><summary>Why the costs add · proof idea</summary><div class="formula">Joint-output ratio = first-release ratio × conditional second-release ratio<br>≤ exp(ε₁) × exp(ε₂) = exp(ε₁ + ε₂)<br>The second mechanism must be DP for every fixed value of the earlier output.</div></details>';}
+  if(step===1){add('Parallel composition','ε_total = max(ε₁, ε₂, ε₃)','max(0.3, 0.2, 0.5)','0.5');note='People, not file names, must be disjoint. The assignment to branches is fixed at the protected-unit level.';}
+  if(step===2){add('Public post-processing','g(ỹ) = round(ỹ)','round(2.7)','3; extra ε = 0');table=tableMarkup(['Rule','Apply the rule','Extra privacy cost'],[['Round and clamp negative count','max(0, round(−0.7)) = 0','0'],['Public class size 120','100 × 2.7 / 120 = 2.25%','0'],['Correct by checking the true count','Reads D again','Requires separate analysis']]);}
+  if(step===3){table=tableMarkup(['Release','Sensitivity','Assigned ε','b = Δ/ε'],[['Enrollment COUNT',1,.2,5],['Credit SUM, public cap 21',21,.3,70],['College histogram',1,.5,'2 per bin']]);add('Account once per fresh release','5 repeated counts at ε = 0.2','5 × 0.2','1 total ε');add('SD of averaged independent noise','√2 / (ε_per_release √q)','√2 / (0.2 × √5)',`≈ ${f(Math.sqrt(10),4)}`);add('One count at the same total budget','SD = √2 / ε_total','√2 / 1',`≈ ${f(Math.SQRT2,4)}`);note='For this same count and fixed total ε, five fresh releases and averaging are noisier than one release at ε = 1. Reusing the same already released answer spends no new budget.';}
+ }
+ if(key==='group'){
+  if(step===0)add('One person','Pr[M(D)∈S] ≤ e^ε Pr[M(D′)∈S]','ε = 1 → exp(1)',`≤ ${f(Math.E,4)} × reference probability`);
+  if(step===1){add('Group adjacency','Number of changed records = c',`COUNT: 8 − ${groupC} = ${8-groupC}`,`${groupC} records differ`);detail='<details class="calc-detail"><summary>Lecture 9 slide 14 · groups within histogram bins</summary>'+tableMarkup(['Age bin','Original D','Remove 2 from one bin','Remove 1 from each bin'],[['20–30',2,0,1],['30–40',3,3,2],['40–50',4,4,3],['50–60',1,1,0]])+'<p class="calc-note">The L1 histogram changes are 2 and 4 respectively, so the pure-DP group bounds are 2ε and 4ε.</p></details>';}
+  if(step===2){add('Group privacy','ε_group = c × ε_individual',`${groupC} × 1`,groupC);add('Chain the comparisons','(e^ε)^c = exp(cε)',`exp(${groupC} × 1)`,`≈ ${f(Math.exp(groupC),4)}`);note='This compares one mechanism on two datasets that differ in a group. It is distinct from spending budget on several releases.';}
+  if(step===3){add('Target group ε = 1','ε_individual = ε_group / c',`1 / ${groupC}`,f(1/groupC,4));add('COUNT calibration','b = 1/ε_individual',`1 / (1/${groupC})`,groupC);add('Check the group guarantee','c × ε_individual',`${groupC} × (1/${groupC})`,'1');}
+ }
+ if(key==='local'){
+  const m=localModel();
+  if(step===0){add('Randomized-response probabilities','p = e^ε/(e^ε+1); q = 1/(e^ε+1)','ε = ln 3 → p = 3/4; q = 1/4','p = 0.75; q = 0.25');add('Privacy ratio','p/q = e^ε','0.75 / 0.25','3; ε = ln 3');}
+  if(step===1){add('Expected reported yes','E[Y] = nq + (p−q)C',`${localN} × 0.25 + 0.5 × ${m.truth}`,f(m.expected,0));add('Debiased count','Ĉ = (Y − nq)/(p−q)',`(${m.expected} − ${localN} × 0.25) / 0.5`,f(m.truth,0));note='This uses the expected report count to show the inversion. An actual random report count fluctuates around it.';}
+  if(step===2){add('One estimator’s conditional variance','pq/(p−q)²','(0.75 × 0.25) / (0.75−0.25)²','0.75');add('Sum n independent contributions','Var(Ĉ | data) = n × 0.75',`${localN} × 0.75`,f(m.variance,2));add('Local standard error','SD = √Var',`√${f(m.variance,2)}`,`≈ ${f(m.localSD,4)}`);}
+  if(step===3){add('Central Laplace error','SD = √2 / ε','√2 / ln 3',`≈ ${f(m.centralSD,4)}`);add('Local count error','SD = √(n e^ε/(e^ε−1)²)',`√(${localN} × 3 / (3−1)²)`,`≈ ${f(m.localSD,4)}`);note='The local variance conditions on the underlying private data. Equal ε does not imply equal utility across central and local trust models.';}
+ }
+ if(key==='exponential'){
+  const m=expModel(),p=expProb(),weights=m.scores.map(v=>Math.exp(epsilon*v/2)),total=weights.reduce((a,b)=>a+b,0),winner=choose(p,expU),lower=p.slice(0,winner).reduce((a,b)=>a+b,0);
+  if(step===0){add('Utility','u(D,r) = number of votes for r',m.names.map((v,i)=>v+': '+m.scores[i]).join('; '),'Δu = 1');}
+  if(step===1){add('Selection probability','Pr(r) = exp(εu(r)/(2Δu)) / Σ exp(εu(j)/(2Δu))',`ε = ${f(epsilon,2)}, Δu = 1; divide each weight by ${f(total,4)}`,'Probabilities sum to 1');table=tableMarkup(['Candidate','Score u','Apply exp(εu/2)','Weight','Probability'],m.scores.map((v,i)=>[m.names[i],v,`exp(${f(epsilon,2)} × ${v} / 2)`,f(weights[i],4),probabilityPercent(p[i])]));}
+  if(step===2){add('Inverse-CDF choice','Choose r whose cumulative interval contains U',`${f(lower,6)} ≤ ${f(expU,6)} < ${f(lower+p[winner],6)}`,m.names[winner]);table=tableMarkup(['Candidate','Cumulative interval'],p.map((v,i)=>[m.names[i],`[${f(p.slice(0,i).reduce((a,b)=>a+b,0),6)}, ${f(p.slice(0,i+1).reduce((a,b)=>a+b,0),6)})`]));}
+  if(step===3)add('Publish the choice','Output r, not its utility vector',`One draw U = ${f(expU,6)}`,m.names[winner]);
+  if(step===4){add('Score factor','exp(ε[u(D,r)−u(D′,r)]/(2Δu)) ≤ exp(ε/2)',`exp(${f(epsilon,2)} / 2)`,`≤ ${f(Math.exp(epsilon/2),4)}`);add('Normalizer factor','Z(D′)/Z(D) ≤ exp(ε/2)',`exp(${f(epsilon,2)} / 2)`,`≤ ${f(Math.exp(epsilon/2),4)}`);add('Multiply the bounds','Pr_D(r)/Pr_D′(r) ≤ exp(ε/2) × exp(ε/2)',`exp(${f(epsilon,2)})`,`≤ ${f(Math.exp(epsilon),4)}`);}
+  if(expCase==='movies')note='The movie utilities [6,9,4] match the lecture. Δu = 1 is illustrative and requires an appropriately bounded score and a specified adjacency model.';
+  if(expCase==='zero')note='Jordan is a public candidate with score 0. Its weight is exp(0) = 1, so it still has a nonzero selection probability. Candidate sets must not be chosen from private observed categories without analysis.';
+ }
+ if(key==='noisymax'){
+  const votes=[30,28,12,5],noise=maxU.map(u=>lap(1/epsilon,u)),noisy=votes.map((v,i)=>v+noise[i]),winner=noisy.indexOf(Math.max(...noisy)),names=['Alice','Bob','Charlie','Dave'];
+  if(step===0)add('Exact lead','Top vote count − runner-up','30 − 28','2 votes');
+  if(step===1){add('Disjoint histogram calibration','b = Δ₁hist / ε',`1 / ${f(epsilon,2)}`,f(1/epsilon,4));table=tableMarkup(['Candidate','Votes','Uniform U','Noise','Votes + noise'],votes.map((v,i)=>[names[i],v,f(maxU[i],4),f(noise[i],4),f(noisy[i],4)]));detail=laplaceSampling(1/epsilon,maxU[0],'Alice’s noise');}
+  if(step===2)add('Choose the largest','argmax of noisy counts',noisy.map(v=>f(v,4)).join(', '),names[winner]);
+  if(step===3){add('Public output','Release only the winning name',names[winner],`Cost: ε = ${f(epsilon,2)}`);note='For this disjoint add/remove vote histogram, the entire noisy vector is ε-DP, and reporting the maximum index is post-processing. General overlapping scores need a different calibration or proof.';}
+ }
+ if(key==='kmeans'){
+  const frame=kmframes[step],stage=frame.stage,d=km[frame.iter],j=focusCluster,members=pointSet.map((p,i)=>({p,i})).filter(v=>d.assigned[v.i]===j),n=d.counts[j],sum=d.sums[j],nc=d.noisyCounts[j],ns=d.noisySums[j];
+  if(stage===0){add('Public setup','Fix k, T, bounds, and starting centers','k = 3; T = 3; each coordinate ∈ [0,1]',`${pointSet.length} synthetic points`);if(kPrivate)add('Budget per iteration','ε_iteration = ε/T',`${f(epsilon,2)} / 3`,f(epsilon/3,4));table=tableMarkup(['Point','x','y'],pointSet.map((p,i)=>['P'+(i+1),f(p[0],4),f(p[1],4)]));}
+  if(stage===1){const p=pointSet[focusPoint],distance=d.centers.map(c=>Math.hypot(p[0]-c[0],p[1]-c[1]));add('Nearest-center grouping','assign(P) = argmin_j d(P,Cj)',`P${focusPoint+1} = ${vec(p)}`,`C${d.assigned[focusPoint]+1}`);table=tableMarkup(['Center','Coordinates','Apply squared distance','Distance'],d.centers.map((c,i)=>['C'+(i+1),vec(c),`(${f(p[0],4)}−${f(c[0],4)})² + (${f(p[1],4)}−${f(c[1],4)})²`,f(distance[i],6)]));note='The ringed point and dashed lines in the plot match this calculation. Ties use the first center.';}
+  if(stage===2){add('Count the group',`n_${j+1} = number of assigned points`,members.length<=12?members.map(v=>'P'+(v.i+1)).join(', ')||'empty cluster':`${members.length} assigned point IDs`,n);if(kPrivate){add('Size budget and scale','ε_n = ε/(2T); b_n = 1/ε_n',`ε_n = ${f(epsilon,2)}/6; b_n = 6/${f(epsilon,2)}`,f(6/epsilon,4));add('Noisy count','ñ = n + η_n',`${n} + (${f(nc-n,4)})`,`≈ ${f(nc,4)}`);detail=laplaceSampling(6/epsilon,d.countU[j],'Cluster size noise');}table=tableMarkup(['Member','x','y'],members.map(v=>['P'+(v.i+1),f(v.p[0],4),f(v.p[1],4)]));}
+  if(stage===3){for(let axis=0;axis<2;axis++)add(`Sum ${axis?'y':'x'} coordinates`,'s = Σ coordinate of each assigned point',sumText(members.map(v=>v.p[axis])),`≈ ${f(sum[axis],4)}`);if(kPrivate){add('Sum-vector noise scale','Δ₁ = 2; ε_s = ε/(2T); b_s = 2/ε_s',`2 / (${f(epsilon,2)}/6)`,f(12/epsilon,4));add('Noisy sums','s̃ = s + η (per coordinate)',`${vec(sum)} + ${vec(ns.map((v,i)=>v-sum[i]))}`,`≈ ${vec(ns)}`);detail=laplaceSampling(12/epsilon,d.sumU[j][0],'x-sum noise')+laplaceSampling(12/epsilon,d.sumU[j][1],'y-sum noise');}note='The x and y sums form one vector with L1 sensitivity 2. The assigned sum budget covers both coordinates and all clusters; do not charge it once per coordinate.';}
+  if(stage===4){
+   if(nc<1)add('Stabilize the denominator','If noisy size < 1: keep the previous center',`${f(nc,4)} < 1`,vec(d.centers[j]));
+   else for(let axis=0;axis<2;axis++){const raw=ns[axis]/nc;add(`New ${axis?'y':'x'} coordinate`,kPrivate?'clip(noisy sum / noisy size, 0, 1)':'sum / size',`${f(ns[axis],4)} / ${f(nc,4)} ≈ ${f(raw,4)}`,f(d.next[j][axis],4));}
+   const sse=centers=>pointSet.reduce((a,p,i)=>a+(p[0]-centers[d.assigned[i]][0])**2+(p[1]-centers[d.assigned[i]][1])**2,0);
+   add('Clustering objective','SSE = Σ ‖point − assigned center‖₂²',`Before ${f(sse(d.centers),5)} → after ${f(sse(d.next),5)}`,kPrivate?'Noise may increase SSE':'Exact means minimize this step’s SSE');
+  }
+  if(stage===5){add('Total budget',kPrivate?'T × (ε/T)':'Ordinary k-means',kPrivate?`3 × (${f(epsilon,2)}/3)`:'No randomized privacy mechanism',kPrivate?`ε = ${f(epsilon,2)}`:'No DP guarantee');table=tableMarkup(['Cluster',kPrivate?'Noisy size':'Size','Final center'],d.next.map((v,i)=>['C'+(i+1),f(d.noisyCounts[i],4),vec(v)]));note='Only final noisy sizes and centers are outputs in the private algorithm. Raw points, exact sums, and assignments shown in earlier teaching steps stay internal in a real system.';}
+ }
+ if(key==='recommend'){
+  if(step===0)add('Global mean','Gavg = Σ rating / n','(1 + 5 + 4 + 3 + 2) / 5','3');
+  if(step===1){add('Replacement sensitivity','Δmean = (5−1)/n','4 / 5','0.8');add('Larger fixed sample','Δmean at n = 1000','4 / 1000','0.004');note='This protects one rating under fixed-size replacement adjacency, not an entire user’s unrestricted rating history.';}
+  if(step===2){const b=.8/epsilon,noise=lap(b,.65);add('Noise scale','b = Δmean/ε',`.8 / ${f(epsilon,2)}`,f(b,4));add('Release a building block','Private Gavg = 3 + η',`3 + (${f(noise,4)})`,`≈ ${f(3+noise,4)}`);detail=laplaceSampling(b,.65);note='A complete recommender must account for all released global, movie, user, and covariance statistics. A small sensitivity claim needs public bounds and a defined privacy unit.';}
+  if(step===3){add('Population covariance','cov(A,B) = Σ(Ai−meanA)(Bi−meanB)/n','(2 + 4 + 0 + 0 + 0) / 5','1.2');table=tableMarkup(['Rating A','Rating B','A−3','B−3','Product'],[[1,2,-2,-1,2],[5,5,2,2,4],[4,3,1,0,0],[3,2,0,-1,0],[2,3,-1,0,0]]);note='Both sample means equal 3 here. This is a raw covariance calculation, not a DP release. Matrix sensitivity, contribution bounds, the neighboring relation, and a joint noise/accounting analysis are still required.';}
+ }
+ if(key==='gaussian'){
+  const m=gaussianModel();
+  if(step===0)add('Affected coordinates','v = f(D)−f(D′)','[1, 1, …, 1] (100 coordinates)','100 changes of 1');
+  if(step===1){add('L1 sensitivity','Δ₁ = Σ |vi|','100 × |1|','100');add('L2 sensitivity','Δ₂ = √Σ vi²','√(100 × 1²)','10');table=tableMarkup(['Another vector from Lecture 8 slide 11','L1','L2'],[['[1, −1, 0]','|1|+|−1|+0 = 2','√(1+1+0) = √2 ≈ 1.4142']]);}
+  if(step===2){add('Gaussian calibration','σ = Δ₂ √(2 ln(1.25/δ))/ε',`10 × √(2 ln(1.25 / 0.00001)) / ${f(epsilon,2)}`,`≈ ${f(m.sigmaG,4)}`);add('Laplace comparison','b = Δ₁/ε; SD = √2 b',`b = 100/${f(epsilon,2)}; SD = √2 × ${f(m.b,4)}`,`≈ ${f(m.sdL,4)}`);}
+  if(step===3){const z=normal(gaussU[1],gaussU[2]),noise=m.sigmaG*z;add('One Gaussian offset','η = σ Z, where Z ∼ N(0,1)',`${f(m.sigmaG,4)} × (${f(z,6)})`,`≈ ${f(noise,4)}`);add('Release each coordinate','Private count_j = true count_j + η_j',`For a true count of 3: 3 + (${f(noise,4)})`,`≈ ${f(3+noise,4)}`);detail=`<details class="calc-detail"><summary>How Z was sampled</summary><div class="formula">Z = √(−2 ln U₁) cos(2πU₂)<br>U₁ = ${f(gaussU[1],6)}, U₂ = ${f(gaussU[2],6)}<br>Z ≈ ${f(z,6)}</div></details>`;}
+  note='δ = 10⁻⁵ and 0 < ε < 1 use the classical sufficient calibration. Gaussian provides (ε,δ)-DP; Laplace provides pure ε-DP. δ is additive probability slack, not the fraction of people exposed.';
+ }
+ if(key==='descent'){
+  const m=descentModel();
+  if(step===0)add('Linear prediction','ŷᵢ = w xᵢ','At w = 1: [1×1, 1×2, 1×3]','[1, 2, 3]');
+  if(step===1)add('Mean squared loss with factor 1/2','L = Σ(ŷᵢ−yᵢ)² / (2B)',m.ids.map(i=>`(${m.residual[i]})²`).join(' + ')+` all divided by ${2*m.ids.length}`,f(m.loss,4));
+  if(step===2)add('Batch gradient','dL/dw = (1/B) Σ(ŷᵢ−yᵢ)xᵢ',m.ids.map(i=>`(${m.residual[i]})×${m.x[i]}`).join(' + ')+` all divided by ${m.ids.length}`,f(m.gradient,4));
+  if(step===3){add('Gradient-descent step','w_next = w − learning_rate × gradient',`1 − 0.1 × (${f(m.gradient,4)})`,f(m.next,4));add('Loss after the step','L(w_next) on the same selected batch',`${f(m.loss,4)} → ${f(m.nextLoss,4)}`,m.nextLoss<m.loss?'Loss decreases':'Check the step size');}
+  table=tableMarkup(['Selected example','x','Observed y','Prediction','Residual','Per-example gradient'],m.ids.map(i=>['P'+(i+1),m.x[i],m.y[i],m.w*m.x[i],m.residual[i],m.gradients[i]]));note='Full batch uses all 3 examples; SGD uses 1; the mini-batch uses 2. This ordinary learning step has no DP guarantee. The examples are synthetic and the model omits an intercept to keep the arithmetic short.';
+ }
+ if(key==='dpsgd'){
+  const cl=clipped(),m=gradientResult();
+  if(step===0)add('One illustrated batch','B = number of sampled examples','5 examples selected from 24','B = 5');
+  if(step===1){add('Per-example squared-loss gradient','gᵢ = (θ·xᵢ − yᵢ) xᵢ','For g₄: (1.88 − 0.88) × (2.6, 1.4)','(2.6, 1.4)');table=tableMarkup(['Example','Feature vector x','Target y','Prediction θ·x','Gradient'],trainingExamples.map((v,i)=>['P'+(i+1),vec(v.x),f(v.y,4),f(v.y+1,4),vec(gradients[i])]));note='θ = (0.4, 0.6). These synthetic targets make each residual exactly 1, so each gradient equals its feature vector.';}
+  if(step===2){add('Clip each gradient','ḡ = g / max(1, ‖g‖₂/C)',`g₄ / max(1, ${f(Math.hypot(...gradients[3]),6)}/1)`,vec(cl[3]));table=tableMarkup(['Gradient','Before','L2 norm','Divide by','Clipped'],gradients.map((v,i)=>['g'+(i+1),vec(v),f(Math.hypot(...v),6),f(Math.max(1,Math.hypot(...v)),6),vec(cl[i])]));}
+  if(step===3){for(let axis=0;axis<2;axis++)add(`Clipped ${axis?'y':'x'} sum`,'Σ ḡᵢ',cl.map(v=>f(v[axis],4)).join(' + '),f(m.sum[axis],6));add('Add Gaussian noise','noisy sum = clipped sum + σ C Z',`${vec(m.sum)} + ${vec(m.z)}`,vec(m.noisy));detail=`<details class="calc-detail"><summary>Gaussian noise · apply Box–Muller</summary><div class="formula">U₁ = ${f(sgU[0],6)}, U₂ = ${f(sgU[1],6)}<br>R = √(−2 ln U₁); a = 2πU₂<br>Z = (R cos a, R sin a) ≈ ${vec(m.standard)}<br>σC = ${f(sigma,2)} × 1; noise ≈ ${vec(m.z)}</div></details>`;note='The cosine/sine pair produces independent standard Gaussian coordinates from two independent uniforms. Noise is added to the sum before dividing by B.';}
+  if(step===4){const mean=m.noisy.map(v=>v/5),after=thetaBefore.map((v,i)=>v-learningRate*mean[i]);add('Average the noisy sum','g̃ = noisy_sum / B',`${vec(m.noisy)} / 5`,vec(mean));add('Update the model','θ_next = θ − learning_rate × g̃',`${vec(thetaBefore)} − 0.1 × ${vec(mean)}`,vec(after));note='The full run needs a privacy accountant matching the sampling and normalization rules. This one-step illustration does not compute a model-level ε. C = 1 bounds an added gradient’s norm; replacement adjacency needs the corresponding analysis.';}
+ }
+ if(key==='audit'){
+  const tpr=.30,fpr=.05,delta=1e-5,lower=Math.log((tpr-delta)/fpr),allowed=Math.exp(auditEpsilon)*fpr+delta;
+  if(step===0)add('Canary inclusion','Pr(record included) = 1/2','Independent coin for each canary','0.5');
+  if(step===1){add('True positive rate','TPR = TP/(TP+FN)','30 / (30+70)','0.30');add('False positive rate','FPR = FP/(FP+TN)','5 / (5+95)','0.05');}
+  if(step===2){add('DP event inequality','TPR ≤ exp(ε) FPR + δ','0.30 ≤ exp(ε) × 0.05 + 0.00001','Solve for ε');add('Rate-based lower bound','ε ≥ ln((TPR−δ)/FPR)','ln((0.30−0.00001)/0.05)',`≈ ${f(lower,6)}`);}
+  if(step===3){add('Allowed TPR under the claim','exp(ε_claim) FPR + δ',`exp(${auditEpsilon}) × 0.05 + 0.00001`,`≈ ${f(allowed,6)}`);add('Check the observed rate','TPR ≤ claimed upper bound?',`0.30 ≤ ${f(allowed,6)} ?`,tpr>allowed?'No: contradiction':'Yes: no contradiction');}
+  note='The rates here are treated as exact for arithmetic. A real audit must use valid confidence bounds and handle sampling error before declaring a violation. A lower bound below a claim does not prove DP.';
+ }
+ if(key==='guide'){
+  if(step===0)table=tableMarkup(['Mechanism','Public output','Calibration','Guarantee'],[['Randomized response','One bit per user','Truth/flip probabilities','Local ε-DP'],['Laplace','Numeric scalar/vector','Δ₁/ε','ε-DP'],['Gaussian','Numeric scalar/vector','Δ₂, ε, δ','(ε,δ)-DP'],['Exponential','One candidate','Utility sensitivity Δu','ε-DP'],['Report noisy max','Winning index','Here: disjoint counts, b=1/ε','ε-DP'],['DP-SGD','Model weights','C, σ, sampling, steps + accountant','(ε,δ)-DP']]);
+  if(step===1){add('Fixed total budget across T iterations','ε_iteration = ε_total/T','ε_total = 1; T = 5','0.2 per iteration');add('Split counts and 2D sums equally','ε_part = 0.2/2; b = Δ/ε_part','Count Δ=1; sum vector Δ=2','b_count = 10; b_sum = 20');table=tableMarkup(['Lecture’s rough numerator-noise scale','Calculation','Scale'],[['Cluster of 1,000 points','20/1000','0.02'],['Cluster of 50 points','20/50','0.4']]);note='The centroid ratios are illustrative numerator-noise scales, not complete error bounds: the denominator is noisy too. More iterations use thinner slices of the same budget. There is no universal ε choice; assumptions and the protected unit matter.';}
+  if(step===2){table=tableMarkup(['Lecture connection','Key question'],[['McKenna et al. · DP language-model scaling','Jointly choose compute, model size, batch size, noise, and training steps.'],['Rosenblatt et al. · Class imbalance','Compare private augmentation and weighted learning; inspect rare-class utility.'],['Wu et al. · Cape','Hybrid utility and bucketized token sampling for private prompt perturbation.'],['VaultGemma · 1B parameters','Reported ε ≤ 2.0, δ ≤ 1.1 × 10⁻¹⁰ per packed 1,024-token sequence.']]);detail='<p class="calc-note">Read the lecture’s primary sources: <a href="https://proceedings.mlr.press/v267/mckenna25a.html" target="_blank" rel="noopener">McKenna et al.</a> · <a href="https://proceedings.mlr.press/v267/rosenblatt25b.html" target="_blank" rel="noopener">Rosenblatt et al.</a> · <a href="https://proceedings.mlr.press/v267/wu25g.html" target="_blank" rel="noopener">Wu et al. (Cape)</a> · <a href="https://arxiv.org/abs/2510.15001" target="_blank" rel="noopener">VaultGemma</a>.</p>';note='Use the definitions of protection, noise, and accounting from each paper; similar-looking randomness alone does not establish the same guarantee.';}
+ }
+ return{rows,table,detail,note};
+}
+
+function renderCalculation(){
+ let context='<span>Equation → substitute → result</span>';
+ if(key==='kmeans'){
+  const stage=getStage();
+  if(stage===1)context+=`<label for="calc-point">Check a point</label><select id="calc-point">${pointSet.map((p,i)=>`<option value="${i}" ${i===focusPoint?'selected':''}>P${i+1} (${f(p[0],2)}, ${f(p[1],2)})</option>`).join('')}</select>`;
+  if(stage>=2&&stage<=4)context+=`<label for="calc-cluster">Check a group</label><select id="calc-cluster">${[0,1,2].map(i=>`<option value="${i}" ${i===focusCluster?'selected':''}>C${i+1}</option>`).join('')}</select>`;
+ }
+ context+='<span class="calc-status">'+esc(key==='kmeans'?`Iteration ${kmframes[step].iter+1} · ${kPrivate?'private':'ordinary'}`:lessons[key].labels[step])+'</span>';
+ $('calccontext').innerHTML=context;
+ const m=calculation();
+ $('calcbody').innerHTML=m.rows.map(r=>`<div class="calc-row"><div><span class="eq-label">${esc(r.name)}</span><div class="eq">${esc(r.formula)}</div></div><div><span class="eq-label">Substitute</span><div class="eq">${esc(r.substitute)}</div></div><div><span class="eq-label">Result</span><div class="eq-value">${esc(r.result)}</div></div></div>`).join('')+m.table+m.detail+`<p class="calc-note">${esc(m.note)}</p>`;
+ const point=$('calc-point'),cluster=$('calc-cluster');
+ if(point)point.onchange=e=>{pause();focusPoint=Number(e.target.value);render();};
+ if(cluster)cluster.onchange=e=>{pause();focusCluster=Number(e.target.value);render();};
+}
+
+function renderCoverage(){
+ const rows=order.map(k=>`<tr><td>${esc(lessons[k].title)}</td><td>${esc(lessons[k].lecture)}</td><td><button data-topic="${k}">Open topic</button></td></tr>`).join('');
+ $('coveragemap').innerHTML='<div class="table-scroll"><table><thead><tr><th scope="col">Topic</th><th scope="col">Lecture slides</th><th scope="col">Open</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+ document.querySelectorAll('[data-topic]').forEach(button=>button.onclick=()=>{openLesson(button.dataset.topic);$('title').scrollIntoView({behavior:'auto',block:'start'});});
+}
+
+$('lesson').onchange=e=>openLesson(e.target.value);$('play').onclick=play;$('prev').onclick=()=>{pause();step=Math.max(0,step-1);render(true);};$('next').onclick=()=>{pause();step=Math.min(countStages()-1,step+1);render(true);};$('reset').onclick=()=>{pause();step=0;render();};$('newrun').onclick=newDraw;$('nextlesson').onclick=()=>openLesson(order[order.indexOf(key)+1]);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});document.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA','BUTTON','SUMMARY'].includes(document.activeElement.tagName)||e.altKey||e.ctrlKey||e.metaKey)return;if(e.code==='Space'){e.preventDefault();play();}if(e.code==='ArrowRight')$('next').click();if(e.code==='ArrowLeft')$('prev').click();});window.addEventListener('hashchange',()=>openLesson(location.hash.slice(1)));$('pace').onchange=e=>{pause();pace=Number(e.target.value);};renderCoverage();generatePoints();openLesson(location.hash.slice(1)||'kmeans');
+</script>
+</body></html>
