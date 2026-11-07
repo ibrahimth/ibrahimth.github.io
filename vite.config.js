@@ -53,7 +53,7 @@ coe526L08: path.resolve(
 
         coe526L09: path.resolve(
           __dirname,
-          'COE526_Homomorphic_Encryption_lab.html',
+          'COE526_Data_Privacy/COE526_Homomorphic_Encryption_lab.html',
         ),
     
       },
