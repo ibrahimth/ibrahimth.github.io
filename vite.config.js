@@ -46,9 +46,14 @@ export default defineConfig({
           __dirname,
           'COE526_Data_Privacy/L07_Differential_Privacy_I_Lab.html',
         ),
-coe526L07: path.resolve(
+coe526L08: path.resolve(
           __dirname,
           'COE526_Data_Privacy/COE526-L08-L09-Visual-Lab.html',
+        ),
+
+        coe526L09: path.resolve(
+          __dirname,
+          'COE526_Homomorphic_Encryption_lab.html',
         ),
     
       },
