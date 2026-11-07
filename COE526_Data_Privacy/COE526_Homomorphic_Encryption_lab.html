@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Twenty-four interactive COE526 homomorphic encryption labs covering RSA, ElGamal, Paillier, circuit depth, bootstrapping, staged evaluation, encrypted prediction, private selection, and security boundaries.">
+<title>Homomorphic Encryption Lab | COE526 Data Privacy</title>
+<style>
+:root{--navy:#1b365d;--green:#00843d;--ink:#172b43;--muted:#52657c;--line:#d5e0e9;--bg:#f4f7fa;--mint:#e8f5ed;--gold:#fff3d5;--red:#a83232;--card:#ffffff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select{font:inherit}
+button,select{cursor:pointer}
+button{min-height:44px;padding:9px 16px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--navy);font-weight:650;transition:background .15s}
+button:hover:not(:disabled){background:#e8eff6}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #2479b2;outline-offset:3px}
+a{color:var(--navy)}
+.skip{position:absolute;left:12px;top:-80px;background:#fff;padding:10px;z-index:10}.skip:focus{top:8px}
+.topbar{background:var(--navy);border-bottom:3px solid var(--green);color:white;padding:13px max(22px,calc((100vw - 1240px)/2));display:flex;justify-content:space-between;align-items:center;gap:18px;font-size:13px}
+.topbar a{color:white;text-decoration:none}
+.brand{font-weight:750;display:flex;align-items:center;gap:8px}
+.wrap{max-width:1240px;padding:24px;margin:auto}
+.lessonbar{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.lessonbar label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:750;color:var(--muted)}
+select{max-width:100%;border:1px solid #bdccd9;background:#fff;color:var(--navy);padding:10px 12px;border-radius:7px}
+.lessonbar select{min-width:340px;font-weight:650}
+.count{margin-left:auto;color:var(--muted);font-size:13px}
+.eyebrow{color:var(--green);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+h1{font-size:clamp(26px,3.2vw,38px);line-height:1.2;letter-spacing:-.025em;margin:6px 0 8px;color:var(--navy)}
+h2{line-height:1.22;margin:8px 0 14px;font-size:24px;color:var(--navy)}
+.subtitle{color:var(--muted);margin:0 0 18px}
+.notice{border-left:4px solid #b5841d;background:var(--gold);padding:11px 16px;font-size:13.5px;margin-bottom:20px;border-radius:0 8px 8px 0}
+.demo{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.viewbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);background:#fcfdfe}
+.viewbar label{display:flex;align-items:center;gap:8px}
+.scene{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,1fr);min-height:380px}
+.plot{min-width:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#ffffff}
+.plot svg{width:100%;height:auto;display:block}
+.aside{border-left:1px solid var(--line);padding:26px;background:#fdfefe}
+.stepnum{font-size:11px;font-weight:800;color:var(--green);letter-spacing:.1em;text-transform:uppercase}
+.caption{font-size:17px;margin:0;color:var(--ink)}
+.result{font-size:23px;font-weight:750;color:var(--navy);margin:20px 0 10px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.takeaway{font-size:13px;color:var(--muted);margin:0}
+.steps{display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px;background:#f9fbfd;border-top:1px solid var(--line)}
+.steps button{flex:1;padding:8px 10px;font-size:12px;min-width:85px;color:var(--muted);background:#edf2f6;border:0}
+.steps .current{background:var(--navy);color:white}
+.steps .done{background:var(--mint);color:var(--green)}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.primary{background:var(--navy);border-color:var(--navy);color:white}
+.primary:hover:not(:disabled){background:#2a4f7c}
+.controls .nextidea{margin-left:auto}
+.controls label{font-size:12px;color:var(--muted)}
+.controls select{padding:7px 10px}
+.parameters{border:1px solid var(--line);background:white;border-radius:10px;margin-bottom:18px;padding:18px 22px;box-shadow:0 1px 4px rgba(0,0,0,0.02)}
+.parameters h2{font-size:15px;margin:0 0 14px}
+.fields{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:5px;min-width:125px;font-size:13px;color:var(--muted)}
+.field input,.field select{width:150px;padding:8px 10px;border:1px solid #bdccd9;border-radius:6px;color:var(--ink);background:#fff;min-height:42px}
+.field.wide input{width:230px}
+.parameterhint{font-size:12px;color:var(--muted);margin:12px 0 0}
+.error{color:var(--red);font-weight:650;min-height:22px;font-size:13px;margin-top:4px}
+.panel{border:1px solid var(--line);border-radius:10px;background:white;margin:18px 0;overflow:hidden}
+.panel>summary{padding:14px 20px;cursor:pointer;font-weight:700;color:var(--navy);background:#f9fbfd}
+.panelbody{padding:6px 22px 20px}
+.equationrow{display:grid;grid-template-columns:1.2fr 2fr .8fr;gap:16px;padding:13px 0;border-bottom:1px solid #eaf0f5;align-items:center}
+.equationrow:last-child{border-bottom:0}
+.eqlabel{font-size:12px;color:var(--muted)}
+.math{font:19px/1.5 Cambria,Georgia,serif;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.eqvalue{font-size:18px;color:var(--green);font-weight:750;overflow-wrap:anywhere}
+.try{border-top:1px solid var(--line);padding:16px 0 6px;margin-top:6px}
+.try label{display:block;font-size:14px;font-weight:650;margin-bottom:10px;color:var(--navy)}
+.try input{width:180px;border:1px solid #bdccd9;padding:9px 12px;min-height:42px;border-radius:6px;margin:0 8px 8px 0}
+.feedback{font-size:14px;margin:8px 0 0;min-height:23px;font-weight:600}
+.correct{color:#006c34}
+.incorrect{color:var(--red)}
+.assumptions{font-size:14px;max-width:1000px;line-height:1.6}
+.assumptions p{margin:12px 0}
+.source{font-size:12px;color:var(--muted)}
+.table-scroll{overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+td,th{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}
+th{background:#edf3f7;color:var(--navy)}
+.pill{fill:#e8f5ed;stroke:#bcd9c8;stroke-width:1.2}
+.stagebox{fill:#edf2f8;stroke:#c8d6e3;stroke-width:1.2}
+.activebox{fill:#e8f5ed;stroke:#00843d;stroke-width:2.5}
+.failbox{fill:#fdf2f2;stroke:#a83232;stroke-width:2.5}
+.svglabel{fill:#1b365d;font-size:16px;font-weight:700}
+.svgsmall{fill:#52657c;font-size:12.5px}
+.svgvalue{fill:#1b365d;font-size:25px;font-weight:750}
+.svgbig{fill:#1b365d;font-size:32px;font-weight:750}
+.flowline{stroke:#7c92a8;stroke-width:2;fill:none}
+.flowerr{stroke:#a83232;stroke-width:2;stroke-dasharray:4 4;fill:none}
+.quizitem{padding:14px 0;border-bottom:1px solid var(--line)}
+.quizitem legend{font-weight:650;font-size:14.5px;padding:0;color:var(--navy);margin-bottom:6px}
+.quizitem label{display:block;margin:7px 0;font-size:13.5px}
+.quizitem input{accent-color:var(--green);margin-right:8px}
+fieldset{border:0;margin:0;min-width:0}
+.footer{font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;gap:15px;margin:24px 0 4px}
+.screenreader{position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden}
+.sources li{margin-bottom:10px}
+.motion{transition:fill .2s,stroke .2s,opacity .2s}
+@media(max-width:780px){
+.wrap{padding:16px 12px}
+.topbar{padding:10px 14px;font-size:11px}
+.scene{grid-template-columns:1fr}
+.aside{border-left:0;border-top:1px solid var(--line);padding:18px}
+.lessonbar select{min-width:0;flex:1}
+.equationrow{grid-template-columns:1fr;gap:4px}
+.math{font-size:18px}
+.field input,.field select{width:100%}
+}
+
+[hidden]{display:none!important}
+.learningbar{display:flex;justify-content:space-between;gap:16px;align-items:center;margin:0 0 22px;padding:16px 0;border-bottom:1px solid var(--line)}
+.learningbar strong{display:block;color:var(--navy);font-size:18px}.learningbar span{display:block;color:var(--muted);font-size:13px;margin-top:3px}.toolbuttons{display:flex;gap:8px;flex-wrap:wrap}
+select,input[type=number],input[type=text]{min-height:44px}.quizitem label{padding:9px 0;min-height:44px}.assumptions p{max-width:72ch}h3{line-height:1.25}.topbar a{display:inline-flex;align-items:center;min-height:44px}
+.randomcomparison{padding:12px 15px;margin-top:12px;background:var(--mint);color:#155331;border-left:3px solid var(--green);font-size:14px}
+.projection .wrap{max-width:1500px}.projection .caption{font-size:22px}.projection .math{font-size:24px}.projection .scene{min-height:450px}.projection h1{font-size:42px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+@media(max-width:780px){.learningbar{align-items:flex-start;flex-direction:column}.lessonbar{flex-wrap:wrap}.lessonbar select{min-width:200px}.count{margin-left:0}.viewbar{align-items:flex-start;flex-direction:column}.topbar{flex-wrap:wrap}.topbar>span{display:none}.field{max-width:100%}.field input{max-width:100%}.projection h1{font-size:30px}}
+@media print{body{background:#fff;font-size:11pt}.topbar,.lessonbar,.learningbar,.controls,.parameters,.steps,.skip,.footer,.try,button,.viewbar label{display:none!important}.wrap{max-width:none;padding:0}.demo,.panel{box-shadow:none;break-inside:avoid}.scene{grid-template-columns:1.4fr 1fr;min-height:0}.aside{padding:12px}.plot{padding:8px}h1{font-size:24pt}.caption{font-size:12pt}.math{font-size:13pt}.equationrow{padding:6px 0}.notice{font-size:9pt}.panel>summary{padding:8px}a{color:inherit;text-decoration:none}}
+
+
+/* Standalone course-lab layout */
+.wrap{max-width:1480px;padding:30px 28px}.labhero{display:flex;justify-content:space-between;gap:30px;align-items:center;padding:8px 0 24px}.labhero h1{font-size:clamp(32px,4.2vw,49px);margin:7px 0 12px}.labhero .subtitle{margin:0;max-width:65ch}.herofacts{display:flex;flex-direction:column;gap:8px;border-left:3px solid var(--green);padding-left:20px;white-space:nowrap;color:var(--muted);font-size:14px}.learningbar{margin-bottom:28px;padding:18px 0}.progressblock{min-width:230px}.progressblock strong{font-size:15px}.progressblock progress{display:block;width:100%;max-width:330px;height:8px;margin:9px 0;accent-color:var(--green)}.progressblock span{font-size:12px}.workspace{display:grid;grid-template-columns:240px minmax(0,1fr);gap:30px;align-items:start}.labnav{position:sticky;top:20px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px}.labnav>label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px}.labnav select,.labnav input{width:100%;min-width:0;font-size:13px;margin-bottom:16px;padding:10px 8px;border:1px solid #bdccd9;border-radius:6px}.labnav nav{max-height:55vh;overflow-y:auto;margin:0 -8px;padding:0 4px}.labnav nav button{display:flex;gap:9px;align-items:flex-start;min-height:44px;width:100%;text-align:left;border:0;background:transparent;font-size:13px;padding:10px 8px;margin:2px 0;font-weight:500;line-height:1.4}.labnav nav button[aria-current=page]{background:var(--mint);color:#006731;font-weight:700}.labnav nav button .labnum{font-variant-numeric:tabular-nums;color:var(--muted);min-width:23px}.navhint{font-size:11.5px;color:var(--muted);margin:14px 0 4px}.quiet{font-size:12px;background:transparent;border:0;padding:8px 0;min-height:40px;color:var(--muted)}.labcontent{min-width:0}.labcontent>h2{font-size:clamp(25px,3vw,34px);margin-top:8px}.lessonbar{gap:9px;margin-bottom:18px}.lessonbar select{min-width:0;flex:1;font-size:13px}.lessonbar label{font-size:11px}.goalrow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;margin:15px 0}.goalrow p{margin:0;flex:1;min-width:220px}.modeltype{background:#eaf1f7;padding:4px 9px;border-radius:4px;font-size:11px;font-weight:700;color:var(--navy)}.taskbrief{border-left:3px solid var(--green);padding:1px 16px;margin:18px 0 20px}.taskbrief h3{font-size:15px;margin:4px 0}.taskbrief p{font-size:14px;margin:7px 0;max-width:75ch}.notice{font-size:12px;margin-bottom:18px}.aside h3{font-size:22px;margin:9px 0 13px;color:var(--navy)}.scene{grid-template-columns:minmax(0,1.4fr) minmax(240px,1fr);min-height:340px}.aside{padding:22px}.caption{font-size:15px}.result{font-size:20px}.viewbar{padding:12px 16px;font-size:12px}.viewbar select{font-size:12px;max-width:240px}.parameters{padding:16px 20px}.checkpoint h3,.notebook h3{font-size:19px;color:var(--navy);margin:15px 0}.checkpoint .try{border:0;margin:0;padding-top:0}.answerrow{display:flex;gap:8px;flex-wrap:wrap}.answerrow input{margin:0;flex:1;min-width:150px}.field output{font-weight:750;color:var(--navy)}.notefields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.notefields label:last-child{grid-column:1/-1}.notefields label{font-size:13px;font-weight:650;color:var(--navy)}textarea{width:100%;display:block;resize:vertical;border:1px solid #bdccd9;border-radius:6px;padding:10px 12px;margin-top:7px;font:14px/1.5 inherit;color:var(--ink);background:#fbfdfe}.notetools{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.sources{max-width:90ch}.sources li{margin:11px 0;font-size:13px}.projection .workspace{grid-template-columns:1fr}.projection .labnav,.projection .labhero,.projection .notebook{display:none}.projection .caption{font-size:21px}.projection .aside h3{font-size:27px}.projection .result{font-size:25px}.projection .wrap{max-width:1550px}button:focus-visible,textarea:focus-visible{outline:3px solid #2479b2;outline-offset:3px}.topbar{padding:12px max(22px,calc((100vw - 1424px)/2))}.topbar a{font-size:13px}.navempty{font-size:13px;color:var(--muted);padding:8px}.notebook .parameterhint{max-width:75ch}
+@media(max-width:1050px){.workspace{grid-template-columns:205px minmax(0,1fr);gap:20px}.scene{grid-template-columns:1fr}.aside{border-left:0;border-top:1px solid var(--line)}.plot{padding:14px;max-height:370px}.plot svg{max-height:340px}.viewbar{align-items:flex-start;flex-direction:column}.notefields{grid-template-columns:1fr}.notefields label:last-child{grid-column:auto}}
+@media(max-width:700px){.wrap{padding:20px 14px}.labhero{align-items:flex-start;gap:18px;flex-direction:column}.herofacts{flex-direction:row;flex-wrap:wrap;gap:8px 14px;white-space:normal;border-left:0;padding-left:0;font-size:12px}.workspace{grid-template-columns:1fr;gap:18px}.labnav{position:static;padding:14px}.labnav nav{max-height:175px}.labnav>label,.labnav .navhint,.labnav .quiet{display:none}.labnav select,.labnav input{margin-bottom:8px}.learningbar{padding:14px 0;margin-bottom:20px}.toolbuttons button{font-size:12px;padding:8px 11px}.lessonbar{flex-wrap:nowrap}.lessonbar>label{display:none}.lessonbar select{min-width:0}.labcontent>h2{font-size:27px}.viewbar select{max-width:100%}.viewbar label{width:100%;flex-wrap:wrap}.parameters{padding:15px}.fields{gap:12px}.field{min-width:100px;flex:1}.field input,.field select{width:100%}.answerrow button{font-size:13px}.equationrow{grid-template-columns:1fr;gap:4px}.topbar .brand{font-size:11px}.topbar{gap:8px}.topbar a{font-size:12px}}
+@media print{.labnav,.labhero,.learningbar,.lessonbar,.topbar,.toolbuttons,.notetools,.checkpoint button,.notebook .parameterhint{display:none!important}.workspace{display:block}.notefields{display:block}textarea{border:0;background:#fff;padding:4px 0;min-height:50px}.scene{display:block}.plot{max-height:none}.notebook{break-before:auto}.labcontent>h2{font-size:24pt}.taskbrief{break-inside:avoid}}
+
+</style>
+</head>
+<body>
+<noscript><div class="notice">Enable JavaScript to run the interactive experiments. The worksheet included in the download can be used offline without JavaScript.</div></noscript>
+<a class="skip" href="#main">Skip to visual lab</a>
+<header class="topbar">
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00E4A8" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span>KFUPM · COE526 DATA PRIVACY</span>
+  </div>
+  <a href="https://ibrahimth.github.io/COE526_Data_Privacy/">← Course home</a>
+
+</header>
+
+<main class="wrap" id="main">
+  <section class="labhero" aria-labelledby="page-title">
+    <div><p class="eyebrow">COE526 / Interactive laboratory</p><h1 id="page-title">Homomorphic encryption</h1><p class="subtitle">Explore encrypted computation, verify the arithmetic, and test its privacy boundaries.</p></div>
+    <div class="herofacts"><span>24 experiments</span><span>8-lab core route</span><span>No installation</span></div>
+  </section>
+  <section class="learningbar" aria-label="Learning progress and tools">
+    <div class="progressblock"><strong id="progress" role="status">0 / 24 checkpoints completed</strong><progress id="progressmeter" value="0" max="24" aria-label="Completed checkpoints"></progress><span id="savestatus">Progress and notes stay in this browser.</span></div>
+    <div class="toolbuttons"><button id="download">Worksheet</button><button id="exportwork">Export lab notes</button><button id="projection" aria-pressed="false">Projection mode</button></div>
+  </section>
+  <div class="workspace">
+  <aside class="labnav" aria-label="Lab navigation">
+    <label for="learningpath">Learning route</label><select id="learningpath"><option value="core">Core route · 8 labs</option><option value="all">All experiments · 24</option><option value="applications">Applications & systems · 8</option><option value="theory">Arithmetic & theory · 8</option></select>
+    <label for="labsearch">Find an experiment</label><input id="labsearch" type="search" placeholder="Search this route…" autocomplete="off">
+    <nav id="lablist" aria-label="Experiments in this route"></nav>
+    <p class="navhint">A check mark records a correct checkpoint. This is a study aid, not a course grade.</p>
+    <button id="clearprogress" class="quiet">Clear saved progress</button>
+  </aside>
+  <div class="labcontent">
+  <div class="lessonbar"><label for="lesson">Experiment</label><select id="lesson" aria-label="Choose a lab"></select><button id="previouslesson" aria-label="Previous experiment">←</button></div>
+  <div class="eyebrow" id="labtopic"></div>
+  <h2 id="title" tabindex="-1"></h2>
+  <p id="subtitle" class="subtitle"></p>
+  <div class="goalrow"><span id="modeltype" class="modeltype"></span><p><strong>Learning goal:</strong> <span id="goal"></span></p></div>
+  <section class="taskbrief" aria-label="Guided experiment"><h3>Your experiment</h3><p id="task"></p></section>
+
+  <div class="notice">
+    <strong>Model boundary:</strong> Small numbers make mathematical traces transparent. RSA, ElGamal, and Paillier examples use teaching parameters to verify exact group arithmetic. Depth, bootstrapping, and staged-evaluation diagrams are conceptual models, not implementations of lattice FHE. The evaluator view illustrates a trust boundary within this local teaching page.
+  </div>
+
+  <section class="demo" aria-label="Step-by-step visual walkthrough">
+    <div class="viewbar">
+      <span id="context"></span>
+      <label for="visibility">Perspective
+        <select id="visibility">
+          <option value="teaching">Teaching: reveal secret values</option>
+          <option value="evaluator">Evaluator: hide secret keys & plaintexts</option>
+        </select>
+      </label>
+    </div>
+    <div class="scene">
+      <div id="plot" class="plot"></div>
+      <aside class="aside">
+        <div id="stepnum" class="stepnum"></div>
+        <h3 id="stagetitle"></h3>
+        <p id="caption" class="caption"></p>
+        <div id="result" class="result"></div>
+        <p id="takeaway" class="takeaway"></p>
+      </aside>
+    </div>
+    <nav id="steps" class="steps" aria-label="Walkthrough steps"></nav>
+  </section>
+
+  <div class="controls">
+    <button id="play" class="primary">Play</button>
+    <button id="prev" aria-label="Previous step">Previous</button>
+    <button id="next">Next</button>
+    <button id="reset">Replay</button>
+    <label for="pace">Pace 
+      <select id="pace">
+        <option value="3200">Slow (3.2s)</option>
+        <option value="1800" selected>Normal (1.8s)</option>
+        <option value="1000">Fast (1.0s)</option>
+      </select>
+    </label>
+    <button id="newrandom" hidden>Roll Fresh Randomness</button>
+    <button id="nextlesson" class="nextidea">Next Lab →</button>
+  </div>
+
+  <section class="parameters" aria-label="Experiment parameters">
+    <h2>Experiment Parameters & Live Inputs</h2>
+    <div id="fields" class="fields"></div>
+    <p class="parameterhint" id="parameterhint"></p>
+    <div id="error" class="error" role="alert"></div><div id="randomcomparison" class="randomcomparison" role="status" hidden></div>
+  </section>
+
+  <section class="panel checkpoint" aria-labelledby="checkpoint-title"><div class="panelbody"><h3 id="checkpoint-title">Predict the result</h3><div id="exercise" class="try"></div></div></section>
+  <details class="panel" id="tracepanel">
+    <summary>Show calculation trace</summary>
+    <div class="panelbody">
+      <div id="calculations"></div>
+
+    </div>
+  </details>
+
+  <details class="panel" id="proofpanel">
+    <summary>Why it works and what the model leaves out</summary>
+    <div id="why" class="panelbody assumptions"></div>
+  </details>
+
+  <section class="panel notebook" aria-labelledby="notes-title"><div class="panelbody"><h3 id="notes-title">Your lab notes</h3><p class="parameterhint">Record one change and explain the result. Saved only in this browser; export your notes before switching devices.</p><div class="notefields"><label for="note-change">Input or condition changed<textarea id="note-change" rows="2" placeholder="For example, m₁ = 200 and m₂ = 40."></textarea></label><label for="note-result">Observed result and explanation<textarea id="note-result" rows="3" placeholder="State the result and the calculation that explains it."></textarea></label><label for="note-limit">What this example does not establish<textarea id="note-limit" rows="2" placeholder="Name an assumption, model limit, or privacy boundary."></textarea></label></div><div class="notetools"><button id="exporttrace">Export this experiment</button><button id="print">Print this lab</button></div></div></section>
+  </div></div>
+  <details class="panel">
+    <summary>Lab map, learning guide, and primary references</summary>
+    <div class="panelbody assumptions">
+      <p>Start with the eight core experiments, then choose applications or additional arithmetic. For each lab, state a prediction, change one input, inspect the trace, and record a limitation.</p>
+      <div id="map"></div>
+
+      <h3>Foundational Academic References</h3>
+      <ol class="sources"><li><a href="https://eprint.iacr.org/2015/1192" target="_blank" rel="noopener noreferrer">Armknecht et al. (2015), A Guide to Fully Homomorphic Encryption (ePrint 2015/1192)</a></li>
+<li><a href="https://doi.org/10.1145/359340.359342" target="_blank" rel="noopener noreferrer">Rivest, Shamir &amp; Adleman (1978), A Method for Obtaining Digital Signatures and Public-Key Cryptosystems</a></li>
+<li><a href="https://doi.org/10.1109/TIT.1985.1057074" target="_blank" rel="noopener noreferrer">ElGamal (1985), A Public Key Cryptosystem and a Signature Scheme Based on Discrete Logarithms</a></li>
+<li><a href="https://doi.org/10.1007/3-540-48910-X_16" target="_blank" rel="noopener noreferrer">Paillier (EUROCRYPT 1999), Public-Key Cryptosystems Based on Composite Degree Residuosity Classes</a></li>
+<li><a href="https://crypto.stanford.edu/craig/craig-thesis.pdf" target="_blank" rel="noopener noreferrer">Gentry (2009), A Fully Homomorphic Encryption Scheme (Stanford PhD Dissertation)</a></li>
+<li><a href="https://eprint.iacr.org/2011/277" target="_blank" rel="noopener noreferrer">Brakerski, Gentry and Vaikuntanathan (2012), (Leveled) Fully Homomorphic Encryption without Bootstrapping</a></li>
+<li><a href="https://eprint.iacr.org/2012/144" target="_blank" rel="noopener noreferrer">Fan &amp; Vercauteren (2012), Somewhat Practical Fully Homomorphic Encryption (ePrint 2012/144)</a></li>
+<li><a href="https://eprint.iacr.org/2016/421" target="_blank" rel="noopener noreferrer">Cheon, Kim, Kim &amp; Song (ASIACRYPT 2017), Homomorphic Encryption for Arithmetic of Approximate Numbers (ePrint 2016/421)</a></li>
+<li><a href="https://eprint.iacr.org/2016/870" target="_blank" rel="noopener noreferrer">Chillotti, Gama, Georgieva &amp; Izabachene (2016), Faster FHE: Bootstrapping in Less Than 0.1 Seconds (ePrint 2016/870)</a></li>
+<li><a href="https://www.cis.upenn.edu/~aaroth/Papers/privacybook.pdf" target="_blank" rel="noopener noreferrer">Dwork &amp; Roth (2014), The Algorithmic Foundations of Differential Privacy</a></li>
+<li><a href="https://github.com/microsoft/SEAL" target="_blank" rel="noopener noreferrer">Microsoft SEAL — Official C++ Homomorphic Encryption Library</a></li>
+<li><a href="https://openfhe-development.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">OpenFHE — Open-Source Fully Homomorphic Encryption Library &amp; Documentation</a></li>
+<li><a href="https://github.com/homenc/HElib" target="_blank" rel="noopener noreferrer">HElib — Homomorphic Encryption Library (BGV / CKKS)</a></li>
+<li><a href="https://homomorphicencryption.org/security-guidelines/" target="_blank" rel="noopener noreferrer">HomomorphicEncryption.org, security guidelines and parameter resources</a></li></ol>
+      <p class="source">KFUPM COE 526: Privacy Enhancing Technologies · Standalone interactive laboratory.</p>
+    </div>
+  </details>
+
+  <footer class="footer">
+    <span>Offline teaching lab · No external scripts or tracking · Small keys are insecure</span>
+    <span>KFUPM · COE526 Homomorphic Encryption Labs</span>
+  </footer>
+  <p id="announce" class="screenreader" aria-live="polite"></p>
+</main>
+
+<script>
+
+'use strict';
+// Exact bounded BigInt arithmetic
+function mod(a,n){return ((a%n)+n)%n;}
+function gcd(a,b){while(b){[a,b]=[b,a%b];}return a;}
+function inverse(a,n){
+  let [r,t,nr,nt]=[n,0n,mod(a,n),1n];
+  while(nr){const q=r/nr;[r,nr]=[nr,r-q*nr];[t,nt]=[nt,t-q*nt];}
+  if(r!==1n)throw Error('The modular inverse does not exist.');
+  return mod(t,n);
+}
+function powmod(a,e,n){
+  if(n<=0n||e<0n)throw Error('Invalid modular exponent.');
+  let v=1n;a=mod(a,n);
+  while(e){if(e&1n)v=v*a%n;a=a*a%n;e>>=1n;}
+  return v;
+}
+function rsaKey(p,q,e){
+  if(p===q)throw Error('Choose distinct primes.');
+  const n=p*q,phi=(p-1n)*(q-1n);
+  if(e<=1n||e>=phi||gcd(e,phi)!==1n)throw Error('Choose 1 < e < φ(n) with gcd(e, φ(n)) = 1.');
+  return {p,q,n,phi,e,d:inverse(e,phi)};
+}
+function elgamalKey(p,g,x){
+  const y=powmod(g,x,p);
+  return {p,g,x,y};
+}
+function elgamalEnc(m,r,k){
+  if(m<=0n||m>=k.p)throw Error('Message m must satisfy 1 ≤ m < p.');
+  if(r<1n||r>k.p-2n)throw Error('Use a teaching exponent 1 ≤ r ≤ p − 2 (21).');
+  return {a:powmod(k.g,r,k.p),b:mod(m*powmod(k.y,r,k.p),k.p)};
+}
+function elgamalDec(c,k){
+  const s=powmod(c.a,k.x,k.p);
+  return mod(c.b*inverse(s,k.p), k.p);
+}
+function paillierKey(p,q,g){
+  const n=p*q,nn=n*n,lambda=(p-1n)*(q-1n)/gcd(p-1n,q-1n);
+  if(gcd(n,lambda)!==1n)throw Error('Unsuitable primes for Paillier.');
+  const u=powmod(g,lambda,nn);
+  if((u-1n)%n)throw Error('Invalid Paillier generator g.');
+  const l=(u-1n)/n;
+  return {n,nn,g,lambda,mu:inverse(l,n)};
+}
+function penc(m,r,k){
+  if(m<0n||m>=k.n)throw Error('Each plaintext must be between 0 and n − 1.');
+  if(r<=0n||r>=k.n||gcd(r,k.n)!==1n)throw Error('Randomness r must satisfy 1 ≤ r < n and gcd(r, n) = 1.');
+  return powmod(k.g,m,k.nn)*powmod(r,k.n,k.nn)%k.nn;
+}
+function pdec(c,k){
+  const u=powmod(c,k.lambda,k.nn);
+  if((u-1n)%k.n)throw Error('Invalid ciphertext.');
+  return mod((u-1n)/k.n*k.mu,k.n);
+}
+function tracePow(a,e,n){
+  let acc=1n,base=mod(a,n),bit=0;const rows=[];
+  while(e){
+    const use=Boolean(e&1n);
+    if(use)acc=acc*base%n;
+    rows.push({bit,base:String(base),use,acc:String(acc)});
+    base=base*base%n;e>>=1n;bit++;
+  }
+  return rows;
+}
+
+const $=id=>document.getElementById(id),esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const lessons={
+  workflow:{
+    name:'01 · The Encrypted-Computation Workflow',
+    title:'Compute Without the Plaintext Key',
+    sub:'Follow a real Paillier addition across client, untrusted cloud evaluator, and key isolation.',
+    topic:'Encrypted computation and key isolation',
+    labels:['1. Encrypt','2. Evaluate','3. Return','4. Decrypt'],
+    stages:[
+      ['The Client Encrypts','The client turns private inputs 123 and 20 into ciphertexts under public key pk.'],
+      ['The Evaluator Multiplies','For Paillier, multiplying ciphertexts computes a plaintext sum without knowing sk.'],
+      ['Return Ciphertext','The evaluator returns the encrypted sum c* without ever decrypting.'],
+      ['The Client Decrypts','The client recovers 143 using secret key sk: Dec(sk, c*) = 123 + 20 = 143.']
+    ]
+  },
+  keygen:{
+    name:'02 · RSA: Generate the Keys by Hand',
+    title:'Build the RSA Teaching Key',
+    sub:'Compute modulus n, Euler totient φ(n), public exponent e, and secret exponent d.',
+    topic:'RSA key generation',
+    labels:['Primes','Modulus','Totient','Exponents'],
+    stages:[
+      ['Choose Distinct Primes','Start with p = 11 and q = 3. These values are instructional primes.'],
+      ['Compute the Modulus','Multiply primes: n = p · q = 33. The modulus is public.'],
+      ['Count Coprime Residues','Euler totient φ(n) = (p − 1)(q − 1) = 10 × 2 = 20.'],
+      ['Find Inverse Exponent','Choose e = 3 coprime to 20; solve 3d ≡ 1 mod 20 => d = 7. (Never mod n!).']
+    ]
+  },
+  rsa:{
+    name:'03 · RSA: Encrypt & Decrypt',
+    title:'RSA Encryption and Decryption',
+    sub:'Step through modular exponentiation and inspect the decryption residue trace.',
+    topic:'RSA encryption and decryption',
+    labels:['Plaintext','Encrypt','Ciphertext','Decrypt'],
+    stages:[
+      ['Choose a Message','Plaintext M = 4 in the range 0 ≤ M < n.'],
+      ['Raise to Public Exponent','Compute C = M^e mod n = 4^3 mod 33 = 64 mod 33 = 31.'],
+      ['Transmit Ciphertext','Ciphertext C = 31 is sent over public channels.'],
+      ['Raise to Private Exponent','Compute C^d mod n = 31^7 mod 33 = (−2)^7 mod 33 = 4. Plaintext recovered!']
+    ]
+  },
+  product:{
+    name:'04 · RSA: Multiply Ciphertexts',
+    title:'A Product Survives Encryption',
+    sub:'Verify that multiplying textbook RSA ciphertexts produces the product of plaintexts.',
+    topic:'RSA multiplicative homomorphism',
+    labels:['Inputs','Encrypt Both','Multiply','Decrypt'],
+    stages:[
+      ['Choose Two Inputs','Inputs M₁ = 2 and M₂ = 4 under public key (n=33, e=3).'],
+      ['Encrypt Each Message','C₁ = 2^3 mod 33 = 8, C₂ = 4^3 mod 33 = 31.'],
+      ['Combine Ciphertexts','Multiply ciphertexts: C* = 8 × 31 mod 33 = 248 mod 33 = 17.'],
+      ['Decrypt the Product','Decrypt C* = 17 using d = 7: 17^7 mod 33 = 8 = 2 × 4. Homomorphic product holds!']
+    ]
+  },
+  elgamal:{
+    name:'05 · ElGamal: Randomized Multiplicative PHE',
+    title:'Randomness, Multiplication, and a Security Caveat',
+    sub:'Trace ElGamal arithmetic. Secure ElGamal also needs a suitable group and the DDH assumption; this full-group toy example is insecure.',
+    topic:'ElGamal arithmetic and security assumptions',
+    labels:['Keys','Encrypt Pairs','Multiply Pairs','Decrypt'],
+    stages:[
+      ['ElGamal Setup','Group modulo p = 23, generator g = 5, private key x = 6, public key y = 5^6 mod 23 = 8.'],
+      ['Randomized Encryption','m₁ = 3 (r₁ = 4) => (4, 6); m₂ = 4 (r₂ = 7) => (17, 2). Different r gives different c!'],
+      ['Coordinate-Wise Multiplication','Multiply pairs: (4 × 17 mod 23, 6 × 2 mod 23) = (22, 12).'],
+      ['Decrypt Product','Decrypt (22, 12): 12 · (22^6)^(-1) mod 23 = 12 = 3 × 4. Randomness absorbed!']
+    ]
+  },
+  paillier:{
+    name:'06 · Paillier: Encrypted Addition',
+    title:'Multiply Ciphertexts. Add Plaintexts.',
+    sub:'Verify Paillier additive homomorphism and observe modular wraparound.',
+    topic:'Paillier addition and modular wraparound',
+    labels:['Key & Inputs','Encrypt Both','Multiply','Decrypt'],
+    stages:[
+      ['Teaching Key','Public key (n, g). Teaching key n = 221 (p=13, q=17) or n = 15 (p=3, q=5).'],
+      ['Randomized Encryption','c = g^m · r^n mod n^2. Secure Paillier uses independent uniform r in the unit group under the DCR assumption. Here r is a visible teaching input.'],
+      ['Multiply Modulo n²','Multiplying ciphertexts adds the exponents: g^(m₁+m₂) · (r₁r₂)^n mod n².'],
+      ['Decrypt Modulo n','Decryption applies L(u) · μ mod n to recover (m₁ + m₂) mod n.']
+    ]
+  },
+  depth:{
+    name:'07 · Circuits & Multiplicative Depth',
+    title:'Same Product. Different Depth.',
+    sub:'Rebalance an arithmetic circuit from sequential depth 3 to balanced depth 2.',
+    topic:'Arithmetic circuits and multiplicative depth',
+    labels:['Inputs','Level 1','Level 2','Compare'],
+    stages:[
+      ['Four Encrypted Inputs','Inputs a, b, c, d all start at multiplication level 0.'],
+      ['Parallel Multiplications','The balanced tree computes (a × b) and (c × d) in parallel at depth 1.'],
+      ['Combine at Level 2','Balanced completes at depth 2. The sequential circuit still needs level 3.'],
+      ['Compare Capacity','Depth dictates parameter sizes and noise growth. Balanced fits tighter depth budgets!']
+    ]
+  },
+  bootstrap:{
+    name:'08 · Bootstrapping Intuition',
+    title:'Homomorphic Decryption: Refresh Before Overflow',
+    sub:'Plan refresh points in a simplified depth model. One level is not a measured quantity of cryptographic noise.',
+    topic:'Conceptual bootstrapping schedule',
+    labels:['Budget Plan','Consume Levels','Refresh (Recrypt)','Continue'],
+    stages:[
+      ['Plan Total Depth','Set total circuit depth D and capacity L before noise reaches boundary.'],
+      ['Evaluate Gates','Each level consumes one abstract capacity unit in this scheduling model.'],
+      ['Homomorphic Decryption','Run decryption circuit homomorphically using encrypted secret key (bsk).'],
+      ['Refreshed Ciphertext','A valid refresh preserves the message and restores a scheme-dependent amount of evaluation capacity.']
+    ]
+  },
+  staged:{
+    name:'09 · Staged Evaluation & i-Hop (Armknecht 2015-1192)',
+    title:'The Staged Evaluation Dilemma',
+    sub:'Compare a one-hop interface, a reusable interface, and the sufficient condition of perfect circuit privacy.',
+    topic:'Staged evaluation and reusable interfaces',
+    labels:['Stage 1: Client','Stage 2: Cloud A','Stage 3: Cloud B','Decryption'],
+    stages:[
+      ['Stage 1: Fresh Encryption','Client encrypts input m₀ = 5 producing fresh ciphertext c₀ ∈ X.'],
+      ['Stage 2: Cloud A Evaluates','Cloud A computes c₁* = Eval(C₁, c₀) (e.g. + 3 => 8). Output is in space Y.'],
+      ['Stage 3: Cloud B Evaluates','Cloud B attempts to compute on c₁*. A one-hop interface may reject reuse. Perfect circuit privacy is a sufficient condition for reuse.'],
+      ['Stage 4: Client Decrypts','Client decrypts final result. Under the theorem’s perfect-privacy assumptions, repeated evaluation is supported.']
+    ]
+  },
+  inference:{
+    name:'10 · Worked Application: Encrypted Linear Prediction',
+    title:'Evaluate a Public Model on Private Inputs',
+    sub:'Evaluate a public affine score on encrypted features and decode negative results within a justified range.',
+    topic:'Encrypted affine prediction and signed decoding',
+    labels:['Private Inputs','Client Encrypts','Cloud Evaluates','Client Decrypts'],
+    stages:[
+      ['Features & Public Model','Client has private features x₁=4, x₂=1. Model has weights (2, −3) and bias 5.'],
+      ['Encrypt Features','Client encrypts x₁ and x₂ using Paillier (n=221).'],
+      ['Evaluate Model in Ciphertext','Cloud computes c* = c₁^2 · (c₂^3)^(-1) · Enc(5) mod n². Group inverse handles −3!'],
+      ['Client Recovers Score','Client decrypts c* to recover 2(4) − 3(1) + 5 = 10. Server never saw x₁ or x₂!']
+    ]
+  },
+  pir:{
+    name:'11 · Private Selection: An Encrypted One-Hot Query',
+    title:'Select a Record Without Sending Its Index',
+    sub:'A four-record, single-server PIR teaching example using a plaintext database and Paillier-encrypted selection bits.',
+    topic:'Private selection with an encrypted one-hot query',
+    labels:['Database','Encrypt Query','Scan All Records','Decrypt Record'],
+    stages:[['Public database','The server stores four plaintext records.'],['Private query','The client encrypts one selection bit per record.'],['Oblivious scan','The evaluator reads every record and computes a weighted encrypted sum.'],['Selected record','The client decrypts the response. Query ciphertexts hide the index only with secure parameters and fresh randomness.']]
+  },
+  audit:{
+    name:'12 · Comprehensive Security & Systems Audit',
+    title:'What Homomorphic Encryption Leaves to the System',
+    sub:'Test your mastery of verification, multi-key trust, compactness, circuit privacy, and output leakage.',
+    topic:'Confidentiality, integrity, and system boundaries',
+    labels:['Confidentiality','Integrity','Key Authority','Circuit Privacy'],
+    stages:[
+      ['Input Secrecy','HE protects input data during evaluation. Evaluator sees only ciphertexts.'],
+      ['Integrity & Verification','Honest-evaluation correctness does not prove that a server ran the requested function. Select verification if the threat model requires it.'],
+      ['Key Governance','Single-key HE requires compatible ciphertexts. Threshold HE normally uses a joint public key; independent keys require a supported multi-key or conversion protocol.'],
+      ['Output Disclosure','A correctly decrypted answer may reveal a sensitive record. Define release controls and consider DP for statistical outputs.']
+    ]
+  }
+};
+
+/* Additional experiments and expanded arithmetic for the complete edition. */
+const extraLessons={
+  doubling:['Insecure Doubling','Arithmetic without confidentiality','Follow an encoding that preserves addition and exposes every message.',['Encode','Add','Multiply','Attack']],
+  attack:['Deterministic RSA Attack','Test the two candidate messages','Public encryption lets an observer match a deterministic ciphertext.',['Observe','Try 2','Try 4','Identify']],
+  paillierkey:['Paillier Key Generation','Derive λ, L, and μ','Keep every intermediate value visible in the original teaching key.',['Moduli','LCM','Apply L','Inverse']],
+  noise:['Noise and Decoding','Find the nearest message centre','A circular phase model modulo 32 shows when a bit decodes incorrectly.',['Encode','Add Error','Compare','Decode']],
+  modswitch:['Modulus Switching','Scale a schematic phase','Compare absolute and relative error while reducing the modulus.',['Original','Scale','Round','Compare']],
+  rescale:['CKKS Rescaling Analogy','Track the scale and rounding error','Scalar fixed-point arithmetic illustrates rescaling without implementing CKKS.',['Encode','Multiply','Rescale','Decode']],
+  packing:['Packing and Rotations','Operate on encoded slots','A slot model illustrates component-wise arithmetic, rotation, and reduction.',['Pack','Rotate','Add','Reduce']],
+  families:['Scheme Selection','Match the workload to the arithmetic','Select a workload and inspect an appropriate initial capability.',['Function','Semantics','Capability','Limits']],
+  compactness:['Compactness','Keep the outsourced result bounded','Compare one result ciphertext with returning the entire circuit.',['Workload','Evaluate','Return','Client Work']],
+  keygov:['Key Authority','Separate key compatibility from authority','Compare single-key, threshold, and explicitly modeled multi-key arrangements.',['Inputs','Keys','Evaluate','Decrypt']],
+  dp:['HE and Differential Privacy','Protect computation and the release','Calculate the Laplace scale for a count under add/remove-one adjacency.',['Compute','Exact Answer','Noise Scale','Release']],
+  cost:['Implementation Costs','Calculate an illustrative total cost','All times here are hypothetical inputs, not measurements or library benchmarks.',['Setup','Online Work','Repeat','Amortize']]
+};
+Object.entries(extraLessons).forEach(([id,[name,title,sub,labels]])=>{
+  lessons[id]={name,title,sub,topic:name,labels,stages:labels.map(label=>[label,''])};
+});
+const completeOrder=['workflow','doubling','keygen','rsa','product','attack','elgamal','paillierkey','paillier','inference','pir','depth','noise','bootstrap','modswitch','rescale','packing','families','compactness','staged','keygov','dp','cost','audit'];
+completeOrder.forEach((id,i)=>lessons[id].name=String(i+1).padStart(2,'0')+' · '+lessons[id].name.replace(/^\d+\s*·\s*/,''));
+
+function noiseValues(){
+  const m=Number(params.noise_bit),e=Number(params.noise_error),phase=((16*m+e)%32+32)%32;
+  const d0=Math.min(phase,32-phase),d1=Math.abs(phase-16);
+  return {m,e,phase,d0,d1,decoded:d0===d1?'tie':d0<d1?'0':'1'};
+}
+function scaleValues(){
+  const e=Number(params.switch_error),phase=64+e,scaled=phase/2,rounded=Math.round(scaled);
+  return {e,phase,scaled,rounded,error:rounded-32};
+}
+function rescaleValues(){
+  const x=Number(params.real_x),y=Number(params.real_y),scale=100;
+  if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>10||y>10)throw Error('Use numbers from 0 to 10.');
+  const ex=Math.round(x*scale),ey=Math.round(y*scale),product=ex*ey,rescaled=Math.round(product/scale),decoded=rescaled/scale;
+  return {x,y,ex,ey,product,rescaled,decoded,exact:x*y,error:decoded-x*y};
+}
+function workload(){
+  return {
+    sum:['Σxᵢ','Exact bounded sum','Additive HE / Paillier','paillier','Compatible keys, valid inputs, and bounded sums.'],
+    integer:['x × y + z','Exact modular arithmetic','BFV / BGV','bfv','Plan modular range, depth, and parameters.'],
+    approximate:['A polynomial score on real features','Approximate real arithmetic','CKKS','ckks','Declare an error tolerance and scale plan.'],
+    boolean:['A threshold or small-domain function','Encoded gates / lookup tables','TFHE-style construction','tfhe','Declare the encoding, cost, and supported function.']
+  }[params.workload];
+}
+function authority(){
+  return {single:['One compatible public key','One secret-key holder','1'],threshold:['One joint public key','Any 2 of 3 shares in this example','2'],multi:['Independent pk₁, pk₂, pk₃','This model assumes cooperation of all 3','3']}[params.authority];
+}
+function costValues(){
+  const queries=Number(params.queries),evaluation=Number(params.eval_ms),online=20+10+evaluation+10;
+  return {queries,evaluation,online,total:500+queries*online,average:500/queries+online};
+}
+function extendedRows(){
+  if(key==='doubling'){
+    const a=Number(params.double_a),b=Number(params.double_b);
+    return [['Encode',`E(${a})=2×${a}; E(${b})=2×${b}`,`${2*a}, ${2*b}`],['Add',`${2*a}+${2*b}=${2*(a+b)}; decode by dividing by 2`,a+b],['Raw product',`${2*a}×${2*b}=${4*a*b}; E(${a*b})=${2*a*b}`,'Raw multiplication differs'],['Attack','No key: divide either encoded input by 2',`${a}, ${b}`]];
+  }
+  if(key==='attack')return [['Observed challenge','M is known to be either 2 or 4',params.challenge],['Candidate 2','2³ mod 33','8'],['Candidate 4','4³ mod 33','31'],['Match','Compare the public encryptions',params.challenge==='31'?'M = 4':'M = 2']];
+  if(key==='paillierkey'){
+    const k=pk(),u=powmod(k.g,k.lambda,k.nn),l=(u-1n)/k.n;
+    return [['Moduli',`n=${k.n}; n²=${k.n}×${k.n}`,k.nn],['Secret exponent','λ=lcm(p−1,q−1)',k.lambda],['L function',`u=g^λ mod n²=${u}; L(u)=(${u}−1)/${k.n}`,l],['Inverse',`${l}×${k.mu} mod ${k.n}`,`1, so μ=${k.mu}`]];
+  }
+  if(key==='noise'){
+    const v=noiseValues();return [['Message centre',`16 × m = 16 × ${v.m}`,16*v.m],['Noisy phase',`(${16*v.m} + ${v.e}) mod 32`,v.phase],['Circular distances',`to 0: min(${v.phase},32−${v.phase}); to 16: |${v.phase}−16|`,`${v.d0}, ${v.d1}`],['Nearest-centre decision','Tie means ambiguous decoding',v.decoded==='tie'?'tie':`bit ${v.decoded}${v.decoded!==String(v.m)?' (incorrect)':''}`]];
+  }
+  if(key==='modswitch'){
+    const v=scaleValues();return [['Original phase',`q=128; centre64; error${v.e}`,v.phase],['Scale',`${v.phase} × (64/128)`,v.scaled],['Round',`round(${v.scaled}) at q′=64`,v.rounded],['Error comparison',`original e/q=${v.e}/128; new e′/q′=${v.error}/64`,'Rounding may change the ratio']];
+  }
+  if(key==='rescale'){
+    const v=rescaleValues();return [['Encode at scale100',`round(${v.x}×100), round(${v.y}×100)`,`${v.ex}, ${v.ey}`],['Multiply',`${v.ex}×${v.ey}; scale is now10000`,v.product],['Rescale',`round(${v.product}/100); scale returns to100`,v.rescaled],['Decode',`${v.rescaled}/100; exact x×y=${v.exact.toFixed(4)}`,`${v.decoded.toFixed(2)} (error ${v.error.toFixed(4)})`]];
+  }
+  if(key==='packing')return [['Pack','Slots in a suitable encoding','[2, 3, 4, 5]'],['Rotate left by2','Slot permutation with appropriate evaluation material','[4, 5, 2, 3]'],['Add slot-wise','[2,3,4,5]+[4,5,2,3]','[6,8,6,8]'],['Reduce','Rotate this result by1 and add','[14,14,14,14]']];
+  if(key==='families'){
+    const w=workload();return [['Function',w[0],'Selected workload'],['Numerical semantics',w[1],'Declare the range / error tolerance'],['Candidate capability',w[2],'Initial design choice'],['Design check',w[4],'Measure cost with justified parameters']];
+  }
+  if(key==='compactness')return [['Workload',`${params.gates} gates; one scalar output`,'Schematic item counts'],['Useful return','One bounded-size result ciphertext','1 output ciphertext'],['Unhelpful return',`Inputs plus ${params.gates} gates of description`,'Client still does the computation'],['Definition','Fix setup and output size; vary circuit size','The result bound is independent of circuit size']];
+  if(key==='keygov'){
+    const a=authority();return [['Inputs',a[0],'Key compatibility'],['Authority',a[1],'Explicit policy'],['Required holders','Number assumed in this teaching arrangement',a[2]],['Limit','Other multi-key protocols may use different decryption rules','No automatic conversion of unrelated keys']];
+  }
+  if(key==='dp'){
+    const eps=Number(params.epsilon),b=1/eps,count=Number(params.count),eta=Number(params.eta);
+    return [['Exact count','Computed and access controlled',count],['Adjacency and sensitivity','Add/remove one person; each person contributes at most1','Δf=1'],['Laplace scale',`b=Δf/ε=1/${eps}`,b],['Illustrative release',`${count}+(${eta}); η is manually chosen here`,`${count+eta}. This display is not a DP mechanism.`]];
+  }
+  if(key==='cost'){
+    const v=costValues();return [['One-time setup','Hypothetical KeyGen and preparation','500 ms'],['One query',`Encrypt20 + transfer10 + Eval${v.evaluation} + decrypt10`,`${v.online} ms`],['Total',`500 + ${v.queries}×${v.online}`,`${v.total} ms`],['Amortized cost',`${v.total}/${v.queries}`,`${v.average.toFixed(2)} ms/query`]];
+  }
+  return [];
+}
+function extendedFields(){
+  if(key==='doubling')return field('double_a','Input a',params.double_a,'number','min="0" max="20"')+field('double_b','Input b',params.double_b,'number','min="0" max="20"');
+  if(key==='attack')return select('challenge','Observed ciphertext',[['31','31'],['8','8']]);
+  if(key==='paillierkey')return select('preset','Teaching key',[['original','p=13, q=17, g=4886'],['small','p=3, q=5, g=16']]);
+  if(key==='noise')return select('noise_bit','Encoded bit',[[1,1],[0,0]])+field('noise_error','Phase error e',params.noise_error,'range','min="-12" max="12" step="1"');
+  if(key==='modswitch')return field('switch_error','Original phase error e',params.switch_error,'range','min="0" max="20" step="1"');
+  if(key==='rescale')return field('real_x','Real x',params.real_x,'number','min="0" max="10" step="0.01"')+field('real_y','Real y',params.real_y,'number','min="0" max="10" step="0.01"');
+  if(key==='families')return select('workload','Workload',[['sum','Encrypted sum'],['integer','Exact modular product'],['approximate','Approximate real score'],['boolean','Boolean / small-domain threshold']]);
+  if(key==='compactness')return field('gates','Circuit gate count',params.gates,'range','min="10" max="1000" step="10"');
+  if(key==='keygov')return select('authority','Key arrangement',[['single','Single compatible key'],['threshold','2-of-3 threshold'],['multi','Multi-key (all3 cooperate in this model)']]);
+  if(key==='dp')return select('epsilon','Privacy budget ε',[[1,1],[.5,.5],[2,2],[4,4]])+field('count','Exact count',params.count,'number','min="0" max="100" step="1"')+field('eta','Illustrative manually chosen noise η',params.eta,'range','min="-5" max="5" step="1"');
+  if(key==='cost')return field('queries','Repeated queries',params.queries,'range','min="1" max="100" step="1"')+field('eval_ms','Hypothetical Eval time (ms)',params.eval_ms,'range','min="1" max="300" step="1"');
+  return '<p>This slot model uses a fixed worked example.</p>';
+}
+
+
+const order=completeOrder;
+const completed=new Set();
+let lastRandom=null;
+let key=order.includes(location.hash.slice(1))?location.hash.slice(1):'workflow',step=0,timer=null;
+
+const params={
+  p:'11',q:'3',e:'3',m:'4',a:'2',b:'4',op:'multiply',
+  preset:'original',m1:'123',m2:'20',r1:'3',r2:'5',
+  elg_m1:'3',elg_m2:'4',elg_r1:'4',elg_r2:'7',
+  budget:'2',depth:'8',capacity:'3',
+  stage_mode:'perfect',stages:'2',record:'2',
+  x1:'4',x2:'1'
+};
+
+Object.assign(params,{double_a:'3',double_b:'5',challenge:'31',noise_bit:'1',noise_error:'3',switch_error:'6',real_x:'1.25',real_y:'2.50',workload:'sum',gates:'100',authority:'threshold',epsilon:'1',count:'12',eta:'1',queries:'20',eval_ms:'80'});
+function int(name){
+  const v=params[name];
+  if(!/^\d{1,5}$/.test(v))throw Error('Enter a nonnegative integer of at most five digits.');
+  return BigInt(v);
+}
+function rk(){return rsaKey(int('p'),int('q'),int('e'));}
+function rsaInputs(){
+  const k=rk();
+  for(const field of key==='product'?['a','b']:['m'])
+    if(int(field)>=k.n)throw Error('Each RSA plaintext must be smaller than n = '+k.n+'.');
+  return k;
+}
+function elgVals(){
+  const k=elgamalKey(23n,5n,6n);
+  const m1=int('elg_m1'),m2=int('elg_m2'),r1=int('elg_r1'),r2=int('elg_r2');
+  const c1=elgamalEnc(m1,r1,k),c2=elgamalEnc(m2,r2,k);
+  const cStar={a:mod(c1.a*c2.a,k.p), b:mod(c1.b*c2.b,k.p)};
+  const dec=elgamalDec(cStar,k);
+  return {...k,m1,m2,r1,r2,c1,c2,cStar,dec};
+}
+function pk(){return params.preset==='small'?paillierKey(3n,5n,16n):paillierKey(13n,17n,4886n);}
+function pvals(){
+  const k=pk(),m1=int('m1'),m2=int('m2'),r1=int('r1'),r2=int('r2');
+  const c1=penc(m1,r1,k),c2=penc(m2,r2,k),c=c1*c2%k.nn;
+  return {...k,m1,m2,r1,r2,c1,c2,c,answer:pdec(c,k)};
+}
+function flowvals(){
+  const k=paillierKey(13n,17n,4886n),c1=penc(123n,3n,k),c2=penc(20n,5n,k);
+  return {...k,c1,c2,c:c1*c2%k.nn};
+}
+function inference(){
+  const k=paillierKey(13n,17n,4886n),x1=int('x1'),x2=int('x2');
+  if(x1>10n||x2>10n)throw Error('Use feature values between 0 and 10.');
+  const c1=penc(x1,3n,k),c2=penc(x2,5n,k),cb=penc(5n,7n,k);
+  const c=powmod(c1,2n,k.nn)*inverse(powmod(c2,3n,k.nn),k.nn)%k.nn*cb%k.nn;
+  const residue=pdec(c,k);
+  return {...k,x1,x2,c1,c2,c,score:2n*x1-3n*x2+5n,residue,decoded:residue>k.n/2n?residue-k.n:residue};
+}
+
+
+function stagedValues(){
+  const count=Number(params.stages),reusable=params.stage_mode!=='onehop';
+  return {count,reusable,perfect:params.stage_mode==='perfect',answer:count===3?15:16};
+}
+function pirValues(){
+  const k=paillierKey(13n,17n,4886n),records=[7n,9n,11n,13n],index=Number(params.record)-1;
+  if(!Number.isInteger(index)||index<0||index>3)throw Error('Choose a record from 1 to 4.');
+  const bits=records.map((_,i)=>i===index?1n:0n),randomness=[3n,5n,7n,9n];
+  const query=bits.map((b,i)=>penc(b,randomness[i],k));
+  const response=query.reduce((acc,c,i)=>acc*powmod(c,records[i],k.nn)%k.nn,1n);
+  return {...k,records,index,bits,query,response,answer:pdec(response,k)};
+}
+function teaching(){return $('visibility').value==='teaching';}
+function sourceForModule(){
+  const name=['keygen','rsa','product','attack'].includes(key)?'rsa':key==='elgamal'?'elg':key==='paillierkey'||['workflow','paillier','inference','pir'].includes(key)?'pai':key==='bootstrap'?'gentry':key==='rescale'?'ckks':key==='modswitch'?'bgv':key==='dp'?'dp':key==='cost'?'seal':'guide';
+  const ref=references[name];return `<a href="${esc(ref.url)}" target="_blank" rel="noopener noreferrer">${esc(ref.label)}</a>`;
+}
+function publicCalculation(){
+  if(['keygen','rsa','product'].includes(key)){
+    const k=rk();
+    let h=row('Public RSA key',`(n, e) = (${k.n}, ${k.e})`,'Teaching parameters');
+    if(key==='rsa')h+=row('Uploaded ciphertext','C = Enc(pk, M)',powmod(int('m'),k.e,k.n));
+    if(key==='product'){
+      const c1=powmod(int('a'),k.e,k.n),c2=powmod(int('b'),k.e,k.n);
+      h+=row('Uploaded ciphertexts','C₁, C₂',`${c1}, ${c2}`)+row('Public operation',params.op==='multiply'?'C₁ × C₂ mod n':'C₁ + C₂ mod n',params.op==='multiply'?c1*c2%k.n:(c1+c2)%k.n);
+    }
+    return h+'<p>Textbook RSA is deterministic. Hiding a label here does not make its ciphertext confidential.</p>';
+  }
+  if(key==='elgamal'){
+    const v=elgVals();
+    return row('Public parameters','(p, g, y) = (23, 5, 8)','Insecure toy group')+row('Uploaded pairs','c₁, c₂',`(${v.c1.a}, ${v.c1.b}), (${v.c2.a}, ${v.c2.b})`)+row('Public multiplication','Coordinate-wise modulo 23',`(${v.cStar.a}, ${v.cStar.b})`);
+  }
+  if(key==='pir'){
+    const v=pirValues();
+    return row('Server database','All four public records',v.records.join(', '))+row('Encrypted selection','Four ciphertexts; no clear index',v.query.join(', '))+row('Fixed scan','∏ Enc(bᵢ)ᵈⁱ mod n²',v.response);
+  }
+  if(['workflow','paillier','inference'].includes(key)){
+    const v=key==='workflow'?flowvals():key==='paillier'?pvals():inference();
+    return row('Public key',`n=${v.n}, g=${v.g}`,`n²=${v.nn}`)+row('Uploaded ciphertexts','C₁, C₂',`${v.c1}, ${v.c2}`)+row('Evaluated ciphertext',key==='inference'?'C₁² · (C₂³)⁻¹ · Enc(5) mod n²':'C₁ × C₂ mod n²',v.c);
+  }
+  return calculation();
+}
+function baseCaptionForStep(){
+  if(!teaching()&&['workflow','keygen','rsa','product','elgamal','paillier','inference','pir'].includes(key)){
+    return ['The client prepares its private values. Only public parameters are shown here.','The client sends ciphertexts. Secret keys, plaintexts, and encryption coins are omitted.','The evaluator applies the displayed public operation to the ciphertexts.','The encrypted result returns to the client. Decryption takes place at the client.'][step];
+  }
+  if(key==='keygen'){
+    const k=rk();return [`Choose distinct primes p=${k.p}, q=${k.q}.`,`Compute n=${k.p} × ${k.q}=${k.n}.`,`Compute φ(n)=(${k.p}−1)(${k.q}−1)=${k.phi}.`,`Solve ${k.e}d ≡ 1 modulo ${k.phi}: d=${k.d}.`][step];
+  }
+  if(key==='rsa'){
+    const k=rsaInputs(),m=int('m'),c=powmod(m,k.e,k.n);
+    return [`Use M=${m} in Z_${k.n}.`,`Compute C=${m}^${k.e} mod ${k.n}=${c}.`,`The transmitted ciphertext is C=${c}.`,`Recover ${c}^${k.d} mod ${k.n}=${m}. This arithmetic example is insecure.`][step];
+  }
+  if(key==='product'){
+    const k=rsaInputs(),a=int('a'),b=int('b'),mul=params.op==='multiply';
+    return [`Use inputs ${a} and ${b} under (n,e)=(${k.n},${k.e}).`,'Encrypt each input independently with textbook RSA.',`Apply ciphertext ${mul?'multiplication':'addition'} modulo ${k.n}.`,mul?`The output decrypts to (${a} × ${b}) mod ${k.n}.`:'Compare decryption with the plaintext sum. A coincidental match does not establish a homomorphism.'][step];
+  }
+  if(key==='elgamal'){
+    const v=elgVals();return ['Public group p=23, g=5; x=6 gives y=8. This full-group toy setup is insecure.',`Use m₁=${v.m1}, m₂=${v.m2} and visible teaching exponents r₁=${v.r1}, r₂=${v.r2}.`,'Multiply the first coordinates and second coordinates separately modulo 23.',`Recover (${v.m1} × ${v.m2}) mod 23=${v.dec}. Randomization alone does not establish IND-CPA security.`][step];
+  }
+  if(key==='paillier'){
+    const v=pvals();return [`Public n=${v.n}, g=${v.g}. Messages lie in Z_n.`,`Encrypt ${v.m1} and ${v.m2} using the selected teaching randomness.`,`Multiply C₁ and C₂ modulo n²=${v.nn}.`,`The sum ${v.m1+v.m2} decodes to residue ${v.answer}; ${v.m1+v.m2>=v.n?'modular wraparound occurred.':'no wraparound occurred.'}`][step];
+  }
+  if(key==='staged'){
+    const v=stagedValues();return ['Begin with an abstract encryption of m₀=5. This is an interface model, not ciphertext arithmetic.','Cloud A evaluates f₁(m)=m+3 and obtains an encryption of 8.',v.reusable?'The selected interface accepts evaluated ciphertexts. Cloud B evaluates f₂(m)=2m.':'This one-hop interface rejects a second Eval call. This is a modeled limitation, not a theorem about all schemes lacking circuit privacy.',v.reusable?`The ${v.count}-stage composition decrypts to ${v.answer}.${v.count===3?' Cloud C applies f₃(m)=m−1.':''}`:'No final result is produced in this one-hop model.'][step];
+  }
+  if(key==='inference'){
+    const v=inference();return [`Use private features x₁=${v.x1}, x₂=${v.x2}; public weights are (2,−3) and bias 5.`,'Encrypt the features under one Paillier key. Fixed coins here make the trace reproducible.','Use public exponents, a group inverse, and an encryption of the public bias.',`Residue ${v.residue} decodes to ${v.decoded}. For xᵢ∈[0,10], the score lies in [−25,25], within [−110,110].`][step];
+  }
+  if(key==='pir'){
+    const v=pirValues();return ['The plaintext server database is [7, 9, 11, 13].',`Record ${v.index+1} gives one-hot bits [${v.bits.join(', ')}]. Encrypt every bit.`,`Scan all four records and compute ∏ Enc(bᵢ)^{dᵢ} mod ${v.nn}.`,`Decrypt the response to recover ${v.answer}. This toy query is not secure and does not provide database privacy.`][step];
+  }
+  return lessons[key].stages[step][1];
+}
+function currentPrediction(){
+  if(key==='workflow')return ['What does the encrypted sum 123 + 20 decrypt to?','143'];
+  if(key==='doubling')return ['What does the encoded sum decode to?',String(Number(params.double_a)+Number(params.double_b))];
+  if(key==='keygen')return ['For the selected primes and exponent, what is d?',String(rk().d)];
+  if(key==='rsa'){const k=rsaInputs();return ['For this plaintext and key, what is ciphertext C?',String(powmod(int('m'),k.e,k.n))];}
+  if(key==='product'){const k=rsaInputs(),a=powmod(int('a'),k.e,k.n),b=powmod(int('b'),k.e,k.n);return ['What does the combined ciphertext decrypt to?',String(powmod(params.op==='multiply'?a*b%k.n:(a+b)%k.n,k.d,k.n))];}
+  if(key==='attack')return ['Which candidate plaintext matches the challenge?',params.challenge==='31'?'4':'2'];
+  if(key==='elgamal')return ['What is the plaintext product modulo 23?',String(elgVals().dec)];
+  if(key==='paillierkey')return ['What is μ for this teaching key?',String(pk().mu)];
+  if(key==='paillier')return ['What is the decrypted sum modulo n?',String(pvals().answer)];
+  if(key==='inference')return ['What signed score do these features produce?',String(inference().decoded)];
+  if(key==='pir')return ['What record value will the selected query return?',String(pirValues().answer)];
+  if(key==='depth')return ['What minimum multiplicative depth fits the balanced four-input product?','2'];
+  if(key==='noise')return ['Which bit decodes? Enter 0, 1, or tie.',noiseValues().decoded];
+  if(key==='bootstrap')return ['How many refreshes does this idealized schedule need?',String(Math.floor((Number(params.depth)-1)/Number(params.capacity)))];
+  if(key==='modswitch')return ['What is the rounded phase after switching?',String(scaleValues().rounded)];
+  if(key==='rescale')return ['What is the decoded approximate product?',rescaleValues().decoded.toFixed(2)];
+  if(key==='packing')return ['After reduction, what value is in every slot?','14'];
+  if(key==='families')return ['Name a candidate family: Paillier, BFV/BGV, CKKS, or TFHE.',workload()[3]];
+  if(key==='compactness')return ['How many result ciphertexts represent this one scalar output?','1'];
+  if(key==='staged'){const v=stagedValues();return [v.reusable?'What is the result after all selected stages?':'Does this modeled one-hop interface accept a second Eval call? (yes/no)',v.reusable?String(v.answer):'no'];}
+  if(key==='keygov')return ['How many holders cooperate in this specific arrangement?',authority()[2]];
+  if(key==='dp')return ['For sensitivity 1, what is the Laplace scale b?',String(1/Number(params.epsilon))];
+  if(key==='cost')return ['What is the total cost in milliseconds for these queries?',String(costValues().total)];
+  throw Error('This lab uses the systems audit instead of a numeric checkpoint.');
+}
+function updateProgress(){
+  $('progress').textContent=`${completed.size} / ${order.length} checkpoints completed`;
+  $('progressmeter').value=completed.size;
+  saveProgress();
+  renderNavigation();
+}
+function saveText(filename,body,type='text/plain;charset=utf-8'){
+  const url=URL.createObjectURL(new Blob([body],{type})),a=document.createElement('a');
+  a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function row(label,formula,value){
+  return `<div class="equationrow"><div class="eqlabel">${esc(label)}</div><div class="math">${formula}</div><div class="eqvalue">${esc(value)}</div></div>`;
+}
+function svg(content,label){
+  return `<svg viewBox="0 0 680 350" role="img" aria-label="${esc(label)}"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10Z" fill="#7c92a8"/></marker></defs>${content}</svg>`;
+}
+function tx(x,y,v,cls='svglabel',anchor='middle'){
+  return `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${esc(v)}</text>`;
+}
+function node(x,y,w,h,title,value,active=false,fail=false){
+  return `<rect class="${fail?'failbox':active?'activebox':'stagebox'} motion" x="${x}" y="${y}" width="${w}" height="${h}" rx="7"/>${tx(x+w/2,y+27,title,'svgsmall')}${tx(x+w/2,y+h/2+20,value,'svgvalue')}`;
+}
+function arrow(x1,y1,x2,y2,fail=false){
+  return `<path d="M${x1} ${y1} L${x2} ${y2}" class="${fail?'flowerr':'flowline'}" marker-end="${fail?'':'url(#arrow)'}"/>`;
+}
+function showSecret(v){return $('visibility').value==='teaching'?String(v):'●●●● (hidden)';}
+
+function baseDiagram(){
+  if(key==='workflow'||key==='inference'){
+    const v=key==='workflow'?flowvals():inference(),a=key==='workflow'?'123, 20':v.x1+', '+v.x2,out=key==='workflow'?'143':v.decoded;
+    return svg(tx(140,29,'CLIENT')+tx(530,29,'CLOUD EVALUATOR')+'<path d="M335 42V315" stroke="#d5e0e9" stroke-dasharray="5 5"/>'+node(25,65,230,87,'Private Inputs',showSecret(a),step===0)+node(425,65,230,87,'Input Ciphertexts',step>=1?String(v.c1):'not sent',step===1)+arrow(264,108,414,108)+node(425,226,230,87,'Evaluated Ciphertext',step>=2?String(v.c):'not evaluated',step===2)+arrow(540,161,540,216)+node(25,226,230,87,'Decrypted Result',step>=3?showSecret(out):'not decrypted',step===3)+arrow(415,270,266,270)+tx(142,185,'Secret key remains here','svgsmall'), 'Encrypted computation workflow.');
+  }
+  if(key==='keygen'){
+    const k=rk();
+    return svg(node(35,25,260,90,'Distinct Primes',k.p+' and '+k.q,step===0)+node(385,25,260,90,'Public Modulus n',step>=1?k.n:'?',step===1)+arrow(304,70,375,70)+node(35,221,260,90,'Euler Totient φ(n)',step>=2?k.phi:'?',step===2)+node(385,221,260,90,'Exponents (e, d)',step>=3?k.e+', '+showSecret(k.d):'?',step===3)+arrow(515,123,515,210)+tx(340,178,step>=3?`${k.e} × ${k.d} ≡ 1 (mod ${k.phi})`:'Inverse condition operates modulo φ(n)','svglabel'), 'RSA key generation.');
+  }
+  if(key==='rsa'){
+    const k=rsaInputs(),m=int('m'),c=powmod(m,k.e,k.n);
+    return svg(node(30,45,260,98,'Plaintext M',showSecret(m),step===0)+node(390,45,260,98,'Ciphertext C',step>=1?c:'?',step===1||step===2)+arrow(300,92,380,92)+tx(340,188,`Public key (n, e) = (${k.n}, ${k.e})`,'svglabel')+node(208,235,264,89,'Recovered Plaintext',step===3?showSecret(powmod(c,k.d,k.n)):'?',step===3)+arrow(520,154,520,278)+arrow(520,278,483,278), 'RSA encryption and decryption.');
+  }
+  if(key==='product'||key==='paillier'){
+    let a,b,c1,c2,c,answer,n,symbol;
+    if(key==='product'){const k=rsaInputs();a=int('a');b=int('b');n=k.n;c1=powmod(a,k.e,n);c2=powmod(b,k.e,n);c=params.op==='multiply'?c1*c2%n:(c1+c2)%n;answer=powmod(c,k.d,n);symbol=params.op==='multiply'?'×':'+';}
+    else{const v=pvals();({m1:a,m2:b,c1,c2,c,answer,n}=v);symbol='×';}
+    return svg(node(25,20,260,88,'Input 1',showSecret(a),step===0)+node(395,20,260,88,'Input 2',showSecret(b),step===0)+node(25,145,260,82,'Ciphertext 1',step>=1?c1:'?',step===1)+node(395,145,260,82,'Ciphertext 2',step>=1?c2:'?',step===1)+arrow(155,115,155,137)+arrow(525,115,525,137)+tx(340,195,symbol,'svgbig')+node(25,266,260,74,'Combined Ciphertext',step>=2?c:'?',step===2)+node(395,266,260,74,'Decrypted Result',step>=3?showSecret(answer):'?',step===3)+arrow(296,303,384,303), 'Ciphertexts combined before decryption.');
+  }
+  if(key==='elgamal'){
+    const v=elgVals();
+    return svg(node(25,20,260,88,'Message m₁',showSecret(v.m1),step===0)+node(395,20,260,88,'Message m₂',showSecret(v.m2),step===0)+node(25,145,260,82,'Pair c₁ = (gʳ¹, m₁yʳ¹)',step>=1?`(${v.c1.a}, ${v.c1.b})`:'?',step===1)+node(395,145,260,82,'Pair c₂ = (gʳ², m₂yʳ²)',step>=1?`(${v.c2.a}, ${v.c2.b})`:'?',step===1)+arrow(155,115,155,137)+arrow(525,115,525,137)+tx(340,195,'⊗','svgbig')+node(25,266,260,74,'Product Pair c*',step>=2?`(${v.cStar.a}, ${v.cStar.b})`:'?',step===2)+node(395,266,260,74,'Decrypted m₁ · m₂',step>=3?showSecret(v.dec):'?',step===3)+arrow(296,303,384,303), 'ElGamal coordinate-wise multiplication.');
+  }
+  if(key==='depth'){
+    const active=step>=2,good=Number(params.budget)>=2;
+    return svg(tx(170,28,'BALANCED: depth 2')+tx(510,28,'SEQUENTIAL: depth 3')+node(28,73,130,65,'Level 1','2 × 3',step===1)+node(185,73,130,65,'Level 1','4 × 5',step===1)+arrow(94,145,94,185)+arrow(251,145,251,185)+`<path d="M94 185H251" class="flowline"/>`+arrow(172,185,172,211)+node(87,219,170,72,'Level 2',active?'6 × 20 = 120':'?',step===2)+node(389,61,235,65,'Level 1','2 × 3 = 6',step===1)+arrow(507,135,507,155)+node(389,164,235,65,'Level 2',step>=2?'6 × 4 = 24':'?',step===2)+arrow(507,237,507,257)+node(389,266,235,65,'Level 3',step>=3?'24 × 5 = 120':'?',step===3)+tx(170,330,`Budget L = ${params.budget}: ${good?'balanced fits':'budget exceeded'}`,'svgsmall'), 'Balanced vs Sequential circuit depth.');
+  }
+  if(key==='bootstrap'){
+    const depth=Number(params.depth),cap=Number(params.capacity),refresh=Math.floor((depth-1)/cap);
+    let g=tx(340,30,'GENTRY BOOTSTRAPPING SCHEDULE','svgsmall');
+    for(let i=0;i<depth;i++){
+      const x=25+(i%6)*107,y=68+Math.floor(i/6)*101,done=step>=1&&i<cap||step>=3;
+      g+=`<rect x="${x}" y="${y}" width="92" height="62" rx="5" fill="${done?'#e8f5ed':'#edf2f8'}" stroke="#b8c9d5"/>`+tx(x+46,y+24,'Mult Gate','svgsmall')+tx(x+46,y+48,String(i+1),'svglabel');
+      if(i>0&&i%cap===0&&refresh>0)g+=tx(x+46,y-9,'recrypt','svgsmall');
+    }
+    g+=tx(340,310,step===2?'Homomorphic decryption refreshes the ciphertext':'Scheduled recryption operations: '+refresh,'svglabel');
+    return svg(g,'Bootstrapping refresh schedule.');
+  }
+  if(key==='staged'){
+    const v=stagedValues(),fail=step>=2&&!v.reusable;
+    return svg(tx(340,28,'EVALUATION INTERFACE MODEL')+
+      node(20,65,190,88,'Fresh input',showSecret('m₀ = 5'),step===0)+arrow(216,110,240,110)+
+      node(245,65,190,88,'Cloud A: f₁(m)=m+3',step>=1?'Enc(8)':'pending',step===1)+arrow(442,110,465,110,fail)+
+      node(470,65,190,88,'Cloud B: f₂(m)=2m',fail?'rejected':step>=2?'Enc(16)':'pending',step===2,fail)+
+      node(245,215,190,85,v.count===3?'Cloud C: f₃(m)=m−1':'Client decrypts',step>=3?(fail?'no result':showSecret(v.answer)):'pending',step===3,fail)+
+      tx(340,335,v.perfect?'Perfect circuit privacy is a sufficient condition':v.reusable?'Reusable interface: circuit privacy is not assumed':'One-hop interface: further evaluation is not guaranteed','svgsmall'),'Staged evaluation interface and composition.');
+  }
+  if(key==='pir'){
+    const v=pirValues();let g=tx(340,25,'SERVER READS EVERY DATABASE RECORD');
+    v.records.forEach((d,i)=>{const x=20+i*167;
+      g+=node(x,60,145,80,'Record '+(i+1),d,step===0)+node(x,175,145,78,'Encrypted query',step>=1?v.query[i]:'?',step===1)+tx(x+73,161,'public exponent','svgsmall');
+    });
+    return svg(g+tx(340,290,step>=2?'Response ciphertext = '+v.response:'Multiply query ciphertext powers','svglabel')+tx(340,330,step>=3?'Client recovers '+showSecret(v.answer):'∏ Enc(bᵢ)^{dᵢ} = Enc(Σ bᵢdᵢ)','svglabel'),'Encrypted one-hot selection with a fixed database scan.');
+  }
+  return svg(node(30,43,280,100,'Evaluator Input','Ciphertexts',step===0)+node(370,43,280,100,'Correct Execution','Verification if needed',step===1)+node(30,226,280,100,'Decryption Authority','Choose key governance',step===2)+node(370,226,280,100,'Released Answer','Assess output disclosure',step===3),'Four core systems dimensions of homomorphic encryption.');
+}
+
+function baseCalculation(){
+  if(key==='workflow'){
+    const v=flowvals();
+    return row('Encrypt Input 1','E(123; r=3) = 4886<sup>123</sup> · 3<sup>221</sup> mod 48841',v.c1)+
+           row('Encrypt Input 2','E(20; r=5) = 4886<sup>20</sup> · 5<sup>221</sup> mod 48841',v.c2)+
+           row('Evaluator Multiplies',`${v.c1} × ${v.c2} mod 48841`,v.c)+
+           row('Client Decrypts','L(c*<sup>48</sup> mod 48841) × 159 mod 221','143 = 123 + 20');
+  }
+  if(key==='keygen'){
+    const k=rk();
+    return row('Public Modulus',`${k.p} × ${k.q}`,k.n)+
+           row('Euler Totient φ(n)',`(${k.p} − 1)(${k.q} − 1)`,k.phi)+
+           row('Private Exponent d',`${k.e} × d ≡ 1 (mod ${k.phi})`,'d = '+k.d)+
+           row('Generated Keys',`Public: (n=${k.n}, e=${k.e}) | Private: d=${k.d}`,'');
+  }
+  if(key==='rsa'){
+    const k=rsaInputs(),m=int('m'),c=powmod(m,k.e,k.n);
+    return row('Encryption',`${m}<sup>${k.e}</sup> mod ${k.n}`,c)+
+           row('Decryption',`${c}<sup>${k.d}</sup> mod ${k.n}`,powmod(c,k.d,k.n))+
+           `<details><summary>Repeated-Squaring Exponentiation Trace</summary><div class="table-scroll"><table><thead><tr><th>Bit</th><th>Base modulo n</th><th>Multiply?</th><th>Accumulator</th></tr></thead><tbody>${tracePow(c,k.d,k.n).map(v=>`<tr><td>${v.bit}</td><td>${v.base}</td><td>${v.use?'Yes':'No'}</td><td>${v.acc}</td></tr>`).join('')}</tbody></table></div></details>`;
+  }
+  if(key==='product'){
+    const k=rsaInputs(),a=int('a'),b=int('b'),c1=powmod(a,k.e,k.n),c2=powmod(b,k.e,k.n),mul=params.op==='multiply';
+    const c=mul?c1*c2%k.n:(c1+c2)%k.n,dec=powmod(c,k.d,k.n),target=mul?a*b%k.n:(a+b)%k.n;
+    return row('Encrypt Both',`C₁ = ${a}<sup>${k.e}</sup> mod ${k.n}, C₂ = ${b}<sup>${k.e}</sup> mod ${k.n}`,`${c1}, ${c2}`)+
+           row('Ciphertext Operation',`${c1} ${mul?'×':'+'} ${c2} mod ${k.n}`,c)+
+           row('Client Decryption',`${c}<sup>${k.d}</sup> mod ${k.n}`,dec)+
+           row('Plaintext Compare',`(${a} ${mul?'×':'+'} ${b}) mod ${k.n}`,target)+
+           `<p class="${dec===target?'correct':'incorrect'}">${mul?'Multiplicative homomorphism holds.':dec===target?'This accidental match holds only for these specific values. Addition is NOT homomorphic in RSA!':'Ciphertext addition fails to decrypt to the sum of plaintexts.'}</p>`;
+  }
+  if(key==='elgamal'){
+    const v=elgVals();
+    return row('Public Key','p = 23, g = 5, secret x = 6 => y = 5⁶ mod 23','y = 8')+
+           row('Ciphertext 1',`c₁ = (5<sup>${v.r1}</sup>, ${v.m1} · 8<sup>${v.r1}</sup>) mod 23`,`(${v.c1.a}, ${v.c1.b})`)+
+           row('Ciphertext 2',`c₂ = (5<sup>${v.r2}</sup>, ${v.m2} · 8<sup>${v.r2}</sup>) mod 23`,`(${v.c2.a}, ${v.c2.b})`)+
+           row('Multiply Pairs',`c* = (${v.c1.a}×${v.c2.a} mod 23, ${v.c1.b}×${v.c2.b} mod 23)`,`(${v.cStar.a}, ${v.cStar.b})`)+
+           row('Decrypted Product',`${v.cStar.b} · (${v.cStar.a}⁶)⁻¹ mod 23`,v.dec)+
+           `<p class="correct">Homomorphic product: (${v.m1} × ${v.m2}) mod 23 = <strong>${v.dec}</strong>. This full-group toy setup leaks the quadratic character of a message. Fresh randomness alone is insufficient for IND-CPA security.</p>`;
+  }
+  if(key==='paillier'){
+    const v=pvals();
+    return row('Paillier Key',`n = ${v.n}, g = ${v.g}, λ = ${v.lambda}, μ = ${v.mu}`,`n² = ${v.nn}`)+
+           row('Encrypt m₁',`${v.g}<sup>${v.m1}</sup> · ${v.r1}<sup>${v.n}</sup> mod ${v.nn}`,v.c1)+
+           row('Encrypt m₂',`${v.g}<sup>${v.m2}</sup> · ${v.r2}<sup>${v.n}</sup> mod ${v.nn}`,v.c2)+
+           row('Multiply Ciphertexts',`${v.c1} × ${v.c2} mod ${v.nn}`,v.c)+
+           row('Decrypt Plaintext','L((c*)<sup>λ</sup> mod n²) · μ mod n',v.answer)+
+           `<p>${v.m1} + ${v.m2} = ${v.m1+v.m2}. Decrypted residue modulo ${v.n} is <strong>${v.answer}</strong>. ${v.m1+v.m2>=v.n?'(Notice: Sum wrapped around modulus n!)':'(Sum did not wrap).'}</p>`;
+  }
+  if(key==='depth'){
+    return row('Balanced Tree','(2 × 3) × (4 × 5)','Depth = 2')+
+           row('Sequential Chain','((2 × 3) × 4) × 5','Depth = 3')+
+           row('Identical Product','Both compute 2 × 3 × 4 × 5','120')+
+           row('Budget Status',`Planned depth limit L = ${esc(params.budget)}`,Number(params.budget)>=3?'Both fit':Number(params.budget)>=2?'Balanced fits; Sequential exceeds!':'Neither fits depth budget');
+  }
+  if(key==='bootstrap'){
+    const d=Number(params.depth),c=Number(params.capacity);
+    return row('Parameters',`Total depth D = ${d}, capacity per refresh L = ${c}`,'')+
+           row('Scheduled Recryptions','floor((D − 1) / L)',Math.floor((d-1)/c))+
+           row('Operational Role','Evaluates decryption circuit homomorphically using bsk = Enc(pk, sk)','Conceptual schedule');
+  }
+  if(key==='staged'){
+    const v=stagedValues();
+    return row('Fresh input','m₀=5; c₀=Enc(m₀)','5')+row('Stage A','f₁(m)=m+3','8')+
+      row('Stage B','f₂(m)=2m',v.reusable?'16':'not guaranteed by this interface')+
+      (v.count===3?row('Stage C','f₃(m)=m−1',v.reusable?'15':'not reached'):'')+
+      row('Condition',v.perfect?'Perfect circuit privacy implies reusable outputs under Theorem 4.':v.reusable?'Output reuse is assumed separately; circuit privacy is not necessary.':'A one-hop guarantee says nothing about later stages.','Abstract model');
+  }
+  if(key==='pir'){
+    const v=pirValues();
+    return row('One-hot vector',`b=[${v.bits.join(', ')}]`,`index=${v.index+1}`)+row('Query','qᵢ=Enc(bᵢ;rᵢ)',v.query.join(', '))+
+      row('Fixed scan','q₁⁷ · q₂⁹ · q₃¹¹ · q₄¹³ mod 48841',v.response)+row('Client decryption','Σ bᵢdᵢ mod 221',v.answer)+
+      '<p>This model uses a plaintext server database. With encrypted database entries, multiplying encrypted bits by encrypted records would require stronger HE or another protocol. Query validity and database privacy are separate requirements.</p>';
+  }
+  if(key==='inference'){
+    const v=inference();
+    return row('Plaintext Formula',`2(${v.x1}) − 3(${v.x2}) + 5`,v.score)+
+           row('Encrypted Features',`Enc(${v.x1}; 3), Enc(${v.x2}; 5)`,`${v.c1}, ${v.c2}`)+
+           row('Evaluate mod n²',`C₁² · (C₂³)⁻¹ · Enc(5; 7) mod 48841`,v.c)+
+           row('Decrypted Residue','Dec(C*) in Z₂₂₁',v.residue)+
+           row('Signed Decoding','Residues > 110 decode to negative values',v.decoded);
+  }
+  return `<div id="quiz">${[
+    ['q1','Does homomorphic encryption alone prove that the cloud honestly evaluated the requested circuit?',['Yes, because ciphertexts are mathematically bound.','No. Correctness assumes honest evaluation; use a suitable verification mechanism if integrity is required.']],
+    ['q2','Can single-key HE combine ciphertexts encrypted under different users’ independent secret keys?',['Yes, the evaluator simply multiplies the ciphertexts.','No. Use a multi-key construction or a protocol to convert to a shared key; threshold HE normally starts with a joint public key.']],
+    ['q3','Can an authorized, correctly decrypted output reveal sensitive individual data?',['Yes. Authorized outputs can leak records; DP is one option for suitably defined statistical releases.','No. Encryption permanently prevents all privacy loss.']],
+    ['q4','What prevents a cloud server from trivially returning (C, c₁, ..., cₙ) and forcing Alice to compute f herself?',['Semantic security.','Compactness (for fixed setup and output size, the result length is independent of circuit size).']],
+    ['q5','According to Armknecht et al. (Theorem 4), what property enables a somewhat homomorphic scheme to achieve ∞-hop staged evaluation?',['Increasing key length.','Perfect circuit privacy under the theorem’s formal assumptions (a sufficient condition).']]
+  ].map(([id,q,opts])=>`<fieldset class="quizitem"><legend>${q}</legend>${opts.map((v,i)=>`<label><input type="radio" name="${id}" value="${i}">${v}</label>`).join('')}</fieldset>`).join('')}<p><button id="checkquiz" class="primary">Submit Audit Quiz</button></p><div id="quizfeedback" class="feedback" role="status"></div></div>`;
+}
+
+const why={
+  workflow:'This exact worked example uses Paillier’s additive cryptosystem over Z₂₂₁. The public function is evaluated by multiplying ciphertexts modulo n². Secret key sk remains exclusively with the client.',
+  keygen:'For textbook RSA, choose distinct primes p and q, modulus n = pq, totient φ(n) = (p − 1)(q − 1), and public exponent e coprime to φ(n). The secret exponent d is computed by solving ed ≡ 1 mod φ(n). The inverse condition operates modulo φ(n), NEVER modulo n!',
+  rsa:'Textbook RSA is deterministic: Enc(M) = Mᵉ mod n. With the default lab key (n=33, e=3, d=7), plaintext 4 encrypts to 31. Decryption computes 31⁷ mod 33 = 4. Practical RSA requires randomized padding (OAEP) which destroys homomorphism.',
+  product:'Textbook RSA preserves multiplication: C₁C₂ ≡ (M₁M₂)ᵉ mod n. The operation does NOT preserve addition. Testing addition reveals failure, proving that RSA is strictly a multiplicative PHE.',
+  elgamal:'ElGamal (1985) achieves randomized multiplicative PHE. Each encryption samples fresh random exponent r, producing a pair (gʳ mod p, m·yʳ mod p). Coordinate multiplication multiplies plaintexts modulo p and combines the random factors. IND-CPA security requires DDH to be hard in the chosen group. This full multiplicative group modulo 23 is only an arithmetic demonstration: because y=8 is a square, the second ciphertext coordinate reveals whether m is a quadratic residue.',
+  paillier:'Paillier (1999) operates over Zₙ and Zₙ²*. Encryption is c = gᵐrⁿ mod n². Multiplying ciphertexts adds plaintexts modulo n. Public scalar multiplication is supported via cᵏ mod n². An encrypted-by-encrypted plaintext product is not supported by ordinary Paillier; ciphertext multiplication itself is the supported addition operation.',
+  depth:'Multiplicative depth is the longest chain of sequential multiplication gates in a circuit DAG. A sequential chain of 4 inputs has depth 3, while a balanced binary tree has depth 2. Rebalancing circuits preserves the function while saving critical noise budget.',
+  bootstrap:'Craig Gentry (2009) proved that if a scheme can evaluate its own decryption circuit plus one gate, it can achieve FHE. Recryption evaluates decryption homomorphically using an encrypted secret key (bsk), resetting the accumulated lattice noise.',
+  staged:'Armknecht et al. (2015-1192, Remark 5) proved that FHE does not automatically imply multi-stage evaluation! A one-hop guarantee need not cover evaluation on evaluated ciphertexts; an interface may reject them. Theorem 4 gives perfect circuit privacy as a sufficient condition for ∞-hop correctness under the paper’s formal assumptions. Reusable schemes can exist without circuit privacy, so the converse does not follow.',
+  inference:'Public affine models f(x) = Wx + b can be evaluated using additive PHE. Feature inputs are encrypted; public weights are evaluated via exponentiation cʷ mod n²; negative weights use modular inverses; and public bias is added via c · gᵇ mod n².',
+  pir:'For plaintext records dᵢ and encrypted one-hot bits bᵢ, Paillier computes ∏ Enc(bᵢ)^{dᵢ}=Enc(Σ bᵢdᵢ) modulo n². Every record is scanned. This illustrates query privacy under secure parameters, not a proof for the toy instance, database privacy, or an efficient production PIR design.',
+  audit:'Confidentiality, computation integrity, key governance, and output disclosure are orthogonal systems challenges. HE provides input confidentiality during computation. Choose verification, decryption governance, and output controls according to the application threat model. No single combination is required for every application.'
+};
+
+function field(name,label,value,type='number',extra=''){
+  const output=type==='range'?` <output for="${name}" id="out-${name}">${esc(value)}</output>`:'';
+  return `<label class="field" for="${name}">${label}${output}<input id="${name}" name="${name}" data-param="${name}" type="${type}" inputmode="${type==='number'?'decimal':'numeric'}" autocomplete="off" value="${esc(value)}" required ${extra}></label>`;
+}
+function select(name,label,items){
+  return `<label class="field" for="${name}">${label}<select id="${name}" name="${name}" data-param="${name}">${items.map(([v,t])=>`<option value="${v}" ${params[name]===String(v)?'selected':''}>${t}</option>`).join('')}</select></label>`;
+}
+
+function baseFields(){
+  let h='',hint='';
+  if(['keygen','rsa','product'].includes(key)){
+    h=select('p','Prime p',[[3,3],[7,7],[11,11],[13,13],[17,17]])+select('q','Prime q',[[3,3],[7,7],[11,11],[13,13],[17,17]])+select('e','Public exponent e',[[3,3],[5,5],[7,7],[17,17]]);
+    if(key==='rsa')h+=field('m','Plaintext M',params.m,'number','min="0" max="288" step="1"');
+    if(key==='product')h+=field('a','Message M₁',params.a,'number','min="0" max="288" step="1"')+field('b','Message M₂',params.b,'number','min="0" max="288" step="1"')+select('op','Operation',[['multiply','Multiply (Homomorphic)'],['add','Add (Test Failure)']]);
+    h+='<button id="rsareset">Reset to Default Lab Key (11, 3, 3)</button>';
+    hint='Parameters sync across RSA labs. Invalid parameter combinations display error details.';
+  }else if(key==='elgamal'){
+    h=field('elg_m1','Message m₁',params.elg_m1,'number','min="1" max="22" step="1"')+
+      field('elg_m2','Message m₂',params.elg_m2,'number','min="1" max="22" step="1"')+
+      field('elg_r1','Random r₁',params.elg_r1,'number','min="1" max="21" step="1"')+
+      field('elg_r2','Random r₂',params.elg_r2,'number','min="1" max="21" step="1"');
+    hint='Toy group modulo p = 23, g = 5, secret x = 6. Use 1 ≤ m ≤ 22 and 1 ≤ r ≤ 21. This full-group toy instance is insecure.';
+  }else if(key==='paillier'){
+    h=select('preset','Teaching Key',[['original','n = 221 (Primary Lab Key)'],['small','n = 15 (Small Key)']])+field('m1','Message m₁',params.m1)+field('m2','Message m₂',params.m2)+field('r1','Randomness r₁',params.r1)+field('r2','Randomness r₂',params.r2);
+    hint='Choose 0 ≤ m < n and 1 ≤ r < n with gcd(r,n)=1. Default lab values: m₁=123, m₂=20, r₁=3, r₂=5.';
+  }else if(key==='depth'){
+    h=field('budget','Depth Budget L',params.budget,'range','min="1" max="5" step="1"');
+    hint='Adjust planned depth limit L and observe which circuit architecture satisfies the constraint.';
+  }else if(key==='bootstrap'){
+    h=field('depth','Total Depth D',params.depth,'range','min="1" max="12" step="1"')+field('capacity','Capacity per Refresh L',params.capacity,'range','min="1" max="4" step="1"');
+    hint='Conceptual depth scheduling model based on Craig Gentry’s bootstrapping theorem.';
+  }else if(key==='staged'){
+    h=select('stage_mode','Interface model',[['perfect','Perfect circuit privacy (sufficient)'],['reusable','Reusable; privacy not assumed'],['onehop','One-hop guarantee only']])+select('stages','Evaluation stages',[[2,'2: A then B'],[3,'3: A then B then C']]);
+    hint='Interface model, not a ciphertext implementation. Perfect privacy is sufficient for reuse; its absence does not imply failure.';
+  }else if(key==='pir'){
+    h=select('record','Private record index',[[1,'1 → value 7'],[2,'2 → value 9'],[3,'3 → value 11'],[4,'4 → value 13']]);
+    hint='All four plaintext records are read. Query bits use fixed teaching coins; real queries require fresh independent randomness.';
+  }else if(key==='inference'){
+    h=field('x1','Feature x₁',params.x1,'number','min="0" max="10" step="1"')+field('x2','Feature x₂',params.x2,'number','min="0" max="10" step="1"');
+    hint='Model weights (2, −3) and bias (5) are public. The toy parameters and fixed coins provide no real confidentiality. Signed score range is [−25,25].';
+  }else if(key==='workflow'){
+    h='<span>This lab uses a fixed worked example. Open the Paillier addition lab to vary these inputs.</span>';
+    hint='Use the perspective selector to compare client values with the public evaluator transcript.';
+  }else{
+    h='<span>Inspect systems audit dimensions above.</span>';
+    hint='Answer all 5 questions in the mathematical panel below.';
+  }
+  $('fields').innerHTML=h;$('parameterhint').textContent=hint;
+  document.querySelectorAll('[data-param]').forEach(el=>el.addEventListener('input',()=>{
+    pause();lastRandom=null;params[el.dataset.param]=el.value;
+    if(el.id==='preset'){
+      Object.assign(params,el.value==='small'?{m1:'7',m2:'4',r1:'2',r2:'7'}:{m1:'123',m2:'20',r1:'3',r2:'5'});
+      buildFields();
+    }
+    render();
+  }));
+  if($('rsareset'))$('rsareset').onclick=()=>{
+    pause();Object.assign(params,{p:'11',q:'3',e:'3',m:'4',a:'2',b:'4',op:'multiply'});
+    buildFields();render();
+  };
+}
+
+
+
+function exercise(){
+  if(key==='audit'){$('exercise').innerHTML='<p>Complete the five-question systems audit in the calculation panel below.</p>';return;}
+  if(!teaching()){$('exercise').innerHTML='<p>Switch to the teaching perspective to answer the client-side checkpoint.</p>';return;}
+  if($('error').textContent){$('exercise').innerHTML='<p>Correct the parameters before checking a prediction.</p>';return;}
+  const [question,answer]=currentPrediction(),response=responses[key]||{};
+  $('exercise').innerHTML=`<label for="answer">${esc(question)}</label><div class="answerrow"><input id="answer" type="text" autocomplete="off" aria-describedby="checkpoint-hint" value="${esc(response.answer||'')}"><button id="check" class="primary">Check prediction</button><button id="reveal">Reveal answer</button></div><p id="checkpoint-hint" class="parameterhint">Predict first, then open the calculation trace. Equivalent decimal values are accepted.</p><p id="feedback" class="feedback" role="status"></p>`;
+  $('answer').oninput=()=>{responses[key]={answer:$('answer').value};};
+  const feedback=(reveal=false)=>{
+    const value=$('answer').value.trim(),ok=answerMatches(value,answer);
+    responses[key]={answer:value};
+    $('feedback').className='feedback '+(reveal?'':ok?'correct':'incorrect');
+    $('feedback').textContent=reveal?'Answer: '+answer+'. Explain the steps in your lab notes.':!value?'Enter a prediction first.':ok?'Correct. Change one input and explain what changes.':'Not yet. Check the operation, modulus, and current inputs.';
+    if(ok&&!reveal){completed.add(key);updateProgress();}
+  };
+  $('check').onclick=()=>feedback();$('reveal').onclick=()=>feedback(true);
+  $('answer').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();feedback();}};
+}
+
+function baseDynamicResult(){
+  if(key==='keygen'){const k=rk();return ['Primes: '+k.p+', '+k.q,'n = '+k.n,'φ(n) = '+k.phi,'Public: e='+k.e+', Secret: d='+k.d][step];}
+  if(key==='rsa'){const k=rsaInputs(),m=int('m'),c=powmod(m,k.e,k.n);return ['Plaintext M = '+m,`C = ${m}^${k.e} mod ${k.n} = ${c}`,'Ciphertext C = '+c,`M = ${c}^${k.d} mod ${k.n} = ${m}`][step];}
+  if(key==='product'){const k=rsaInputs(),a=int('a'),b=int('b'),c1=powmod(a,k.e,k.n),c2=powmod(b,k.e,k.n),c=params.op==='multiply'?c1*c2%k.n:(c1+c2)%k.n;return [`M₁=${a}, M₂=${b}`,`C₁=${c1}, C₂=${c2}`,`C* = ${c}`,`Dec(C*) = ${powmod(c,k.d,k.n)}`][step];}
+  if(key==='elgamal'){const v=elgVals();return [`m₁=${v.m1}, m₂=${v.m2}`,`c₁=(${v.c1.a},${v.c1.b}), c₂=(${v.c2.a},${v.c2.b})`,`c*=(${v.cStar.a},${v.cStar.b})`,`Dec(c*) = ${v.dec}`][step];}
+  if(key==='paillier'){const v=pvals();return [`n=${v.n}, n²=${v.nn}`,`C₁=${v.c1}, C₂=${v.c2}`,`C* = ${v.c}`,`Dec(C*) = (${v.m1}+${v.m2}) mod ${v.n} = ${v.answer}`][step];}
+  if(key==='depth')return ['4 fresh inputs (depth 0)','Parallel level 1 mults','Balanced product complete (depth 2)','Sequential requires depth 3'][step];
+  if(key==='bootstrap')return `${Math.floor((Number(params.depth)-1)/Number(params.capacity))} recryptions scheduled in this model`;
+  if(key==='staged'){
+    const v=stagedValues();return ['Fresh ciphertext c₀', 'Stage A: evaluated ciphertext',v.reusable?'Stage B: evaluated ciphertext':'Stage B: no guarantee',v.reusable?`Composition result = ${showSecret(v.answer)}`:'No final output in this model'][step];
+  }
+  if(key==='pir'){const v=pirValues();return ['Four public records',`Encrypted query: ${v.query.length} ciphertexts`,`Response ciphertext: ${v.response}`,`Selected value = ${showSecret(v.answer)}`][step];}
+  if(key==='inference'){const v=inference();return [`Features x₁=${v.x1}, x₂=${v.x2}`,`C₁=${v.c1}, C₂=${v.c2}`,`Encrypted score = ${v.c}`,`Decrypted score = ${v.decoded}`][step];}
+  if(key==='workflow')return ['Private inputs: 123 and 20','Multiplying ciphertexts mod 48841','Evaluated c* = 25204','Dec(c*) = 143 (123 + 20)'][step];
+  return ['Confidentiality: Hides inputs','Integrity: Select verification if required','Authority: Define decryption governance','Output: Assess release disclosure'][step];
+}
+
+function render(){
+  const l=lessons[key],privateModule=privateModules.has(key);
+  if(extraLessons[key])$('visibility').value='teaching';
+  $('title').textContent=l.title;$('subtitle').textContent=l.sub;
+  $('labtopic').textContent='Experiment '+String(order.indexOf(key)+1).padStart(2,'0')+' / '+order.length;
+  $('lesson').value=key;
+  $('goal').textContent=labTasks[key][0];$('task').textContent=labTasks[key][1];
+  $('modeltype').textContent=conceptualModules.has(key)?'Conceptual model':key==='doubling'?'Insecure encoding':'Exact toy arithmetic';
+  $('context').textContent=l.topic;$('stepnum').textContent='Step '+(step+1)+' of '+l.labels.length;
+  $('stagetitle').textContent=l.stages[step][0];
+  $('takeaway').textContent=key==='elgamal'?'Randomization needs a suitable security assumption.':'Record the operation, result, and limits of the example.';
+  $('steps').innerHTML=l.labels.map((v,i)=>`<button type="button" data-step="${i}" class="${i===step?'current':i<step?'done':''}" ${i===step?'aria-current="step"':''}>${esc(v)}</button>`).join('');
+  $('steps').querySelectorAll('button').forEach(b=>b.onclick=()=>{pause();step=Number(b.dataset.step);render();});
+  $('prev').disabled=step===0;$('next').disabled=step===l.labels.length-1;
+  const path=pathIds();$('nextlesson').disabled=path.indexOf(key)===path.length-1;$('previouslesson').disabled=path.indexOf(key)<=0;
+  $('newrandom').hidden=!teaching()||!['paillier','elgamal'].includes(key);
+  $('visibility').closest('label').hidden=Boolean(extraLessons[key])||!privateModule;
+  $('fields').closest('section').hidden=!teaching()&&privateModule;
+  $('proofpanel').hidden=!teaching()&&privateModule;
+  document.querySelector('.notebook').hidden=!teaching()&&privateModule;
+  $('why').innerHTML=`<p>${esc(why[key])}</p><p class="source">Underlying concept: ${sourceForModule()}. Small-key arithmetic is for instruction; the conceptual models do not run lattice FHE.</p>`;
+  try{
+    validateInputs();
+    $('plot').innerHTML=key==='keygen'&&!teaching()?svg(node(180,110,320,110,'Public RSA key',`n=${rk().n}, e=${rk().e}`,true),'Public key only.'):diagram();
+    $('caption').textContent=captionForStep();
+    $('result').textContent=!teaching()&&privateModule?'Public evaluator transcript':dynamicResult();
+    $('calculations').innerHTML=!teaching()&&privateModule?publicCalculation():calculation();
+    $('error').textContent='';
+    if(key==='audit'){
+      document.querySelectorAll('.quizitem input').forEach(input=>{input.checked=auditSelections[input.name]===input.value;input.onchange=()=>{auditSelections[input.name]=input.value;};});
+      $('checkquiz').onclick=()=>{
+        const expected=[1,1,0,1,1],chosen=['q1','q2','q3','q4','q5'].map(n=>document.querySelector(`input[name="${n}"]:checked`));
+        if(chosen.some(v=>!v)){$('quizfeedback').className='feedback incorrect';$('quizfeedback').textContent='Answer all five questions first.';return;}
+        const score=chosen.filter((v,i)=>Number(v.value)===expected[i]).length;
+        const explanations=['Correctness under honest evaluation does not verify a malicious evaluator.','Threshold HE normally uses one joint public key.','A decrypted result can disclose an individual value.','Compactness bounds output size independently of circuit size.','The cited theorem gives a sufficient condition under its assumptions.'];
+        $('quizfeedback').className='feedback '+(score===5?'correct':'incorrect');
+        $('quizfeedback').textContent=`${score} / 5 correct. `+explanations.filter((_,i)=>Number(chosen[i].value)!==expected[i]).join(' ');
+        if(score===5){completed.add('audit');updateProgress();}
+      };
+    }
+  }catch(error){
+    pause();$('error').textContent=error.message;$('caption').textContent='Correct the inputs to continue.';
+    $('plot').innerHTML=svg(tx(340,140,'Check the experiment parameters','svglabel'),'Invalid parameters.');
+    $('result').textContent='Check inputs';$('calculations').innerHTML='<p>The trace will appear when the parameters are valid.</p>';
+  }
+  document.querySelectorAll('output[for]').forEach(out=>{out.value=params[out.getAttribute('for')];out.textContent=params[out.getAttribute('for')];});
+  $('randomcomparison').hidden=!lastRandom||!teaching();if(lastRandom&&teaching())$('randomcomparison').textContent=lastRandom;
+  exercise();updateProgress();$('announce').textContent=l.title+'. Step '+(step+1)+': '+l.stages[step][0];
+}
+
+function pause(){if(timer!==null)clearInterval(timer);timer=null;$('play').textContent='Play';}
+function setLesson(value){
+  if(!order.includes(value))return;
+  pause();key=value;step=0;lastRandom=null;
+  if(!pathIds().includes(key)){activePath='all';$('learningpath').value='all';}
+  if(location.hash.slice(1)!==key)history.replaceState(null,'','#'+key);
+  buildFields();render();loadJournal();
+  $('tracepanel').open=key==='audit';
+}
+
+
+function diagram(){
+    if(!extraLessons[key])return baseDiagram();
+    if(key==='noise'){
+      const v=noiseValues(),angle=v.phase/32*2*Math.PI,x=265+125*Math.sin(angle),y=175-125*Math.cos(angle);
+      const good=v.decoded===String(v.m);
+      return svg(`<circle cx="265" cy="175" r="125" fill="#f2f7f5" stroke="#a4bbad" stroke-width="2"/><path d="M125 175H405" stroke="#aaa" stroke-dasharray="5 5"/><circle cx="${x}" cy="${y}" r="8" fill="${good?'#008348':'#b33342'}"/>`+tx(265,30,'0 ≡ 32','svglabel')+tx(265,335,'16','svglabel')+tx(427,182,'8','svgsmall')+tx(104,182,'24','svgsmall')+tx(265,175,'Phase '+v.phase,'svglabel')+node(470,65,190,90,'Distances to (0,16)',`${v.d0}, ${v.d1}`,true)+node(470,220,190,90,'Decoded bit',v.decoded,true,!good),'Circular phase decoding model.');
+    }
+    const rows=extendedRows();let result='';
+    rows.forEach((r,i)=>{const y=16+i*82;result+=node(12,y,210,66,r[0],String(i+1),step===i)+tx(243,y+25,String(r[2]).slice(0,48),'svglabel','start');});
+    return svg(result,lessons[key].topic+' worked stages.');
+
+}
+
+function calculation(){
+    if(extraLessons[key])return extendedRows().map(r=>row(r[0],esc(r[1]),r[2])).join('');
+    if(key==='paillier'){
+      const v=pvals(),u=powmod(v.c,v.lambda,v.nn),l=(u-1n)/v.n;
+      return row('Key',`n=${v.n}; n²=${v.nn}; g=${v.g}; λ=${v.lambda}; μ=${v.mu}`,'Teaching parameters')+
+        row('First factors',`g^${v.m1} mod n²; ${v.r1}^n mod n²`,`${powmod(v.g,v.m1,v.nn)}, ${powmod(v.r1,v.n,v.nn)}`)+
+        row('Encrypt m₁','Multiply the two first factors modulo n²',v.c1)+
+        row('Second factors',`g^${v.m2} mod n²; ${v.r2}^n mod n²`,`${powmod(v.g,v.m2,v.nn)}, ${powmod(v.r2,v.n,v.nn)}`)+
+        row('Encrypt m₂','Multiply the two second factors modulo n²',v.c2)+
+        row('Evaluate',`${v.c1}×${v.c2} mod ${v.nn}`,v.c)+
+        row('Apply λ',`${v.c}^${v.lambda} mod ${v.nn}`,u)+
+        row('Apply L',`L(${u})=(${u}−1)/${v.n}`,l)+
+        row('Recover',`${l}×${v.mu} mod ${v.n}`,v.answer)+
+        `<p>${v.m1}+${v.m2}=${v.m1+v.m2}. The recovered residue is ${v.answer}.${v.m1+v.m2>=v.n?' The sum wrapped modulo n.':''}</p>`;
+    }
+    if(key==='elgamal'){
+      const v=elgVals(),s=powmod(v.cStar.a,v.x,v.p);
+      return baseCalculation()+row('Shared factor',`${v.cStar.a}^${v.x} mod ${v.p}`,s)+row('Inverse factor',`${s}⁻¹ mod ${v.p}`,inverse(s,v.p))+row('Final product',`${v.cStar.b}×${inverse(s,v.p)} mod ${v.p}`,v.dec);
+    }
+    if(key==='keygen'){
+      const k=rk();let a=k.phi,b=k.e,steps=[];
+      while(b){steps.push(`${a}=${a/b}×${b}+${a%b}`);[a,b]=[b,a%b];}
+      return baseCalculation()+row('Euclidean divisions',steps.join('; '),`gcd=${a}`)+row('Verify inverse',`${k.e}×${k.d}=${k.e*k.d}; subtract ${(k.e*k.d-1n)/k.phi}×${k.phi}`,'1');
+    }
+    return baseCalculation();
+
+}
+
+function buildFields(){
+    if(!extraLessons[key])return baseFields();
+    $('fields').innerHTML=extendedFields();
+    $('parameterhint').textContent=key==='paillierkey'?'Choose a teaching key. λ and μ are secret decryption material.':key==='dp'?'The chosen η is for explanation only. It is not a random sample or a DP implementation.':'Conceptual models are explicitly labeled. No lattice FHE or secure deployment is implemented here.';
+    document.querySelectorAll('[data-param]').forEach(el=>el.addEventListener('input',()=>{
+      pause();params[el.dataset.param]=el.value;
+      if(el.id==='preset')Object.assign(params,el.value==='small'?{m1:'7',m2:'4',r1:'2',r2:'7'}:{m1:'123',m2:'20',r1:'3',r2:'5'});
+      render();
+    }));
+
+}
+
+function captionForStep(){return extraLessons[key]?extendedRows()[step][1]:baseCaptionForStep();
+}
+
+function dynamicResult(){return extraLessons[key]?String(extendedRows()[step][2]):baseDynamicResult();
+}
+Object.assign(why,{
+    doubling:'The map E(m)=2m is fully reversible without a secret. Addition survives the encoding, but raw multiplication needs a different translated operation. None of this gives confidentiality.',
+    attack:'Textbook RSA is deterministic. Anyone with the public key can encrypt both known candidates and compare. Secure encryption needs an appropriate security definition and construction; fresh randomness alone is not a proof.',
+    paillierkey:'Compute λ=lcm(p−1,q−1), u=g^λ mod n², L(u)=(u−1)/n, and μ=L(u)⁻¹ mod n. The inverse must exist. For the main key, λ = 48, u = 30,720, L(u) = 139, and μ = 159. This is insecure arithmetic practice.',
+    noise:'This is a nearest-centre phase model after removal of a secret-dependent term. For centres 0 and 16 modulo 32, |e|<8 suffices. Error 8 can tie. It is not an LWE implementation or a universal BFV/BGV/CKKS noise bound.',
+    modswitch:'Only a scalar phase is scaled here. Real modulus switching transforms ciphertext components, has rounding terms, and preserves scheme-specific encodings. It consumes modulus and does not provide unlimited fresh capacity.',
+    rescale:'Positive inputs are rounded to nearest integers with .5 rounded upward in this scalar model. Actual CKKS uses a modulus-chain prime and approximate encrypted arithmetic. Encoding, security noise, and numerical error require separate analysis.',
+    packing:'This is a plaintext slot model. It does not encrypt the vector. Suitable HE encodings support component-wise operations and rotations using evaluation material. Relinearization can reduce representation size after multiplication; it does not reset noise.',
+    families:'The suggested capability is an initial match to the task. BFV/BGV use exact modular semantics, CKKS approximate arithmetic, and TFHE-style schemes support suitably encoded gates and small-domain functions. Measure costs with justified parameters.',
+    compactness:'For fixed setup and output size, compactness bounds the evaluated result independently of circuit size. It constrains the returned object and client decryption burden, not the server’s total work.',
+    keygov:'Threshold decryption normally uses one joint public key. Multi-key HE is a separate capability with protocol-specific decryption rules. This example explicitly assumes all 3 multi-key participants cooperate; it is not a universal rule.',
+    dp:'With add/remove-one adjacency and a count with one bounded contribution per person, sensitivity is 1 and the Laplace scale is 1/ε. The manually chosen noise display does not implement DP. Real sampling, output access, trust, and composition must be specified.',
+    cost:'Every number here is hypothetical. Sum the included online stages and state what is excluded. Amortizing setup over queries does not measure throughput, concurrency, security, or a real implementation.',
+    product:'Textbook RSA exhibits a multiplicative algebraic property and is deterministic. It fails semantic security. Ciphertext addition is not generally a plaintext-sum operation; isolated matching values would not prove otherwise.',
+    bootstrap:'Bootstrapping evaluates a suitable decryption circuit on encrypted key information. A construction needs enough evaluation capacity and appropriate evaluation-key security assumptions. This idealized schedule does not measure actual cryptographic noise.'
+  });
+
+const references={"guide": {"label": "Armknecht et al. (2015), A Guide to Fully Homomorphic Encryption (ePrint 2015/1192)", "url": "https://eprint.iacr.org/2015/1192"}, "rsa": {"label": "Rivest, Shamir & Adleman (1978), A Method for Obtaining Digital Signatures and Public-Key Cryptosystems", "url": "https://doi.org/10.1145/359340.359342"}, "elg": {"label": "ElGamal (1985), A Public Key Cryptosystem and a Signature Scheme Based on Discrete Logarithms", "url": "https://doi.org/10.1109/TIT.1985.1057074"}, "pai": {"label": "Paillier (EUROCRYPT 1999), Public-Key Cryptosystems Based on Composite Degree Residuosity Classes", "url": "https://doi.org/10.1007/3-540-48910-X_16"}, "gentry": {"label": "Gentry (2009), A Fully Homomorphic Encryption Scheme (Stanford PhD Dissertation)", "url": "https://crypto.stanford.edu/craig/craig-thesis.pdf"}, "bgv": {"label": "Brakerski, Gentry and Vaikuntanathan (2012), (Leveled) Fully Homomorphic Encryption without Bootstrapping", "url": "https://eprint.iacr.org/2011/277"}, "bfv": {"label": "Fan & Vercauteren (2012), Somewhat Practical Fully Homomorphic Encryption (ePrint 2012/144)", "url": "https://eprint.iacr.org/2012/144"}, "ckks": {"label": "Cheon, Kim, Kim & Song (ASIACRYPT 2017), Homomorphic Encryption for Arithmetic of Approximate Numbers (ePrint 2016/421)", "url": "https://eprint.iacr.org/2016/421"}, "tfhe": {"label": "Chillotti, Gama, Georgieva & Izabachene (2016), Faster FHE: Bootstrapping in Less Than 0.1 Seconds (ePrint 2016/870)", "url": "https://eprint.iacr.org/2016/870"}, "dp": {"label": "Dwork & Roth (2014), The Algorithmic Foundations of Differential Privacy", "url": "https://www.cis.upenn.edu/~aaroth/Papers/privacybook.pdf"}, "seal": {"label": "Microsoft SEAL — Official C++ Homomorphic Encryption Library", "url": "https://github.com/microsoft/SEAL"}, "openfhe": {"label": "OpenFHE — Open-Source Fully Homomorphic Encryption Library & Documentation", "url": "https://openfhe-development.readthedocs.io/en/latest/"}, "helib": {"label": "HElib — Homomorphic Encryption Library (BGV / CKKS)", "url": "https://github.com/homenc/HElib"}, "standards": {"label": "HomomorphicEncryption.org, security guidelines and parameter resources", "url": "https://homomorphicencryption.org/security-guidelines/"}};
+const labTasks={"workflow": ["Identify the material visible to the evaluator.", "Step through Encrypt, Evaluate, Return, and Decrypt. Switch perspectives. List the public values and explain where the secret key is used."], "doubling": ["Distinguish a homomorphic encoding from secure encryption.", "Change a and b. Compare encoded addition with raw multiplication, then recover an input without a key."], "keygen": ["Derive a valid RSA decryption exponent.", "Start with p=11, q=3, e=3. Compute n, φ(n), and d; then choose a different valid key and verify ed ≡ 1 mod φ(n)."], "rsa": ["Verify modular encryption and decryption.", "Predict the ciphertext for M=4. Change M while keeping M<n, then follow the modular exponentiation trace."], "product": ["Compare plaintext multiplication with ciphertext addition.", "Use messages 2 and 4. Predict the decrypted result for Multiply, then select Add and compare with the plaintext sum."], "attack": ["Demonstrate a deterministic public-key dictionary attack.", "Select challenge 8 or 31. Encrypt the two candidate messages using the public key and identify the matching input."], "elgamal": ["Verify coordinate-wise ciphertext multiplication.", "Start with messages 3 and 4. Change one random exponent, reroll both, and explain which outputs change and which plaintext product stays fixed."], "paillierkey": ["Derive λ and μ for the Paillier teaching keys.", "Compute L(g^λ mod n²) and its inverse modulo n. Switch to n=15 and verify the inverse again."], "paillier": ["Verify encrypted addition and modular wraparound.", "Start with 123+20. Then set m₁=200 and m₂=40 under n=221. Predict the residue, inspect the trace, and reroll the coins."], "inference": ["Evaluate a signed linear score with public weights.", "Set x₁=0 and x₂=10. Predict 2x₁−3x₂+5, then explain why the decrypted residue and signed score differ."], "pir": ["Derive a private one-hot selection computation.", "Select record 3. Follow the four encrypted query bits and the full database scan. Explain which query information is modeled as hidden."], "depth": ["Compare circuit depth with operation count.", "Set L=2. Compare a chain with a balanced four-input product; then set L=1 and explain why neither fits."], "noise": ["Find the decoding boundary in a phase model.", "Use encoded bit 1. Test errors 7, 8, and 9. Distinguish a correct result, a tie, and an incorrect result."], "bootstrap": ["Plan refresh locations in an idealized depth schedule.", "Compare D=8,L=3 with D=8,L=2. Count the refreshes and state what this schedule does not measure."], "modswitch": ["Compare error before and after scalar phase scaling.", "Change the initial error from 6 to 7. Compute the rounded phase and compare e/q with e′/q′."], "rescale": ["Track encoding scale and approximation error.", "Multiply 1.25 by 2.50 at scale 100. Try 1.23 and 4.56, then compare the decoded product with the exact real product."], "packing": ["Explain rotation-based reduction across slots.", "Trace [2,3,4,5], rotate by 2, add, then rotate by 1 and add. Explain why every slot ends at 14."], "families": ["Match numerical semantics to an HE capability.", "Select each workload. State why exact modular and approximate real arithmetic need different choices and what still needs benchmarking."], "compactness": ["State what a compactness bound does and does not limit.", "Increase the gate count. Compare a bounded result ciphertext with returning a circuit for the client to evaluate."], "staged": ["Separate reusable evaluation from circuit privacy.", "Compare the three interface models at 2 and 3 stages. Explain why a one-hop model gives no second-hop guarantee."], "keygov": ["Separate compatible encryption keys from decryption authority.", "Compare single-key, 2-of-3 threshold, and the specified multi-key arrangement. State the assumed decryption quorum in each."], "dp": ["Calculate the noise scale for a bounded count.", "Compare ε=1 and ε=0.5 with sensitivity 1. Change the illustrative noise value and explain why manually choosing noise does not implement DP."], "cost": ["Calculate total and amortized costs from stated inputs.", "Compare 1 and 20 queries. Change Eval time and calculate the included total; list excluded costs and avoid treating it as a benchmark."], "audit": ["Distinguish confidentiality, correctness, and output disclosure.", "Answer the five systems questions in the trace panel. For one answer, describe a concrete failure and an appropriate additional safeguard."]};
+
+const privateModules=new Set(['workflow','keygen','rsa','product','elgamal','paillier','inference','pir']);
+const conceptualModules=new Set(['depth','noise','bootstrap','modswitch','rescale','packing','families','compactness','staged','keygov','dp','cost','audit']);
+const routes={core:['workflow','product','elgamal','paillier','depth','noise','bootstrap','audit'],applications:['inference','pir','families','keygov','dp','staged','compactness','cost'],theory:['doubling','keygen','rsa','attack','paillierkey','modswitch','rescale','packing'],all:order};
+const storageKey='coe526.he.lab.v1',responses={},auditSelections={};
+let notes={},activePath='core';
+function pathIds(){return routes[activePath]||order;}
+function answerMatches(value,answer){
+  const a=value.trim().toLowerCase(),b=String(answer).trim().toLowerCase();
+  if(!a)return false;
+  if(a===b)return true;
+  if(key==='families'&&b==='bfv'&&['bgv','bfv/bgv','bgv/bfv','bfv or bgv'].includes(a))return true;
+  if(b==='no'&&a==='n')return true;
+  if(/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(a)&&/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(b))return Math.abs(Number(a)-Number(b))<=1e-9*Math.max(1,Math.abs(Number(b)));
+  return false;
+}
+function validateInputs(){
+  for(const input of document.querySelectorAll('[data-param]')){
+    if(input.tagName==='INPUT'&&(input.value===''||!input.validity.valid))throw Error('Enter a valid value for '+input.closest('label').firstChild.textContent.trim()+'.');
+  }
+  if(key==='doubling'&&(!Number.isInteger(Number(params.double_a))||!Number.isInteger(Number(params.double_b))))throw Error('Use whole numbers from 0 to 20.');
+}
+function loadProgress(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(storageKey)||'null');
+    if(!saved||saved.version!==1)return;
+    if(Array.isArray(saved.completed))saved.completed.filter(id=>order.includes(id)).forEach(id=>completed.add(id));
+    if(saved.notes&&typeof saved.notes==='object')for(const id of order){const n=saved.notes[id];if(n&&typeof n==='object')notes[id]={change:String(n.change||'').slice(0,10000),result:String(n.result||'').slice(0,10000),limit:String(n.limit||'').slice(0,10000)};}
+    if(routes[saved.route])activePath=saved.route;
+  }catch(error){$('savestatus').textContent='Saving is unavailable here. Export your lab notes to keep them.';}
+}
+function saveProgress(){
+  try{localStorage.setItem(storageKey,JSON.stringify({version:1,completed:[...completed],notes,route:activePath}));}
+  catch(error){$('savestatus').textContent='Saving is unavailable here. Export your lab notes to keep them.';}
+}
+function loadJournal(){
+  const n=notes[key]||{};for(const name of ['change','result','limit'])$('note-'+name).value=n[name]||'';
+}
+function renderNavigation(){
+  const ids=pathIds(),query=$('labsearch').value.trim().toLowerCase();
+  const shown=ids.filter(id=>(lessons[id].name+' '+lessons[id].sub+' '+labTasks[id][0]).toLowerCase().includes(query));
+  $('lablist').innerHTML=shown.length?shown.map(id=>`<button type="button" data-lab="${id}" ${id===key?'aria-current="page"':''}><span class="labnum" aria-label="${completed.has(id)?'Completed checkpoint':'Experiment '+(order.indexOf(id)+1)}">${completed.has(id)?'✓':String(order.indexOf(id)+1).padStart(2,'0')}</span><span>${esc(lessons[id].name.replace(/^\d+\s*·\s*/,''))}</span></button>`).join(''):'<p class="navempty">No matching experiments in this route.</p>';
+  $('lablist').querySelectorAll('[data-lab]').forEach(button=>button.onclick=()=>setLesson(button.dataset.lab));
+  const markup=ids.map(id=>`<option value="${id}">${esc(lessons[id].name)}</option>`).join('');
+  if($('lesson').innerHTML!==markup)$('lesson').innerHTML=markup;
+  $('lesson').value=key;
+}
+function saveWorksheet(){
+  const lines=['COE526: Homomorphic Encryption Laboratory','Student: ___________________  Date: ___________________','Core route: workflow, product, elgamal, paillier, depth, noise, bootstrap, audit.','For each experiment: predict before opening the trace, change one input, explain the arithmetic, and state a limit.',''];
+  for(const id of order)lines.push(lessons[id].name,'Goal: '+labTasks[id][0],'Experiment: '+labTasks[id][1],'Prediction: __________________________________','Changed input / condition: ____________________','Observed result and explanation: ______________','Assumption or limit: __________________________','');
+  saveText('COE526-HE-Student-Worksheet.txt',lines.join('\n'));
+}
+function exportNotebook(){
+  const lines=['COE526: Homomorphic Encryption Lab Notes',`${completed.size} of ${order.length} checkpoints completed`,''];
+  for(const id of order){const n=notes[id]||{};lines.push(lessons[id].name,'Checkpoint: '+(completed.has(id)?'completed':'not yet completed'),'Change: '+(n.change||''),'Result and explanation: '+(n.result||''),'Assumption or limit: '+(n.limit||''),'');}
+  saveText('COE526-HE-Lab-Notes.txt',lines.join('\n'));
+}
+function exportExperiment(){
+  if($('error').textContent)return;
+  const selected={};document.querySelectorAll('[data-param]').forEach(input=>selected[input.dataset.param]=params[input.dataset.param]);
+  const data={format:'COE526-HE-Lab-v4',lab:key,title:lessons[key].title,perspective:$('visibility').value,step:step+1,model:conceptualModules.has(key)?'conceptual':key==='doubling'?'insecure encoding':'exact toy arithmetic',parameters:teaching()?selected:'Client parameters omitted',caption:$('caption').textContent,trace:$('calculations').innerText,checkpointCompleted:completed.has(key),notes:teaching()?(notes[key]||{}):'Notes omitted in evaluator view',notice:'Teaching artifact. Small keys and fixed coins are insecure; teaching traces reveal client-side values.'};
+  saveText('COE526-HE-'+key+'-experiment.json',JSON.stringify(data,null,2),'application/json');
+}
+
+function randomChoice(values,previous){
+  const choices=values.filter(v=>String(v)!==String(previous)),buf=new Uint32Array(1);
+  const limit=Math.floor(4294967296/choices.length)*choices.length;
+  do{crypto.getRandomValues(buf);}while(buf[0]>=limit);
+  return String(choices[buf[0]%choices.length]);
+}
+$('newrandom').onclick=()=>{
+  pause();
+  try{
+    let before,after;
+    if(key==='paillier'){
+      const v=pvals(),valid=[];before=`(${v.c1}, ${v.c2})`;
+      for(let r=1n;r<v.n;r++)if(gcd(r,v.n)===1n)valid.push(r);
+      params.r1=randomChoice(valid,params.r1);params.r2=randomChoice(valid,params.r2);
+      const n=pvals();after=`(${n.c1}, ${n.c2})`;lastRandom=`Ciphertexts before: ${before}; after: ${after}. Both sums decrypt to ${n.answer}.`;
+    }else if(key==='elgamal'){
+      const v=elgVals();before=`(${v.c1.a},${v.c1.b}), (${v.c2.a},${v.c2.b})`;
+      const valid=Array.from({length:21},(_,i)=>i+1);
+      params.elg_r1=randomChoice(valid,params.elg_r1);params.elg_r2=randomChoice(valid,params.elg_r2);
+      const n=elgVals();after=`(${n.c1.a},${n.c1.b}), (${n.c2.a},${n.c2.b})`;lastRandom=`Pairs before: ${before}; after: ${after}. Both products decrypt to ${n.dec}. This does not establish security.`;
+    }
+    buildFields();render();
+  }catch(e){$('error').textContent=e.message;}
+};
+
+
+
+loadProgress();
+if(!pathIds().includes(key))activePath='all';
+$('learningpath').value=activePath;
+$('learningpath').onchange=event=>{activePath=event.target.value;$('labsearch').value='';if(!pathIds().includes(key))setLesson(pathIds()[0]);else render();};
+$('labsearch').oninput=renderNavigation;
+$('lesson').onchange=event=>setLesson(event.target.value);
+$('visibility').onchange=()=>{pause();render();};
+$('prev').onclick=()=>{pause();step=Math.max(0,step-1);render();};
+$('next').onclick=()=>{pause();step=Math.min(lessons[key].labels.length-1,step+1);render();};
+$('reset').onclick=()=>{pause();step=0;render();};
+$('play').onclick=()=>{
+  if(timer!==null){pause();return;}
+  if(step===lessons[key].labels.length-1)step=0;
+  $('play').textContent='Pause';render();if($('error').textContent)return;
+  timer=setInterval(()=>{step++;render();if(step===lessons[key].labels.length-1)pause();},Number($('pace').value));
+};
+$('pace').onchange=pause;
+$('nextlesson').onclick=()=>{const ids=pathIds(),i=ids.indexOf(key);if(i<ids.length-1)setLesson(ids[i+1]);};
+$('previouslesson').onclick=()=>{const ids=pathIds(),i=ids.indexOf(key);if(i>0)setLesson(ids[i-1]);};
+$('download').onclick=saveWorksheet;$('exportwork').onclick=exportNotebook;$('exporttrace').onclick=exportExperiment;
+$('projection').onclick=()=>{const active=document.body.classList.toggle('projection');$('projection').setAttribute('aria-pressed',String(active));};
+for(const name of ['change','result','limit'])$('note-'+name).oninput=()=>{notes[key]||={};notes[key][name]=$('note-'+name).value.slice(0,10000);saveProgress();};
+$('clearprogress').onclick=()=>{if(!confirm('Clear this browser’s saved checkpoints and lab notes? Export your notes first if you want to keep them.'))return;completed.clear();notes={};for(const id of Object.keys(responses))delete responses[id];saveProgress();loadJournal();render();};
+$('map').innerHTML='<ol>'+order.map(id=>`<li><a href="#${id}" data-lesson="${id}">${esc(lessons[id].name)}</a> — ${esc(labTasks[id][0])}</li>`).join('')+'</ol>';
+document.querySelectorAll('[data-lesson]').forEach(link=>link.onclick=event=>{event.preventDefault();setLesson(link.dataset.lesson);$('title').focus();});
+$('print').onclick=()=>{const panels=[...document.querySelectorAll('details')],previous=panels.map(panel=>panel.open);panels.forEach(panel=>panel.open=true);window.print();panels.forEach((panel,i)=>panel.open=previous[i]);};
+document.addEventListener('keydown',event=>{if(event.altKey||event.ctrlKey||event.metaKey||/INPUT|SELECT|TEXTAREA|BUTTON|SUMMARY|A/.test(event.target.tagName))return;if(event.key==='ArrowRight'){event.preventDefault();$('next').click();}if(event.key==='ArrowLeft'){event.preventDefault();$('prev').click();}if(event.code==='Space'){event.preventDefault();$('play').click();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
+window.addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(order.includes(id))setLesson(id);});
+window.addEventListener('pagehide',pause);
+window.coe526={order,lessons,params,setLesson,render,currentPrediction};
+setLesson(key);
+
+</script>
+</body>
+</html>
